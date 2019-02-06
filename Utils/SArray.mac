@@ -1,0 +1,520 @@
+/**
+   @Package Utils
+   Расширение стандартного класса [TArray].
+*/
+
+
+
+Private Class SAIterator(_arr)
+   private var arr  = _arr;
+   private var nextIndex = 0;
+   private var lastReturned;
+
+   Macro next() : Bool
+      if(arr.size > nextIndex)
+         lastReturned = arr[nextIndex];
+         nextIndex = nextIndex + 1;
+         return true;
+      end;
+      return false;
+   End;
+
+   Macro item() : Variant
+      return lastReturned;
+   End;
+End;
+
+Private Macro isLambdaLoaded()
+   return (ValType(ExecMacro2("LambdaLoadedMarker")) != V_UNDEF);
+End;
+
+Private Macro isStreamLoaded()
+   return (ValType(ExecMacro2("StreamLoadedMarker")) != V_UNDEF);
+End;
+
+
+Private Class ArrayIterator(_arr : TArray)
+   var arr = _arr;
+   var nextIndex : Integer = 0;
+   var lastReturned;
+
+   Macro hasNext() : Bool
+      return (nextIndex < arr.size);
+   End;
+
+   Macro hasPrev() : Bool
+      return (nextIndex != 0);
+   End;
+
+   Macro next() : Variant
+      lastReturned = arr[nextIndex];
+      nextIndex = nextIndex + 1;
+      return lastReturned;
+   End;
+
+   Macro prev() : Variant
+      nextIndex = nextIndex - 1;
+      lastReturned = arr[nextIndex];
+      return lastReturned;
+   End;
+
+   Macro set(el : Variant)
+      arr[nextIndex-1] = el;
+   End;
+
+   Macro add(el : Variant)
+      for(var i, arr.size, nextIndex, -1)
+         arr[i] = arr[i-1];
+      end;
+      arr[nextIndex] = el;
+   End;
+
+   Macro remove()
+      return;
+      // не реализовано, по причине неизменности исходного массива
+      /*
+      var el = arr[nextIndex-1];
+      var newArr = Arrays.subArray(arr, 0, nextIndex-1);
+      Arrays.addArray(newArr, Arrays.subArray(arr, nextIndex));
+      arr = StrongRef(newArr);
+      return el;
+      */
+   End;
+End;
+
+
+/**
+   Расширение стандартного класса [TArray]. Реализует всю базовую функциональность, дополнительно предоставляя методы для удобной работы с массивом.
+   Не уступает в производительности оригинальному [TArray].
+*/
+Class (TArray) SArray()
+   initTArray();
+   // ------Constructor------
+   local var i;
+   for (i, 1, Parmcount-1, 1)
+      GetParm(i, value(i-1));
+   end;
+
+   // -----------------------
+
+   /**
+      Возвращает `true` если массив пустой.
+   */
+   Macro isEmpty() : Bool
+      return (size == 0);
+   End;
+
+
+   /**
+      Добавляет элементы указанные в качестве аргументов. Массив должен быть пустым.
+      @oparam varargs - добавляемые элементы
+   */
+   Macro of() : SArray
+      if(size != 0) RunError("Not Empty SArray cannot be initialized"); end;
+      for (var i, 1, Parmcount-1, 1)
+         GetParm(i, value(i-1));
+      end;
+      return this;
+   End;
+
+   /**
+      Добавляет 'element' на позицию 'ind', сдвигая последующие элементы вправо. Если 'ind' не указан или равен `null` добавляет вконец массива. Возвращает текущий экземпляр класса.
+   ```
+      var arr = SArray();
+      arr.add(1);        // [1]
+      arr.add("two");    // [1, "two"]
+      arr.add("new", 1)  // [1, "new", "two"]
+   ```
+   */
+   Macro add(element : Variant, ind : Integer) : SArray
+      if (ValType(ind) == V_UNDEF)
+         value(size) = element;
+      else
+         for(var i, size, ind + 1, -1)
+            value(i) = value(i-1);
+         end;
+         value(ind) = element;
+      end;
+      return this;
+   end;
+
+   /**
+      Добавляет элементы массива 'arr' в конец массива. Возвращает текущий экземпляр класса.
+   */
+   Macro addArray(arr) : SArray
+      if (IsEqClass("TArray", arr) == false) RunError("Illegal argument"); end;
+      size = size + arr.size;
+      for (var i, 0, arr.size - 1, 1)
+         value(size + i) = arr[i];
+      end;
+      return this;
+   End;
+
+   /**
+      Возвращает первый элемент массива или бросает ошибку, если массив пустой.
+   */
+   Macro getFirst() : Variant
+      if (size == 0) RunError("No such element"); end;
+      return value(0);
+   End;
+
+   /**
+      Возвращает последний элемент массива или бросает ошибку, если массив пустой.
+   */
+   Macro getLast() : Variant
+      if (size == 0) RunError("No such element"); end;
+      return value(size-1);
+   End;
+
+   /**
+      Удаляет и возвращает элемент под индексом 'ind', "схлопывая дырку" в массиве.
+   */
+   Macro remove(ind) : Variant
+      var r = value(ind);
+      for(var i, ind, size - 2, 1)
+         value(i) = value(i + 1);
+      end;
+      size = size - 1;
+      return r;
+   End;
+
+   /**
+      Добавляет 'element' в конец массива. Возвращает текущий экземпляр класса.
+   ```
+      var arr = SArray();
+      arr.push(1);      // [1]
+      arr.push("two");  // [1, "two"]
+   ```
+   */
+   Macro push(element : Variant) : SArray
+      value(size) = element;
+      return this;
+   end;
+
+   /**
+      Удаляет и возвращает последний элемент массива, бросает ошибку если массив пустой.
+   */
+   Macro pop() : Variant
+      if (size == 0) RunError("No such element"); end;
+      var v = value(size-1);
+      size = size - 1;
+      return v;
+   End;
+
+   /**
+      Удаляет и возвращает последний элемент массива.
+   */
+   Macro poll() : Variant
+      if (size == 0) return; end;
+      var v = value(size-1);
+      size = size - 1;
+      return v;
+   End;
+
+   /**
+      Возвращает последний элемент массива (не удаляя) или `null`, если массив пустой.
+   */
+   Macro peek() : Variant
+      if (size == 0) return; end;
+      var v = value(size-1);
+      return v;
+   End;
+
+   /**
+      Возвращает новый массив состоящий из элементов текущего с индекса 'from' (включительно) по индекс 'to'(исключительно).
+   */
+   Macro slice(from, to) : SArray
+      if (ValType(from) == V_UNDEF)
+         from = 0;
+      end;
+      if (ValType(to) == V_UNDEF)
+         to = size;
+      end;
+      var newArr = SArray();
+      for (var i, from, to - 1, 1)
+         newArr.push(value(i));
+      end;
+      return newArr;
+   End;
+
+   /**
+      "Разворачивает" исходный массив
+   */
+   Macro reverse() : SArray
+      if (size <= 1) return this; end;
+      for(var i, 0, size/2-1, 1)
+         var t = value(i);
+         value(i) = value(size-i-1);
+         value(size-i-1) = t;
+      end;
+      return this;
+   End;
+   /**
+      Возвращает новый массив, состоящий из элементов исходного и массива 'arr'.
+   */
+   Macro concat(arr)
+      var newArr = SArray();
+      if (size + arr.size  == 0) return newArr; end;
+      newArr[size + arr.size - 1] = null;
+      for(var i, 0, size - 1, 1);
+         newArr[i] = value(i);
+      end;
+      var j = i;
+      for(i, 0, arr.size - 1, 1);
+         newArr[j] = arr[i];
+         j = j + 1;
+      end;
+      return newArr;
+   End;
+
+   /**
+      Возвращает индекс элемента массива 'arr' равного 'element', '-1' в случае если ничего не найдено.
+      Если 'element' является 'null', функция вернет индекс первого элемента массива равный `null`.
+      Так же есть возможность указать ссылку на функцию компаратор или её имя в 2 аргументе 'compfunc'.
+      Функция-компаратор должна принимать два аргумента и возвращать 0 в случае их равенства.
+      Если функцию-компаратор не указывать сравнение будет проходить через `==` т.е. в случае когда 'element' объектного типа, сравнение будет проходить по ссылке.
+   */
+   Macro indexOf(element, compfunc)
+      var i;
+      if (ValType(compfunc) != V_UNDEF)
+         if (ValType(element) == 19)
+            var clName = GenClassName(element);
+            for (i, 0, size-1, 1)
+               if (isEqClass(clName, value(i)) and (ExecMacro2(compfunc, element, value(i)) == 0))
+                  return i;
+               end;
+            end;
+         else
+            for (i, 0, size-1, 1)
+               if (ExecMacro2(compfunc, element, value(i)) == 0)
+                  return i;
+               end;
+            end;
+         end;
+
+      elif (ValType(element) == V_UNDEF)
+         for (i, 0, size-1, 1)
+            if (ValType(value(i)) == V_UNDEF)
+               return i;
+            end;
+         end;
+      else
+         for (i, 0, size-1, 1)
+            if ((ValType(value(i)) != V_UNDEF) and (value(i) == element))
+               return i;
+            end;
+         end;
+      end;
+      return -1;
+   End;
+
+   /**
+      Метод аналогичен [SArray.indexOf indexOf]; но возвращает индекс 'последнего' элемента или -1;
+   */
+   Macro lastIndexOf(element, compfunc)
+      var i;
+      if (ValType(compfunc) != V_UNDEF)
+         if (ValType(element) == 19)
+            var clName = GenClassName(element);
+            for (i, size-1, 0, -1)
+               if (isEqClass(clName, value(i)) and (ExecMacro2(compfunc, element, value(i)) == 0))
+                  return i;
+               end;
+            end;
+         else
+            for (i, size-1, 0, -1)
+               if (ExecMacro2(compfunc, element, value(i)) == 0)
+                  return i;
+               end;
+            end;
+         end;
+      elif (ValType(element) == V_UNDEF)
+         for (i, size-1, 0, -1)
+            if (ValType(value(i)) == V_UNDEF)
+               return i;
+            end;
+         end;
+      else
+         for (i, size-1, 0, -1)
+            if ((ValType(value(i)) != V_UNDEF) and (value(i) == element))
+               return i;
+            end;
+         end;
+      end;
+      return -1;
+   End;
+
+   /**
+      Очищает текущий массив. Возвращает текущий экземпляр класса.
+   */
+   Macro clear()
+      size = 0;
+      return this;
+   end;
+
+
+   /**
+      Возвращает новый массив, состоящий из элементов исходного массива 'arr', для которых функция-предикат 'predicFunc' возвращает `true`.
+
+      Пример:
+      ```
+         Macro isEven(el) : Bool
+            return (mod(el,2) == 0);
+         End;
+         var arr = SArray(1,2,3,4,5);
+         var even = arr.filter(@isEven);
+         even.toScreen();  // [2, 4]
+
+      ```
+   */
+   Macro filter(predicFunc)
+      if (ValType(predicFunc) == V_UNDEF)
+         RunError("Не указана функция-предикат");
+      elif ((ValType(predicFunc) == V_STRING) and isLambdaLoaded)
+         predicFunc = ExecMacro2("GetFunOrLambda", predicFunc);
+      end;
+      var resArr = SArray();
+      for(var el, this)
+         if(ExecMacro2(predicFunc, el))
+            resArr.push(el);
+         end;
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает новый массив преобразованных функцией 'mapFunc' всех элементов исходного массива.
+
+      Пример:
+      ```
+         Macro squareInt(el)
+            return (el*el);
+         End;
+         var arr = SArray(1,2,3,4);
+         var sq = arr.map(@squareInt);
+         sq.toScreen(); // [1, 4, 9, 16]
+      ```
+
+      @see [Definitions.SampleMap map-функция]
+   */
+   Macro map(mapFunc)
+      if (ValType(mapFunc) == V_UNDEF)
+         RunError("Не указана функция-преобразования");
+      elif ((ValType(mapFunc) == V_STRING) and isLambdaLoaded)
+         mapFunc = ExecMacro2("GetFunOrLambda", mapFunc);
+      end;
+      var resArr = SArray();
+      if (size != 0)
+         resArr[size-1] = null;
+         for(var i, 0, size-1, 1)
+            resArr[i] = ExecMacro2(mapFunc, value(i));
+         end;
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает результат агрегатной функции 'accumulator' на элементы исходного массива.
+      'identity' - начальное значение.
+
+      Пример:
+      ```
+         Macro sumReduce(ident, el)
+            return ident + el;
+         End;
+
+         var arr = SArray(1,2,3,4);
+         var res = arr.reduce(0, @sumReduce);
+         println(res);    //10
+      ```
+
+      @param identity начальное значение
+      @param accumulator  функция-редюсер
+   */
+   Macro reduce(identity, accumulator)
+      if (ValType(accumulator) == V_UNDEF)
+         RunError("Не указана функция-редюсер");
+      elif ((ValType(accumulator) == V_STRING) and isLambdaLoaded)
+         accumulator = ExecMacro2("GetFunOrLambda", accumulator);
+      end;
+      for(var el, this)
+         identity = ExecMacro2(accumulator, identity, el);
+      end;
+      return identity;
+   End;
+
+   /*
+      Вызывает 'func' для каждого элемента массива, возвращает `null`.
+   */
+   Macro forEach(func)
+      if (ValType(func) == V_UNDEF)
+         RunError("Не указана функция forEach");
+      elif ((ValType(func) == V_STRING) and isLambdaLoaded)
+         func = ExecMacro2("GetFunOrLambda", func);
+      end;
+      for (var el, this)
+         ExecMacro(func, el);
+      end;
+   End;
+
+   Macro sort(comp) : SArray
+      if (ValType(comp) == V_UNDEF)
+         RunError("Не указана функция компаратор");
+      elif ((ValType(comp) == V_STRING) and isLambdaLoaded)
+         comp = ExecMacro2("GetFunOrLambda", comp);
+      end;
+      ExecMacro2("QSort", this, comp);
+      return this;
+   End;
+   /**
+      Выводит элементы массива на экран разделенные ",".
+   */
+   Macro toScreen()
+      print("[");
+      for (var i, 0, size-1, 1)
+         print(value(i));
+         if (i != size-1)
+            print(", ");
+         end;
+      end;
+      print("]");
+      println();
+   End;
+
+   /**
+      Выводит элементы массива на экран, каждый с новой строки.
+   */
+   Macro toScreen2()
+      for (var el, this)
+         println(el);
+      end;
+   End;
+
+   /**
+      Приводит массив к типу [TArray].
+   */
+   Macro toArray()
+      var resArr = TArray();
+      if (size == 0) return resArr; end;
+      resArr[size-1] = null;
+      for (var i, 0, size - 1)
+         resArr[i] = value(i);
+      end;
+      return resArr;
+   End;
+
+   Macro newIterator() : ArrayIterator
+      return GenObject("ArrayIterator", this);
+   End;
+
+   /**
+      Создает [StreamApi.Stream Stream] объект.
+   */
+   Macro toStream()
+
+   End;
+
+   Macro createEnum()
+     return SAIterator(this);
+   End;
+End;

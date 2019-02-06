@@ -1,0 +1,155 @@
+/**
+   @package Utils
+   Реализованные функции-компараторы.
+*/
+
+// import "..\\mac\\extra\\InterReplacement.mac";
+// import bankInter;   // Qsort, при необходимости избавиться от зависимости можно реализовать метод сортировки самостоятельно
+
+
+// Сравнение двух примитивных типов средствами языка
+// Для скорости сортировки, аргументы не проверяются на Null или соответсвие типов значения
+Macro CF_ComparePrimitive(el1,el2) : Integer
+   if(el1>el2)
+      return 1;
+   elif(el1<el2)
+      return -1;
+   else
+      return 0;
+   end;
+End;
+
+// Сравнение примитивных типов с учетом возможности аргументов == Null
+Macro CF_CompareNullable(el1,el2) : Integer
+   var n1 = (ValType(el1) == V_UNDEF);
+   var n2 = (ValType(el2) == V_UNDEF);
+   if(n1 and n2)
+      return 0;
+   elif(n1)
+      return -1;
+   elif(n2)
+      return 1;
+   else
+      return CF_ComparePrimitive(el1,el2);
+   end;
+End;
+
+// Сравнение двух экземпляров пользовательского класса (классов)
+// реализующих метод compareTo(otherObj) : Integer
+// Способен принимать Null в качестве аргументов
+Macro CF_CompareObjFromInner(o1,o2)
+   if(ValType(o1) != V_UNDEF)
+      return o1.compareTo(o2);
+   elif(ValType(o2) != V_UNDEF)
+      return -o2.compareTo(o1);
+   else
+      return 0;
+   end;
+End;
+
+// Функции для сравнения объектов типа Pair
+
+Macro comparePairsByValueInner(p1, p2)
+   return CF_compareObjFromInner(p1.value, p2.value);
+End;
+
+Macro comparePairsByKeyInner(p1, p2)
+   return CF_ComparePrimitive(p1.key, p2.key);
+End;
+
+Macro CF_CompareByKeyPrimitive(e1, e2) : Integer
+   return execMacro2(@CF_ComparePrimitive, e1.key, e2.key);
+End;
+
+Macro CF_CompareByValuePrimitive(e1, e2) : Integer
+   return execMacro2(@CF_ComparePrimitive, e1.value, e2.value);
+End;
+
+// Сравнение двух объектов по их свойствам по порядку
+Macro CF_CompareByProps(obj1, obj2)
+   var i = 2;
+   var prop;
+   var res;
+   while(i < parmCount)
+      getParm(i, prop);
+      res = CF_ComparePrimitive(GenGetProp(obj1, prop), GenGetProp(obj2, prop));
+      if(res!=0)
+         return res;
+      end;
+      i = i + 1;
+   end;
+   return 0;
+End;
+
+Private Macro isEqualProp(p1, p2) : Bool
+   var t1 = ValType(p1);
+   var t2 = ValType(p2);
+   if(t1!=t2) return false; end;
+
+   if((t1<=10) or (t1 == V_NUMERIC)) return (t1==t2);  // null, примитивы и numeric
+   elif(t1 == V_GENOBJ) return ExecMacro2("CF_objectEquals", p1,p2);  // Объекты
+   elif(t1 == V_ARRAY)                               // Массивы
+      if(t1.size!=t2.size) return false; end;
+      var i;
+      for(i, 0, t1.size-1)
+         if(isEqualProp(t1[i], t2[i]) == false)
+            return false;
+         end;
+      end;
+      return true;
+   else
+      return true;                                   // Ссылки на файлы, методы, считаем несущественными
+   end;
+   return true;
+End;
+
+// Проверка объектов на полное равенство по свойствам (в т.ч вложенным и массивам)
+// Свойства, являющиеся примитивными типами RSL, проверяются на равенство средствами языка (==)
+// Свойства, являющиеся ссылкой на объект будут рекурсивно проверенны по примитивным свойствам
+// Свойства, являющиеся массивами (TArray) будут проверены по размеру, а при равенстве, попарно по индексу
+Macro CF_objectEquals(o1, o2) : Bool
+   if(IsEqClass(GenClassName(o1), o2) == false) return false; end;
+   var pc = GenNumProps(o1);
+   var i;
+   for(i, 0, pc-1, 1)
+      if(isEqualProp(o1[i], o2[i])==false)
+         return false;
+      end;
+   end;
+   return true;
+End;
+
+
+// Функция-компаратор для объектов классов реализующих метод equals(otherObject) : Integer
+// Используется в коллекциях типа ObjectHashMap <Object, Variant>, HashSet<Object>
+// Где ключ(объект) обязан являться уникальным.
+Macro CF_equalsFromInner(o1 : Object, o2 : Object) : Bool
+   return (o1.equals(o2));
+End;
+
+
+// Объект-компаратор
+// @parm _propsName : TArray - массив имен свойств объектов (являющихся примитивами) одного класса для сравнения
+Class CF_ObjectComparator(_propsName : TArray)
+   var propsName = _propsName;
+
+   Macro compare(o1, o2)
+      var p;
+      var p1,p2;
+      var resCompare;
+      for(p, propsName)
+         p1 = GenGetProp(o1, p);
+         p2 = GenGetProp(o2, p);
+         if(ValType(p1) != V_UNDEF)
+            if(ValType(p1) < 10)
+               resCompare = CF_ComparePrimitive(p1,p2);
+               if(resCompare != 0)
+                  return resCompare;
+               end;
+            end;
+         end;
+      end;
+      return 0;
+   End;
+
+End;

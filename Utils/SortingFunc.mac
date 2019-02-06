@@ -1,0 +1,68 @@
+/**
+   @package Utils
+   Релизация функций для сортировки массива.
+*/
+
+
+
+Private var tempSortFunc = null;
+
+
+Macro callObjectMethod(parm1, parm2)
+   return CallR2M(tempSortFunc, parm1, parm2);
+End;
+
+// Обертка для функции Qsort из BankInter
+// В отличии от оригинала способна принимать в качестве компаратора не только ссылку на функцию,
+// но и ссылку на метод объекта
+Macro ExQSort(arr, func)
+   if(Valtype(func) == 20)    // Если ссылка на функцию
+      return ExecMacro2("QSort", arr, func);
+   elif(Valtype(func) == 25)  // Если ссылка на метод
+      tempSortFunc = func;
+      return ExecMacro2("QSort", arr, @callObjectMethod);
+   end;
+End;
+
+/**
+   Замена сотрировки массива из BankInter
+   arr - Ссылка на массив
+   _compFunc - ссылка на функцию-компаратор
+*/
+Macro QSort(arr : @TArray, compfunc)
+   ExecMacro("qSortInner", arr, compfunc, 0, arr.size-1);
+End;
+
+/** Рекурсивная реализация быстрой сортировки */
+Macro qSortInner(arr, compfunc, low : Integer, high : Integer)
+   if(arr.size == 0) return; end;
+   if(low>=high) return; end;
+
+   var mid = (low + high) / 2;
+   var pivot = arr[mid];
+   var tmp;
+   var i = low;
+   var j = high;
+
+   while(i <= j)
+      while(ExecMacro2(compFunc, arr[i], pivot) < 0)
+         i = i + 1;
+      end;
+      while(ExecMacro2(compFunc, arr[j], pivot) > 0)
+         j = j - 1;
+      end;
+      if (i <= j)
+         tmp = arr[i];
+         arr[i] = arr[j];
+         arr[j] = tmp;
+         i = i + 1;
+         j = j - 1;
+      end;
+   end;
+   if (low < j)
+      qSortInner(arr, compFunc, low, j);
+   end;
+   if (high > i)
+      qSortInner(arr, compfunc, i, high);
+   end;
+End;

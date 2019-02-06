@@ -1,0 +1,530 @@
+import rcw;
+import "..\\mac\\extra\\RUnit\\RUnitFlag.Mac";
+
+var RUnitTest = GenObject("RUnitProperties");
+
+Private var AllTestResult = GenObject("AllTestsResult");
+
+
+Private Class RUnitProperties()
+   var RUN_UNIT_TEST                = true;           // Запускать тест
+   var SHOW_ONLY_FAILED_UNIT_TEST   = false;          // Выводить на экран только провалившиеся тесты
+   var SHOW_ONLY_FAILED_UNIT_FUN    = false;          // Выводить на экран только провалившиеся методы
+   var SHOW_ONLY_FAILED_UNIT_ASSERT = true;           // Выводить на экран только провалившиеся ассерты
+
+   var WRITE_TO_LOG                 = false;          // Писать в текстовый лог
+   var LOG_ONLY_FAILED_UNIT_TEST    = false;          // Писать в лог только провалившиеся тесты
+   var LOG_ONLY_FAILED_UNIT_FUN     = false;          // Писать в лог только провалившиеся методы
+   var LOG_ONLY_FAILED_UNIT_ASSERT  = true;           // Писать в лог только провалившиеся ассерты
+
+   var LOGGER_INSTANCE              = null;           // Экземпляр логгера
+
+   var UNIT_TEST_METHOD_PREFIX = "TEST_";             // Префикс тестовых методов
+End;
+
+Macro Arr_()
+   var arr = TArray();
+   var count = Parmcount();
+   var i = 0;
+   var p;
+   while(i < count)
+      getParm(i, p);
+      arr[i] = p;
+      i = i + 1;
+   end;
+   return arr;
+End;
+
+Macro toLogI(msg)
+   RUnitTest.LOGGER_INSTANCE.i(msg);
+End;
+
+Macro toLogE(msg)
+   RUnitTest.LOGGER_INSTANCE.e(msg);
+End;
+
+Private Class AssertResult(_assertString : String)
+
+   var assertString = _assertString;
+   var isOk;
+   var message = "";
+
+   Macro toScreen()
+      if(RUnitTest.SHOW_ONLY_FAILED_UNIT_ASSERT and isOk) return; end;
+      var st = "ok  ";
+      if(not(isOk))
+         st = "fail";
+      end;
+      println("      " + st + " - "+ assertString + " - " + message);
+   End;
+
+   Macro toLog()
+      if(RUnitTest.LOG_ONLY_FAILED_UNIT_ASSERT and isOk) return; end;
+      if(not(isOk))
+         toLogE("fail - " + assertString + " - " + message);
+      else
+         toLogI("ok   - " + assertString + " - " + message);
+      end;
+   End;
+End;
+
+Private Class FunResult(_name)
+   var name = _name;
+   var messages = TArray();
+   var ok   : Integer = 0;
+   var fail : Integer = 0;
+   var isOk = true;
+   var assertResults = TArray();
+
+   Macro addLine(line : String)
+      messages[messages.size] = line;
+   End;
+
+   Macro addOk()
+      ok = ok + 1;
+   End;
+
+   Macro addFail()
+      fail = fail + 1;
+      isOk = false;
+   End;
+
+   Macro addAssertResult(assRes : AssertResult)
+      assertResults[assertResults.size] = assRes;
+      if(assRes.isOk)
+         ok = ok  + 1;
+      else
+         fail = fail + 1;
+         isOk = false;
+      end;
+   End;
+
+   Macro toScreen()
+      if (RUnitTest.SHOW_ONLY_FAILED_UNIT_FUN and isOk) return; end;
+
+      var st = "[OK]";
+      if(not(isOk))
+         st = "[FAIL]";
+      end;
+      var stats = "   Asserts run:" + (ok + fail) + ", failed:" + fail;
+      print("   "); print(name:20:0); print(st:8:0); println(stats);
+
+      var assRes;
+      for(assRes, assertResults)
+         assRes.toScreen();
+      end;
+      println("");
+   End;
+
+   Macro toLog()
+      if (RUnitTest.LOG_ONLY_FAILED_UNIT_FUN and isOk) return; end;
+      var stats = "   Asserts run:" + (ok + fail) + ", failed:" + fail;
+      if(not(isOk))
+         toLogE(String(name:20:0) + "[FAIL]  " + stats);
+      else
+         toLogI(String(name:20:0) + "[OK]    " + stats);
+      end;
+      var assRes;
+      for(assRes, assertResults)
+         assRes.toLog();
+      end;
+   End;
+End;
+
+Private Class UnitResult(_name)
+   var name = _name;
+   var funResults = TArray();
+   var ok = 0;
+   var fail = 0;
+   var isOk = true;
+
+   Macro addFunResult(_funResult : FunResult)
+      funResults[funResults.size] = _funResult;
+      if(_funResult.isOk)
+         ok = ok + 1;
+      else
+         fail = fail + 1;
+         isOk = false;
+      end;
+   End;
+
+   Macro toScreen()
+      if(funResults.size == 0) return; end;
+      if(RUnitTest.SHOW_ONLY_FAILED_UNIT_TEST and isOk) return; end;
+
+      var st = "[OK]";
+      if(not(isOk))
+         st = "[FAIL]";
+      end;
+      var stats = "Tests method run: " + (ok + fail) + ", failed: " + fail;
+
+      print(name:20:0); println(st:10:0);
+      println(stats);
+      println("");
+
+      for(var funRes, funResults)
+         funRes.toScreen();
+      end;
+      println("-------------------------------------------------------------------");
+
+   End;
+
+   Macro toLog()
+      if(funResults.size == 0) return; end;
+      if(RUnitTest.LOG_ONLY_FAILED_UNIT_TEST and isOk) return; end;
+      var stats = "Tests method run: " + (ok + fail) + ", failed: " + fail;
+      if(not(isOk))
+         toLogE(String(name:20:0) + "[FAIL]");
+      else
+         toLogI(String(name:20:0) + "[OK]");
+      end;
+      toLogI(stats);
+      for(var funRes, funResults)
+         funRes.toLog();
+      end;
+   End;
+End;
+
+Private Class AllTestsResult()
+   var testResults = TArray();
+   var isOk = true;
+   var ok = 0;
+   var fail = 0;
+   var printed = false;
+
+   Macro addTestResult(testResult : UnitResult)
+      testResults[testResults.size] = testResult;
+      if(testResult.isOk)
+         ok = ok + 1;
+      else
+         fail = fail + 1;
+         isOk = false;
+      end;
+   End;
+
+   Macro printTestResults()
+      if(testResults.size == 0) return; end;
+
+      Println("=========================== START TESTS ===========================");
+      var st = "[OK]";
+      if(not(isOk))
+         st = "[FAILED]"
+      end;
+      println(st + " Tests successful complete: " + ok + "/" + (ok+fail));
+      println("");
+      for(var testRes, testResults)
+         testRes.toScreen();
+      end;
+   End;
+
+   Macro logTestResults()
+      if(testResults.size == 0) return; end;
+      if(not(RUnitTest.WRITE_TO_LOG)) return; end;
+
+      toLogI("START UNIT TESTS");
+      var st;;
+      if(not(isOk))
+         st = "[FAILED]";
+         toLogE("[FAILED] " + "Tests successful complete: "  + ok + "/" + (ok+fail));
+      else
+         toLogI("[OK    ] " + "Tests successful complete: "  + ok + "/" + (ok+fail));
+      end;
+      for(var testRes, testResults)
+         testRes.toLog();
+      end;
+      toLogI("END UNIT TESTS");
+
+   End;
+
+   Macro Destructor()
+      if(not(printed))
+         printTestResults();
+         logTestResults();
+         printed = true;
+      end;
+   End;
+End;
+
+Private Class AssertClass(_val1, _val2)
+   var val1 = _val1;
+   var val2 = _val2;
+   private var strAssert = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " , " + String(_val2) + " )";
+   var result = AssertResult(strAssert);
+
+   Macro runAssert() : Bool
+      return true;
+   End;
+
+   Macro setResult(res : Bool)
+      result.isOk = res;
+   End;
+
+   Macro getResult() : Bool
+      return true;
+   End;
+
+   Macro setFaultCause(cause : String)
+      result.message = cause;
+   End;
+
+End;
+
+Private Class (AssertClass) AssertEqualsClass(_val1, _val2)
+   initAssertClass(_val1, _val2);
+
+   Macro runAssert() : Bool
+      if(ValType(val1) != ValType(val2))
+         setResult(false);
+         setFaultCause("AssertEquals different ValTypes.");
+      elif (val1 != val2)
+         setResult(false);
+         setFaultCause("AssertEquals expected value: " + String(val1) + " , real value: " + String(val2));
+      else
+         setResult(true);
+      end;
+   End;
+End;
+
+Private Class (AssertClass) AssertNullClass(_val1)
+   initAssertClass(_val1);
+
+   Macro runAssert() : Bool
+      if(ValType(val1) == V_UNDEF)
+         setResult(true);
+      else
+         setResult(false);
+         setFaultCause("AssertNull expected null-value, but value is: " + String(val1));
+      end;
+   End;
+End;
+
+Private Class (AssertClass) AssertNotNullClass(_val1)
+   initAssertClass(_val1);
+
+   Macro runAssert() : Bool
+      if(ValType(val1) != V_UNDEF)
+         setResult(true);
+      else
+         setResult(false);
+         setFaultCause("AssertNotNull expected notnull-value, but value is null");
+      end;
+   End;
+End;
+
+Private Class (AssertClass) AssertTrueClass(_val1)
+   initAssertClass(_val1);
+
+   Macro runAssert() : Bool
+      if(ValType(val1) == V_BOOL)
+         if(val1)
+            setResult(true);
+         else
+            setResult(false);
+            setFaultCause("AssertTrue expected TRUE, but value is: " + String(val1));
+         end;
+      else
+         setResult(false);
+         setFaultCause("AssertTrue value is not BOOL type: " + String(val1));
+      end;
+   End;
+End;
+
+Private Class (AssertClass) AssertFalseClass(_val1)
+   initAssertClass(_val1);
+
+   Macro runAssert() : Bool
+      if(ValType(val1) == V_BOOL)
+         if(Not(val1))
+            setResult(true);
+         else
+            setResult(false);
+            setFaultCause("AssertFalse expected FALSE, but value is: " + String(val1));
+         end;
+      else
+         setResult(false);
+         setFaultCause("AssertFalse value is not BOOL type: " + String(val1));
+      end;
+   End;
+End;
+
+Private Class (AssertClass) AssertArraysClass(_arr1, _arr2)
+   initAssertClass(_arr1, _arr2);
+
+   Macro runAssert() : Bool
+      setResult(true);
+      if(IsEqClass("TArray", val1) == false)
+         setResult(false);
+         setFaultCause("AssertArrays first parm is not an Array");
+      elif(IsEqClass("TArray", val2) == false)
+         setResult(false);
+         setFaultCause("AssertArrays second parm is not an Array");
+      elif(val1.size != val2.size)
+         setResult(false);
+         setFaultCause("AssertArrays arrays has a different size. " + val1.size + " and " + val2.size);
+      else
+         var i;
+         for(i,0,val1.size-1,1)
+            if(val1[i]!=val2[i])
+               setResult(false);
+               setFaultCause("AssertArrays arrays are not equal. At least on index: " + i + " , values: '" + val1[i] + "' and '" + val2[i] + "'");
+               break;
+            end;
+         end;
+      end;
+   End;
+End;
+
+Private Class (AssertClass) AssertErrorClass(_expCode, _err)
+   initAssertClass(_expCode, _err);
+
+   if(isEqClass("TRSLERROR",_err))
+      strAssert = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_expCode) + " , " + String(_err.code) + " )";
+      result = AssertResult(strAssert);
+   end;
+   Macro runAssert()
+      var expCode = val1;
+      var err = val2;
+      if(ValType(err)!=V_UNDEF)
+         if(ValType(expCode) == V_INTEGER)    // Если ожидалась ошибка проверим код
+               if((expCode == -1) or (expCode == err.Code))
+                  setResult(true);
+               else
+                  setResult(false);
+                  setFaultCause("Expected error with code: " + expCode + " , but was catched error with code: " + err.code + " - " + err.Message);
+               end;
+         else
+            setResult(false);
+            setFaultCause("Unexpected Error. Code: " + err.code + " - " + err.Message);
+         end;
+      else
+         setResult(false);
+         setFaultCause("AssertError expected ERROR, but wasn't catched any error. Value is:" + val1);
+      end;
+   End;
+End;
+
+
+
+Private Class UnitFun(_parent, _name : String)
+   var parent = _parent;
+   var name = _name;
+   var expectedErrCode;
+   var result = FunResult(_name);
+
+   Macro runTest()
+      var curTest = 0;
+      var t0 = time();
+      var res = GenRun(parent, name);
+      var t1 = time();
+      var restime = String((t1 - t0) : m) + " ms";
+
+      OnError(err) // При ошибке внутри функции
+         var errAss = AssertErrorClass(expectedErrCode, err);
+         this.addAssert(errAss);
+   End;
+
+   Macro addAssert(ass)
+      ass.RunAssert();
+      result.addAssertResult(ass.result);
+   End;
+
+End;
+
+Class UnitTest(_name)
+   var name : String;
+   var testFuns   : TArray;
+   var curTestFun : UnitFun;
+   var testOK : Bool;
+   var result;
+
+   if(ValType(_name) == V_STRING)
+      name = _name;
+   end;
+
+   Macro beforeClass()
+   End;
+
+   Macro afterClass()
+   End;
+
+   Macro beforeTest()
+   End;
+
+   Macro afterTest()
+   End;
+
+   Macro assertEquals(val1, val2)
+      curTestFun.addAssert(AssertEqualsClass(val1,val2));
+   End;
+
+   Macro assertNull(val1) : Bool
+      curTestFun.addAssert(AssertNullClass(val1));
+   End;
+
+   Macro assertNotNull(val1) : Bool
+      curTestFun.addAssert(AssertNotNullClass(val1));
+   End;
+
+   Macro assertTrue(val1, val2) : Bool
+      curTestFun.addAssert(AssertTrueClass(val1));
+   End;
+
+   Macro assertFalse(val1) : Bool
+      curTestFun.addAssert(AssertFalseClass(val1));
+   End;
+
+   Macro assertError(val1) : Bool
+      curTestFun.addAssert(assertErrorClass(val1));
+   End;
+
+   Macro assertArrays(arr1, arr2)
+      curTestFun.addAssert(assertArraysClass(arr1, arr2));
+   End;
+
+   Macro catchError(_code)
+      var code = _code;
+      if(valType(code)!=V_INTEGER)
+         code = -1;           // Catch all errors
+      end;
+      curTestFun.expectedErrCode = code;
+   End;
+
+   Macro startTests()
+      testFuns = TArray();
+      var allMeth = GetObjMethods(this);
+      var met;
+      for(met, allMeth)
+         if(SubStr(met,1,5) == RUnitTest.UNIT_TEST_METHOD_PREFIX)
+            testFuns[testFuns.size] = UnitFun(this, met);
+         end;
+      end;
+
+      for(curTestFun, testFuns)
+         beforeTest();
+         curTestFun.runTest();
+         afterTest();
+         result.addFunResult(curTestFun.result);
+      end;
+   End;
+
+   Macro RunTest()
+      if(ValType(name) == V_UNDEF)
+         name = GenClassName(this);
+      end;
+      result = UnitResult(name);
+      beforeClass();
+      startTests();
+      afterClass();
+      AllTestResult.addTestResult(result);
+   End;
+
+   Macro Destructor()
+      if((ValType(testOK) == V_UNDEF) and RUnitTest.RUN_UNIT_TEST)
+         RunTest();
+      end;
+   End;
+End;
+
+Macro UnitTestMarker()
+   return 1;
+End;

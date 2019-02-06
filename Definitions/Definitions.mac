@@ -1,0 +1,39 @@
+/**
+   @package Definitions
+   @ancestor Extra
+   @title Определения
+
+   Описания и примеры определений встречаемые в библиотеке [Extra].
+*/
+
+/**
+   Функция компаратор. Представляет из себя макрос с двумя аргументами, возвращающая результат типа 'Integer':
+   - 1  - если первый аргумент считается больше второго
+   - -1 - если первый аргумент считается меньше второго
+   - 0  - если аргументы равны
+   Используется в массивах и коллекциях для установления порядка элементов, например при сортировке.
+   @sample [Samples.Definitions.Comparator]
+   @see [CompareFunc]
+
+*/
+Macro SampleComparator(o1, o2) : Integer
+
+End;
+
+/**
+    Функция перобразователь (mapFunction). Представляет из себя макрос с одним аргументом, возвращает результат произвольного типа.
+    Используется в [Stream], [Utils.SArray], [Collections]
+    @sample [Samples.Definitions.MapFunction]
+*/
+Macro SampleMapFunction(o) : Variant
+
+End;
+
+/**
+    Функция предикат. Представляет из себя макрос с одним аргументом, возвращает результат типа `bool`.
+    Часто используется на множестве элементов для фильтрации. Например [Utils.SArray.filter]
+    @sample [Samples.Definitions.Predicate]
+*/
+Macro SamplePredicate(o) : Bool
+
+End;

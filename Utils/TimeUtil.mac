@@ -1,0 +1,251 @@
+/**
+   @package Utils
+
+*/
+
+// import globals;
+
+private var Monthes = TArray();
+Monthes[Monthes.size] = "Январь";
+Monthes[Monthes.size] = "Февраль";
+Monthes[Monthes.size] = "Март";
+Monthes[Monthes.size] = "Апрель";
+Monthes[Monthes.size] = "Май";
+Monthes[Monthes.size] = "Июнь";
+Monthes[Monthes.size] = "Июль";
+Monthes[Monthes.size] = "Август";
+Monthes[Monthes.size] = "Сентябрь";
+Monthes[Monthes.size] = "Октябрь";
+Monthes[Monthes.size] = "Ноябрь";
+Monthes[Monthes.size] = "Декабрь";
+
+
+Macro getStartMonth(dt : Date, monthOff : Integer) : Date
+   var moff = 0;
+   var calcDt;
+   var y,m,d;
+   if(valType(monthOff)==V_INTEGER)
+      moff = monthOff;
+   end;
+   calcDt = DateShift(dt, null, moff);
+   //getDateOff(dt, 2, moff, calcDt);
+   DateSplit(calcDt, d,m,y);
+   return Date(1,m,y);
+End;
+
+Macro getEndMonth(dt : Date, monthOff : Integer) : Date
+   var stDT = getStartMonth(dt, monthOff);
+   var calcDt = DateShift(stDT, null, 1);         // Начало след. месяца
+   var resDate = calcDt - 1;                    // Минус день
+   return resDate;
+End;
+
+
+// Вызов меню выбора месяца - возвращает имя месяца
+// ind - Возвращает, индекс месяца
+// dt  - Возвращает первый день этого месяца в текущем году.
+// pastCheck - если true, вернет в @dt, первый день, этого месяца в блихкайшем прошлом.
+Macro chooseMonth(ind : @Integer, dt: @Date, pastCheck : Bool) : String
+   var pc = false;
+   if(ValType(pastCheck) == V_BOOL)
+      pc = pastCheck;
+   End;
+   var ch = menu(Monthes, "Выбор месяца", "Месяцы:");
+   if(ch < 0)
+      return "";
+   end;
+   var num = ch + 1;
+   var y;
+   DateSplit(date,null,null,y);
+   if((pc) and( date < date(1,num,y)))
+      y = y - 1;
+   end;
+   setParm(0, num);
+   setParm(1, date(1,num,y));
+   return Monthes[ch];
+End;
+
+Const FORMAT_TYPE_EMPTY= 0;
+Const FORMAT_TYPE_D = 1;
+Const FORMAT_TYPE_M = 2;
+Const FORMAT_TYPE_Y = 3;
+Const FORMAT_TYPE_TEXT = 20;
+
+Class FormatPart(_s)
+   var type       : Integer;
+   var length     : Integer   = 0;
+   var maxLength  : Integer   = 0;
+   var str        : String    = "";
+   var pattern    : String    = "";
+   var isFloat    : Bool      = false;
+
+   Macro append(s : String)
+      str = str + s;
+      length = length + StrLen(s);
+      maxLength = maxLength + StrLen(s);
+      if((type>0) and (type<20))   // определяем плавающее ли количесвто знаков для y,m,d
+         isFloat = (length < 2);
+      end;
+   End;
+
+   Macro like(s : String) : Bool
+      if(pattern == s)
+         return true;
+      else
+         if(FormatPart(s).type == type)
+            return true;
+         end;
+         return false;
+      end;
+   End;
+
+   Macro toStrDay(d : Integer) : String
+      if((d>=10) or (length == 1))
+         return String(d);
+      else
+         return "0" + d;
+      end;
+   End;
+
+   Macro toStrMonth(m : Integer) : String
+      if((m>=10) or (length == 1))
+         return String(m);
+      else
+         return "0" + m;
+      end;
+   End;
+
+   Macro toStrYear(y:Integer) : String
+      if(length == 2)
+         return String(mod(Int(y),100));
+      else
+         return String(y);
+      end;
+   End;
+
+   Macro toStr(d,m,y)
+      if  (type == FORMAT_TYPE_D)
+         return toStrDay(d)
+      elif(type == FORMAT_TYPE_M)
+         return toStrMonth(m);
+      elif(type == FORMAT_TYPE_Y)
+         return toStrYear(y);
+      else
+         return str;
+      end;
+   End;
+
+   if(StrLwr(_s) == "d")
+      pattern = _s;
+      type = FORMAT_TYPE_D;
+      maxLength = 2;
+   elif(StrLwr(_s) == "m")
+      pattern = _s;
+      type = FORMAT_TYPE_M;
+      maxLength = 2;
+   elif(StrLwr(_s) == "y")
+      pattern = _s;
+      type = FORMAT_TYPE_Y;
+      maxLength = 4;
+   elif(StrLen(_s) == 0)
+      pattern = _s;
+      type = FORMAT_TYPE_EMPTY;
+   else
+      pattern = "";
+      type = FORMAT_TYPE_TEXT;
+   end;
+   append(_s);
+End;
+
+Class TU_DateFormat(_mask)
+   var mask = _mask;
+   var yCount;
+   var mCount;
+   var dCount;
+
+   var parts : TArray = TArray();
+
+   Macro addPart(part)
+      if(part.length > 0)
+         parts[parts.size] = part;
+      end;
+   End;
+
+   Macro dateToString(dt : Date) : String
+      var res = "";
+      var year;
+      var month;
+      var day;
+      DateSplit(dt, day, month, year);
+      var p;
+      for(p, parts)
+         res = res + p.toStr(day, month, year);
+      end;
+      return res;
+   End;
+
+   Macro ini()
+      var i = 1;
+      var s;
+      var curP = FormatPart("");
+      while(i <= StrLen(mask))
+         s = SubStr(mask, i, 1);
+         if(curP.like(s))
+            curP.append(s);
+         else
+            addPart(curP);
+            curP = FormatPart(s);
+         end;
+         i = i + 1;
+      end;
+      addPart(curP);
+   End;
+
+   Macro stringToDate(str : String) : Date
+      var len = strLen(str);
+      var inStr;
+      var y, m, d;
+      var p = 0;
+      var i = 1;
+      var tl;
+      for(p, parts)
+         if(not(p.isFloat))
+            if((p.type > 0) and (p.type<20))
+               inStr = Substr(str,i, i + p.length - 1);
+            end;
+            i = i + p.length;
+         else
+            if((p.type > 0) and (p.type<20))
+               inStr = "";
+               tl = 0;
+               while((i <= len) and (tl < p.maxLength))
+                  var s = SubStr(str,i,1);
+                  if (StrIsNumber(s))
+                     inStr = inStr + s;
+                     tl = tl + 1;
+                     i = i + 1;
+                  else
+                     break;
+                  end;
+               end;
+            end;
+         end;
+         if(p.type == FORMAT_TYPE_Y)
+            y = Int(inStr);
+         elif(p.type == FORMAT_TYPE_M)
+            m = Int(inStr);
+         elif(p.type == FORMAT_TYPE_D)
+            d = Int(inStr);
+         end;
+      end;
+
+      return date(d,m,y);
+
+      OnError
+         println("Ошибка преобразования строки в дату : " + str + " -> ???");
+         printStack();
+         exit();
+   End;
+
+   ini();
+End;

@@ -1,0 +1,7 @@
+/**
+   @ancestor Extra
+   @package Forms
+
+   Библиотека ui-элементов.
+*/
+import "../Mac/Extra/Forms/SimpleScroll.mac";

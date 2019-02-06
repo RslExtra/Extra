@@ -1,0 +1,13 @@
+import "..\\mac\\extra\\collection\\collection.mac";
+//<
+var list = ArrayList();
+list.add(1);
+list.add(2);
+list.add(3);
+list.add(4);
+for(var l, list)
+   print(l + " ");
+end;
+//>
+
+

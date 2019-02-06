@@ -1,0 +1,222 @@
+
+Class TbIterator(_file)
+   var extb = _file;
+   var asc = true;
+   var firstPos = 0;
+   var lastPos  = 0;
+   var curPos   = 0;
+   var hn = false;
+   var hp = false;
+
+   Macro hasNext()
+      return hn;
+   End;
+
+   Macro hasPrev()
+      return hp;
+   End;
+
+   Macro next()
+      hn =  (extb.next and (extb.inFile.GetPos() != lastPos));
+      return extb.rec;
+   End;
+
+   Macro previous()
+      hp = (extb.prev and(extb.inFile.GetPos() != firstPos));
+      return extb.rec;
+   End;
+
+   Macro clear()
+      extb.infile.clear();
+      extb.infile.rewind();
+      this.ini();
+   End;
+
+   Macro ini()
+      extb.inFile.rewind();
+      if(extb.inFile.prev == false)
+         return;
+      end;
+      lastPos = extb.inFile.GetPos();
+      extb.inFile.rewind();
+      extb.inFile.next();
+      firstPos = extb.inFile.GetPos();
+      if(extb.rewinded == false)
+         extb.inFile.GetDirect(lastPos);
+      else
+         extb.inFile.rewind();
+         extb.inFile.clear();
+      end;
+      hn = true;
+      hp = true;
+   End;
+
+   ini();
+End;
+
+Class (TbIterator) DescTbIterator(_file)
+   InitTbIterator(_file);
+end;
+
+Class EXTBFile(_tbfile, _fixed : Bool)
+   var inFile : TBFile = _tbfile;
+   var fixed : Bool    = _fixed;
+   var filename = _tbfile.TblName;
+   var dicName  = _tbfile.DicName;
+   var keyNum = _tbfile.KeyNum;
+   var rewinded = true;
+   Private var iter = TbIterator(this, true);
+   Private var arrVal : TArray;
+   Private var arrSize : Integer;
+   Private var arrKeys ;
+   Private var arrKeysSize;
+   Private var arrKeysType;
+
+   // Singleton iterator!
+   Macro newIterator()
+      return iter;
+   End;
+
+   Macro getInstance()
+      return EXTBFile(TBFile, fixed);
+   End;
+
+   Macro NRecords() : Integer
+      return inFile.NRecords();
+   End;
+   Macro getCurKeys(_KN : Integer)
+      var THandl = TRecHandler(filename, dicName);
+      var i = 0;
+      var k = 0;
+      var find = false;
+      var curP;
+      var pos;
+      var ar = THandl.GetKeyInfo();
+      var arF = THandl.GetFldInfo();
+      arrKeys = TArray;
+      arrKeysType = TArray;
+      while(i<ar.size)
+         if(ar[i] == _KN)
+            curP = ar[i+2];
+            arrKeys[k]      = curP;
+            pos = curP * 5;
+            arrKeysType[k]  = arF[pos + 1];
+            k = k + 1;
+            find = true;
+         elif(find)
+            arrKeysSize = k;
+            break;
+         end;
+         i = i + 5;
+      end;
+   End;
+
+   Macro setAllParm()
+      var curProp;
+      var i = 0;
+      var ok = true;
+      if(true)
+         arrVal = TArray();
+         while(ok)
+            ok = GetParm(i, curProp);
+            if(ok)
+               arrVal(i) = curProp;
+               i = i + 1;
+            end;
+         end;
+         arrSize = i;
+      end;
+   End;
+
+   Macro clearRewind()
+      inFile.rewind();
+      inFile.clear();
+      rewinded = true;
+   End;
+
+   Macro rec()
+      return inFile.rec;
+   End;
+
+   Macro next()
+      return inFile.next();
+   End;
+
+   Macro prev()
+      return inFile.prev();
+   End;
+
+   Macro fixedNext()
+      var hand = TRecHandler(filename, dicName);
+      copy(hand, inFile);
+      return hand;
+   End;
+
+   Macro prepareFun()
+      var i = 0;
+      var p;
+      var v;
+      for(i, 0, arrKeysSize - 1)
+         p = arrKeys[i];
+         v = arrVal[i];
+         if(ValType(v) == V_UNDEF)
+            defVal(arrKeysType[i], v);
+         end;
+         inFile.rec[p] = v;
+      end;
+   End;
+
+   Macro getGE(props) : Bool
+      arrVal = props;
+      clearRewind();
+      prepareFun();
+      var res = inFile.getGE();
+      rewinded = false;
+      return res;
+   End;
+
+   Macro getGT(props) : Bool
+      arrVal = props;
+      clearRewind();
+      prepareFun();
+      var res = inFile.getGT();
+      rewinded = false;
+      return res;
+   End;
+
+   Macro getLE(props) : Bool
+      arrVal = props;
+      clearRewind();
+      prepareFun();
+      var res = inFile.getLE();
+      rewinded = false;
+      return res;
+   End;
+
+   Macro getLT(props) : Bool
+      arrVal = props;
+      clearRewind();
+      prepareFun();
+      var res = inFile.getLE();
+      rewinded = false;
+      return res;
+   End;
+
+   Macro getEQ(props) : Bool
+      arrVal = props;
+      clearRewind();
+      prepareFun();
+      var res = inFile.getEQ();
+      rewinded = false;
+      return res;
+   End;
+
+   Macro DoWhile()
+
+   End;
+
+   getCurKeys(KeyNum);
+   if (fixed)
+      GenAttach(this, "next", R2M(this, "fixedNext"));
+   end;
+End;

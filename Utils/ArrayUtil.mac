@@ -1,0 +1,450 @@
+/**
+   @package Utils
+*/
+var Arrays = GenObject("ArrayUtil");
+/**
+
+   Класс утилит для удобной работы с массивами типа [TArray].
+   Представлен singlton объектом `Arrays`.
+   Например чтобы создать массив, необходимо импортировать макрофайл и вызвать метод
+```
+   import "../mac/Extra/ext_ArrayUtil.mac";
+   var myArr = Arrays.of("first el", 2, null);
+```
+
+*/
+
+
+Private Class ArrayUtil()
+   /**
+      Выводит на экран элементы массива 'arr'.
+   */
+   Macro toScreen(arr)
+      var str = "[";
+      for(var i, 0, arr.size - 1, 1)
+         str = str + String(arr[i]);
+         if(i != arr.size - 1)
+            str = str + ", ";
+         end;
+      end;
+      str = str + "]";
+      println(str);
+   End;
+
+   /**
+      Возвращает `true`, если массив 'arr' равен `null` или размер массива равен 0. `false` в противном случае.
+   */
+   Macro isNullOrEmpty(arr) : Bool
+      return ((ValType(arr) == V_UNDEF) or (arr.size == 0));
+   End;
+
+   /**
+      Возвращает `false`, если массив 'arr' равен `null` или размер массива равен 0. `true` в противном случае.
+   */
+   Macro notNullOrEmpty(arr) : Bool
+      return ((ValType(arr) != V_UNDEF) and (arr.size != 0));
+   End;
+
+   /**
+      Возвращает новый массив типа [TArray] и заполняет его аргументами.
+      Если не указывать ни одного аргумента, вернется массив инициализированный одним `null`.
+   */
+   Macro of(varargs) : TArray
+      var resArr = TArray();
+      for (var i, 1, Parmcount-1, 1)
+         GetParm(i, resArr[i-1]);
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает итератор подобный [Collections.BaseIterator] для работы с массивом 'arr'
+   */
+   Macro newIterator(arr)
+      if(ValType(arr) == V_UNDEF)
+         RunError("Не возможно создать итератор массива для " + arr);
+      end;
+      return GenObject("ArrayIterator", arr);
+   End;
+
+   /**
+      Возвращает индекс элемента массива 'arr' равного 'element', '-1' в случае если ничего не найдено.
+      Если 'element' является 'null', функция вернет индекс первого элемента массива равный `null`.
+      Так же есть возможность указать ссылку на функцию компаратор или её имя в 3 аргументе 'compfunc'.
+      Функция-компаратор должна принимать два аргумента и возвращать 0 в случае их равенства.
+      Если функцию-компаратор не указывать сравнение будет проходить через `==` т.е. в случае когда 'element' объектного типа, сравнение будет проходить по ссылке.
+   */
+   Macro indexOf(arr, element, compfunc)
+      if(ValType(arr) == V_UNDEF) return -1; end;
+      var i;
+      if(ValType(compfunc) != V_UNDEF)
+         if(ValType(element) == 19)
+            var clName = GenClassName(element);
+            for(i, 0, arr.size-1, 1)
+               if (isEqClass(clName, arr[i]) and (ExecMacro2(compfunc, arr[i], element) == 0))
+                  return i;
+               end;
+            end;
+         else
+            for(i, 0, arr.size-1, 1)
+               if(ExecMacro2(compfunc, arr[i], element) == 0)
+                  return i;
+               end;
+            end;
+         end;
+
+      elif (ValType(element) == V_UNDEF)
+         for(i, 0, arr.size-1, 1)
+            if(ValType(arr[i]) == V_UNDEF)
+               return i;
+            end;
+         end;
+      else
+         for(i, 0, arr.size-1, 1)
+            if((ValType(arr[i]) != V_UNDEF) and (arr[i] == element))
+               return i;
+            end;
+         end;
+      end;
+      return -1;
+   End;
+
+   /**
+      Метод аналогичен [ArrayUtil.indexOf indexOf]; но возвращает индекс 'последнего' элемента или -1;
+   */
+   Macro lastIndexOf(arr, element, compfunc)
+      if(ValType(arr) == V_UNDEF) return -1; end;
+      var i;
+      if(ValType(compfunc) != V_UNDEF)
+         if(ValType(element) == 19)
+            var clName = GenClassName(element);
+            for(i, arr.size-1, 0, -1)
+               if (isEqClass(clName, arr[i]) and (ExecMacro2(compfunc, arr[i], element) == 0))
+                  return i;
+               end;
+            end;
+         else
+            for(i, arr.size-1, 0, -1)
+               if(ExecMacro2(compfunc, arr[i], element) == 0)
+                  return i;
+               end;
+            end;
+         end;
+      elif (ValType(element) == V_UNDEF)
+         for(i, arr.size-1, 0, -1)
+            if(ValType(arr[i]) == V_UNDEF)
+               return i;
+            end;
+         end;
+      else
+         for(i, arr.size-1, 0, -1)
+            if((ValType(arr[i]) != V_UNDEF) and (arr[i] == element))
+               return i;
+            end;
+         end;
+      end;
+      return -1;
+   End;
+
+   /**
+      Возвращает `true` если массив 'arr' содержит хоть один элемент `null`. `false` в противном случае.
+   */
+   Macro containsNull(arr : TArray)
+      for(var el, arr)
+         if(ValType(el) == V_UNDEF)
+            return true;
+         end;
+      end;
+      return false;
+   End;
+
+   /**
+      Возвращает `true` если массив 'arr' содержит 'element'. `false` в противном случае.
+      Если 'element' является объектом следует указать функцию компаратор 'compfunc'.
+      В противном случае сравнение будет проходить по ссылке на объект.
+   */
+   Macro contains(arr : TArray, element : Variant, compfunc)
+      if(ValType(element) == V_UNDEF)
+         return this.containsNull(arr);
+      else
+         return (this.indexOf(arr, element, compfunc) > 0);
+      end;
+   End;
+
+   /**
+      Удаляет элемент в массиве 'arr' с индексом 'ind', "схлопывая" пустоту. Возвращает удаляемый элемент.
+   */
+   Macro remove(arr : @TArray, ind : Integer)
+      if((ind<0) or (ind>arr.size-1))
+         RunError("Выход за границы массива при remove");
+      end;
+      var ret = arr[ind];
+      var resArr = TArray;
+      var i;
+      for(i,0,ind-1,1)
+         resArr[i] = arr[i];
+      end;
+      for(i,ind+1,arr.size - 1,1)
+         resArr[i-1] = arr[i];
+      end;
+      setparm(1, resArr);
+      return ret;
+   End;
+
+   /**
+      Возвращает новый массив, заполненный элементами исходного массива 'arr' с индекса 'from' (включительно) по индекс 'to' (исключительно).
+      Если from не указан или равен 'null', заполняется с начала исходного массива.
+      Если 'to' не указан или равен 'null', заполняется до конца исходного массива.
+   */
+   Macro subArray(arr : TArray, from : Integer, to : Integer)
+      if(ValType(from) == V_UNDEF)
+         from = 0;
+      end;
+      if(ValType(to) == V_UNDEF)
+         to = arr.size;
+      end;
+      var resArr = TArray;
+      if(to==from) return resArr; end;
+      resArr[to-from-1] = null;
+      for(var i, 0, to-from-1, 1)
+         resArr[i] = arr[from+i];
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает копию массива 'arr'.
+   */
+   Macro copy(arr : TArray) : TArray
+      return subArray(arr);
+   End;
+
+   /**
+      Разворачивает массив 'arr'.
+   */
+   Macro reverse(arr : TArray)
+      var t;
+      var s = arr.size - 1;
+      for(var i, 0, s/2, 1)
+         t = arr[i];
+         arr[i] = arr[s-i];
+         arr[s-i] = t;
+      end;
+   End;
+
+
+   /**
+      Возвращает объединённый массив из элементов массивов 'arr1' и 'arr2'.
+   */
+   Macro mergeArrays(arr1 : TArray, arr2 : TArray) : TArray
+      var resArr = TArray();
+      resArr[arr1.size + arr2.size - 1] = null;
+      for(var i, 0, arr1.size-1, 1)
+         resArr[i] = arr1[i];
+      end;
+      for(var el, arr2)
+         i = i + 1;
+         resArr[i] = el;
+      end;
+      return resArr;
+   End;
+
+   /**
+      Добавляет в конец массива 'arr' элементы массива 'arr2'.
+   */
+   Macro addArray(arr : TArray, arr2 : TArray)
+      var s  = arr.size;
+      var s2 = arr2.size;
+      if(s2 == 0) return; end;
+      arr[s + s2 - 1] = null;
+      for(var i, 0, s2 - 1, 1)
+         arr[s+i] = arr2[i];
+      end;
+   End;
+
+   /**
+      Возвращает новый массив, состоящий из элементов исходного массива 'arr', для которых функция-предикат 'func' возвращает `true`.
+
+      Пример:
+      ```
+         Macro isEven(el) : Bool
+            return (mod(el,2) == 0);
+         End;
+         var arr = SArray(1,2,3,4,5);
+         var even = Arrays.filter(arr, @isEven);
+         Arrays.toScreen(even);  // [2, 4]
+
+      ```
+   */
+   Macro filter(arr, predicFunc)
+      if(ValType(predicFunc) == V_UNDEF)
+         RunError("Не указана функция-предикат");
+      end;
+      var resArr = TArray();
+      for(var el, arr)
+         if(ExecMacro2(predicFunc, el))
+            resArr[resArr.size] = el;
+         end;
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает новый массив преобразованных функцией 'mapFunc' всех элементов исходного массива 'arr'.
+
+      Пример:
+      ```
+         Macro squareInt(el)
+            return (el*el);
+         End;
+         var arr = Arrays.of(1,2,3,4);
+         var sq = Arrays.map(arr, @squareInt);
+         Arrays.toScreen(sq); // [1, 4, 9, 16]
+      ```
+   */
+   Macro map(arr, mapFunc)
+      if(ValType(mapFunc) == V_UNDEF)
+         RunError("Не указана функция-преобразования");
+      end;
+      var resArr = TArray();
+      resArr[arr.size-1] = null;
+      for(var i, 0, arr.size-1, 1)
+         resArr[i] = ExecMacro2(mapFunc, arr[i]);
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает результат выполнения функции 'reduceFunc' на элементы исходного массива 'arr'.
+
+      Пример:
+      ```
+         Macro sumReduce(acc, el)
+            return acc + el;
+         End;
+
+         var arr = Arrays.of(1,2,3,4);
+         var res = Arrays.reduce(arr, @sumReduce, 0);
+         println(res);    //10
+      ```
+      @param arr исходный массив
+      @param accumulator начальное значение
+      @param reduceFunc  функция редюсер
+   */
+   Macro reduce(arr, reduceFunc, accumulator)
+      for(var el, arr)
+         accumulator = ExecMacro2(reduceFunc, accumulator, el);
+      end;
+      return accumulator;
+   End;
+End;
+
+Private Class ArrayIterator(_arr : TArray)
+   var arr = _arr;
+   var nextIndex : Integer = 0;
+   var lastReturned;
+
+   Macro hasNext() : Bool
+      return (nextIndex < arr.size);
+   End;
+
+   Macro hasPrev() : Bool
+      return (nextIndex != 0);
+   End;
+
+   Macro next() : Variant
+      lastReturned = arr[nextIndex];
+      nextIndex = nextIndex + 1;
+      return lastReturned;
+   End;
+
+   Macro prev() : Variant
+      nextIndex = nextIndex - 1;
+      lastReturned = arr[nextIndex];
+      return lastReturned;
+   End;
+
+   Macro set(el : Variant)
+      arr[nextIndex-1] = el;
+   End;
+
+   Macro add(el : Variant)
+      for(var i, arr.size, nextIndex, -1)
+         arr[i] = arr[i-1];
+      end;
+      arr[nextIndex] = el;
+   End;
+
+   Macro remove()
+      return;
+      // не реализовано, по причине неизменности исходного массива
+      /*
+      var el = arr[nextIndex-1];
+      var newArr = Arrays.subArray(arr, 0, nextIndex-1);
+      Arrays.addArray(newArr, Arrays.subArray(arr, nextIndex));
+      arr = StrongRef(newArr);
+      return el;
+      */
+   End;
+End;
+
+Macro removeWithShift(arr : @TArray, ind : Integer)
+   if((ind<0) or (ind>arr.size-1)) return; end;
+   var resArr = TArray;
+   var i;
+   for(i,0,ind-1,1)
+      resArr[i] = arr[i];
+   end;
+   for(i,ind+1,arr.size - 1,1)
+      resArr[i-1] = arr[i];
+   end;
+   setparm(0,resArr);
+End;
+
+Macro removeObjectWithShift(arr : @TArray, obj : Object)
+   if(ValType(obj) == V_UNDEF) return; end;
+   var resArr = TArray;
+   var i = 0;
+   var k = 0;
+   while(i<arr.size)
+      if(arr[i] != obj)
+         resArr[k] = arr[i];
+         k = k + 1;
+      end;
+      i = i + 1;
+   end;
+   setparm(0,resArr);
+End;
+
+Macro ArrayOf(/*varargs*/) : TArray
+   var resArr = TArray();
+   var pn = Parmcount();
+   var i;
+   for (i, 0, pn-1, 1)
+      GetParm(i, resArr[i]);
+   end;
+   return resArr;
+End;
+
+/**
+   Ищет и возвращает результат поиска в массиве 'arr' объекта или примитива 'find' согласно функции компаратору 'comp'.
+*/
+Macro findInArray(arr : TArray, find : Variant, comp) : Variant
+   for(var a, arr)
+      if(ExecMacro2(comp, a, find) == 0)
+         return a;
+      end;
+   end;
+End;
+
+/**
+   Ищет и возвращает результат поиска в массиве 'arr' объекта или примитива 'find' согласно функции компаратору 'comp'.
+*/
+Macro findInNullableArray(arr : TArray, find : Variant, comp) : Variant
+   if (arr == null) return; end;
+   for(var a, arr)
+      if(ExecMacro2(comp, a, find) == 0)
+         return a;
+      end;
+   end;
+End;

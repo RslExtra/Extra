@@ -1,0 +1,125 @@
+
+Class SimpleScroll()
+   Const prefix   =  " ";
+   Const postfix  =  " ";
+   Const divider  =  " | ";
+
+   var size  = 0;
+   var title = "Меню";
+   var mess  = "Выберите";
+   var x;
+   var y;
+   var n = 0;
+   var LineArr= TArray();
+   var ObjArr = TArray();
+   var ColumnProps = TArray();
+   var ColumnSizes = TArray();
+
+   Macro setTitle(_Title : String)
+      this.title = _Title;
+      return this;
+   End;
+
+   Macro setMessage(_Message)
+      this.mess = _Message;
+      return this;
+   End;
+
+   Macro setCoord(_x, _y)
+      this.x = _x;
+      this.y = _y;
+      return this;
+   End;
+
+   Macro setActiveLine(_n)
+      this.n = _n;
+      return this;
+   End;
+
+   Macro setActiveObject(obj)
+      if(ValType(obj) == V_UNDEF)
+         return setActiveLine(0);
+      end;
+      var i = ObjArr.size - 1;
+      while((i > 0) and (obj.CompareTo(ObjArr[i])!=0))
+         i = i - 1;
+      end;
+      return setActiveLine(i);
+   End;
+
+   Macro setCol(propName : String, ssize : Integer)
+      ColumnProps[ColumnProps.size] = propName;
+      ColumnSizes[ColumnSizes.size] = ssize;
+      return this;
+   End;
+
+   Macro processStr(str : String, ns : Integer) : String
+      var res = "";
+      var ln = StrLen(str);
+      if(ln>=ns)
+         res = SubStr(str,1, ns);
+      else
+         var i = 0;
+         res = str;
+         while(i < (ns - ln))
+            res = res + " ";
+            i = i + 1;
+         end;
+      end;
+      return res;
+   End;
+
+   private Macro addLine(obj : Variant)
+      var i = 0;
+      var s = prefix;
+      var propVal;
+      var sz = 0;
+      while(i < ColumnProps.Size)
+         propVal = GenGetProp(obj,ColumnProps[i]);
+         sz      = ColumnSizes[i];
+         s = s + processStr(String(propVal), sz);
+         i = i + 1;
+         if(i < ColumnProps.size)
+            s = s + divider;
+         end;
+      end;
+      s = s + postfix;
+      LineArr[LineArr.size] = s;
+   End;
+
+   Macro processLines()
+      var i = 0;
+      while(i < ObjArr.size)
+         addline(ObjArr[i]);
+         i = i + 1;
+      end;
+   End;
+
+   Macro add(obj : Variant)
+      ObjArr(ObjArr.size) = obj;
+      size = size + 1;
+      return this;
+   End;
+
+   Macro addArray(arr : TArray)
+      var i = 0;
+      while(i < arr.size)
+         add(arr[i]);
+         i = i + 1;
+      end;
+      return this;
+   End;
+
+   Macro indexOf()
+      processLines();
+      var mn = Menu(LineArr, mess, title, x, y, n);
+      return mn;
+   End;
+
+   Macro valueOf() : Variant
+      var ind = indexOf();
+      if(ind>=0)
+         return ObjArr[ind];
+      end;
+   End;
+End;

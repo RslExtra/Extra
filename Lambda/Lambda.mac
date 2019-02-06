@@ -1,0 +1,221 @@
+/**
+   @package Lambda
+   @title   Лямбда-функции
+   @ancestor Extra
+
+   Библиотека для динамического создания функций из строковых шаблонов.
+   Принцип работы основан на кодогенерации. Выражение преобразуется в код макрофункции, затем он записывается в файл, динамически импортируется в текущий контекст, временный файл удаляется, метод остается доступен по ссылке в переменной, который можно вызвать через стандартные [ExecMacro2] или [CallR2M].
+   Используется в библиотеках:
+    - [Collections]
+    - [StreamApi]
+    - [Utils.SArray]
+*/
+
+import rsexts;
+
+/**
+   Флаг отладки лямбда выражений. Добавляет в начале каждой сгенерированной функции оператор [debugbreak], что позволяет отлаживать сгенерированные функции. По умолчанию равен `false`.
+*/
+var LAMBDA_DEBUG : bool  = false;
+
+/**
+   Флаг автоматического удаления сгенерированных файлов. Если установить его в значение `false`, все сгенерированные файлы будут доступны в рабочем каталоге. По умолчанию равен `true`.
+*/
+var LAMBDA_REMOVE : bool = true;
+
+/**
+   Строковое значение стрелки в лямбда выражении. По умолчанию равно '->'.
+*/
+var LAMBDA_ARROW : String = "->";
+
+/**
+   Имя аргумента функции для использования без "стрелки". По умолчанию равен 'it'.
+*/
+var LAMBDA_DEFPARM : String = "it";
+
+/* Количество сгенерированных функций, для избежания коллизий.*/
+Private var countLambdas = 0;
+/* Массив уже сгенерированных функций */
+Private var LamArray = TArray();             // Массив уже сгенерированных лямбд
+/* Генератор лямб */
+Private var lGen = GenObject("LambdaGen");   // Генератор лямбд
+
+/* Префикс названия файлов.*/
+Private CONST FILE_PREFIX = "lam_";
+
+/*
+   Вспомогательная функция для нахождения последнего вхождения подстроки в строке.
+*/
+Private Macro IndexRev(_str, _findStr, _startPos) : Integer
+   var findLen = strLen(_findStr);
+   var startPos = StrLen(_str);
+   if(findLen == 0) return 0; end;
+   if((ValType(_startPos) == V_INTEGER) and (startPos > 0))
+      if(_startPos<findLen) return 0; end;
+      startPos = _startPos;
+   end;
+   var i = 0;
+   for(i, startPos - findLen + 1, 1, -1)
+      if(SubStr(_str, i, findLen) == _findStr)
+         return i;
+      end;
+   end;
+   return 0;
+End;
+
+/*
+   Получаем папку для записи временных файлов
+*/
+Private Macro getWorkDirPath() : String
+   var path = ExecMacro2("getRegVal", "BANK_INI\\ОБЩИЕ ПАРАМЕТРЫ\\ДИРЕКТОРИИ\\WORKDIR", true);
+   if((ValType(path) != V_UNDEF) and (path != ""))
+      return path;
+   end;
+   return "..\\WorkFile\\";
+End;
+
+/*
+   Вспомогательная функция для проверки корректности текста лямбда выражения.
+*/
+Private macro checkLambdaText(lambdaText) : Bool
+   return true;
+   if ((Index(lambdaText, LAMBDA_ARROW) < 1) and (Index(lambdaText, LAMBDA_DEFPARM) < 1))
+      return false;
+   end;
+   return true;
+End;
+
+Private Class LambdaGen()
+   var curLamFilename;
+   var curLamClassName;
+   var dirPath = ExecMacro2("getWorkDirPath");
+   var TmpFile : TStreamDoc;
+   var un = UserNumber();
+
+   Macro generateFileName()
+      curLamFilename = dirPath + FILE_PREFIX + un + "_" + countLambdas + "." + (1000 + Random(8999));
+   End;
+
+   Macro createFile() : Bool
+      TmpFile = TStreamDoc (curLamFilename, "W","rsoem");
+      return true;
+      onError
+         msgBox("Ошибка при создании файла лямбда-функции " + curLamFilename);
+         Exit();
+         return false;
+   End;
+
+   Macro writeTempFile(inputText)
+      var funcText = Trim(inputText);
+      var indArrow = Index(funcText, LAMBDA_ARROW);
+      var args = SubStr(funcText, 1, indArrow - 1);
+      var body = SubStr(funcText, indArrow + 2);
+      if (indArrow == 0)
+         args = LAMBDA_DEFPARM;
+         body = funcText;
+      end;
+      if (Substr(body, StrLen(body)) == ";")         // отрезаем крайнюю ';'
+         body = Substr(body, 1, StrLen(body) - 1);
+      end;
+      var lastSepInd = IndexRev(body, ";");         // ищем последнюю ';'
+      var firstPart = SubStr(body, 1, lastSepInd);  // Выделяем части до и после, чтобы добавить к последней return;
+      var lastPart  = SubStr(body, lastSepInd + 1);
+
+      if (LAMBDA_DEBUG) //Если режим дебага добавим debugbreak внутрь лямбды
+         firstPart = "debugbreak;" + firstPart;
+      end;
+
+      var textMacro = "Macro lam" + "(" +  args + ") " + firstPart +"return (" + lastPart + "); end; ";
+      var lambdaText = StrSubst(funcText, "\"", "\\\"");
+      textMacro = StrSubst(textMacro, "'", "\"");         // Меняем одинарные кавычки на простые
+      TmpFile.writeLine("class " + curLamClassName +"()");
+      TmpFile.writeLine("var lambdaText = \"" + lambdaText + "\";");
+      TmpFile.writeLine(textMacro);
+      TmpFile.writeLine("End;");
+      TmpFile = null;
+   end;
+
+   Macro removeTempFile()
+      if (LAMBDA_REMOVE)
+         removeFile(curLamFilename);
+      end;
+   End;
+
+   Macro makeMacro(l)
+      countLambdas = countLambdas + 1;
+      curLamClassName = "LamObject" + countLambdas;
+      generateFileName();
+      createFile();
+      writeTempFile(l);
+      instLoadModule(curLamFilename);
+      var lob = GenObject(curLamClassName);
+      LamArray[LamArray.size] = lob;
+      removeTempFile();
+      return R2M(lob, "lam");
+   End;
+End;
+
+/**
+   Возвращает ссылку на сгенерированный метод согласно выражению 'lambdaText'.
+   Функция генерируется по следующим алгоритмам. Слева от стрелки через запятую перечисляются параметры функции с любыми именами, затем идет стрелка (по умолчанию '->'), справа от стрелки идет тело функции. Последнее выражение после ';' (если имеется) передается в 'return'. Для удобства чтения, внутри текста лямбды вместо символа двойных кавычех рекомендуется использовать символ одинарных.
+
+   Например:
+```
+   var ref = Lambda("i, j -> println(i + ' and ' + j); i+j");
+   /*
+      В результате будет сгененирована функция вида
+      Macro lam(i, j)
+         println(i + " and " + j);
+         return (i+j);
+      End;
+   */
+
+   // Вызываем функцию
+   var result = ExecMacro2(ref, 10, 23);  // 10 and 23
+   println(result);   // 33
+```
+   Если фукция с одним аргументом, есть возможность упростить запись лямбда-выражения, передав только тело функции, где именем входного параметра будет являться 'it'. Например:
+```
+   var sqRef = Lambda("it*it");      // Функция возведения в квадрат
+   var b = ExecMacro2(sqRef, 5);
+   println(b);                     // 25
+```
+
+*/
+Macro Lambda(lambdaText : String)
+   if (checkLambdaText(lambdaText))
+      return lGen.makeMacro(lambdaText);
+   else
+      RunError("Неверное лямбда-выражение \n" + lambdaText);
+   end;
+   OnError(err)
+      return null;
+End;
+
+/**
+   Возвращает ссылку на функцию или бросает исключение. Функция принимает 'funrefOrLambdaText' которая должна быть или ссылкой на функцию, или корректным лямбда-выражением. Может использоваться как адаптер в библиотеках, где необходима возможность использовать лямбда-функции.
+*/
+Macro getFunOrLambda(funrefOrLambdaText)
+   var type = ValType(funrefOrLambdaText);
+   if ((type == V_PROC) or (type == V_R2M))
+      return funrefOrLambdaText;
+   elif (type == V_STRING)
+      for(var lamObj, LamArray)
+         if (lamObj.lambdaText == funrefOrLambdaText)
+            return R2M(lamObj, "lam");
+         end;
+      end;
+      return Lambda(funrefOrLambdaText);
+   else
+      RunError("Неверный тип для создания лямбда-выражения");
+   end;
+   OnError(err)
+      return null;
+End;
+
+/**
+   Функция-маркер для проверки загрузки библиотеки.
+*/
+Macro LambdaLoadedMarker()
+   return 1;
+End;

@@ -1,0 +1,68 @@
+import "..\\Mac\\Extra\\Stream\\Stream.mac";
+import or_rep_h;
+
+/**/
+Class (ForEachStream) toReportStream(_fields : TArray, _headersOrStr : Variant)
+   initForEachStream(R2M(this, "funcAddToReport"));
+
+   var fields  = _fields;
+   var headers = _headersOrStr;
+   var addAll  = false;
+   var rep = null;
+
+
+   Macro funcAddToReport(par : Object)
+      if(ValType(par) == V_UNDEF) return; end;
+      var i;
+      if(addAll)
+         for(i, 0, GenNumProps(par) - 1, 1)
+            rep.addPrintCell(par[i], 0, 2, null, REP_ELEM_TABL);
+         end;
+      else
+         for(i, 0, fields.size - 1, 1)
+            rep.addPrintCell(GenGetProp(par, fields[i]), 0, 2, null, REP_ELEM_TABL);
+         end;
+      end;
+      rep.addStr();
+   end;
+
+   Macro stopStream()
+      if(ValType(rep) != V_UNDEF)
+         Rep.SetWinRepOutPut(0, 0);
+         Rep.AddWinRepOutput( WINREP_OUTPUT_EXCEL, WINREP_FORMAT_XLS);
+         Rep.PrintWinRep();
+         Rep.ShowWinRep();
+         Rep = null;
+      end;
+      needStop = true;
+      if(Valtype(downstream) != V_UNDEF)
+         downstream.stopStream();
+      end;
+   End;
+
+   addAll = (ValType(fields) == V_UNDEF);
+
+   local var strHeader;
+   local var hdr;
+   local var i;
+
+   if(ValType(_headersOrStr) == V_STRING)
+      strHeader = _headersOrStr;
+   elif(IsEqClass("TArray", _headersOrStr))
+      hdr = CHeader();
+      for(i, 0, _headersOrStr.size - 1, 1)
+         hdr.AddChild(_headersOrStr[i], 15);
+      end;
+      strHeader = hdr.CreateHeader(3, null);
+   end;
+
+   if((ValType(hdr == V_UNDEF))and addAll)
+      hdr = CHeader();
+      for(i, 0, fields.size - 1, 1)
+         hdr.AddChild(fields[i]);
+      end;
+      strHeader = hdr.CreateHeader(3, null);
+   end;
+
+   rep = CMakeReport(strHeader);
+End;

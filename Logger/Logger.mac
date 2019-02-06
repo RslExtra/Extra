@@ -1,0 +1,207 @@
+/*********************************************************
+@FILE         :     Logger.mac
+@COPYRIGHT    :
+@DESCRIPTION  :     Логгеры.
+                    Logger        - для записи в файлы для каждого пользователя.
+                    SingleLogger  - для записи в один файл.
+@AUTHOR       :     Джаныбаев М.П. (maratkhv@mail.ru)
+@CREATION DATE:     10.01.2018
+@Update       :
+************************************************************/
+
+// Logger(fullname : String, [isOn : Bool]) - класс для логирования в текстовый файл
+// fullname - обязательный параметр, указывается полный путь до файла лога относительно папки на сервере н.р "..\\WorkFiles\\Logs\\myprog.log" - Тогда созданный лог-файл будет выглядеть например %RS-BankDir%\WorkFiles\Logs\myprog_9999_2.log
+// Все вложенные папки в случае отстутствия создаются автоматически
+// isOn  - необязательный параметр. По умолчанию - true. Включение/отключения логирования.
+
+// Методы:
+// d(MessageText : String) - вывод в лог с префиксом [DEBUG]
+// e(MessageText : String) - вывод в лог с префиксом [ERROR]
+// i(MessageText : String) - вывод в лог с префиксом [INFO ]
+
+// import BankInter;
+import rsexts;
+
+Class Logger(fullname : String, isOn : Bool)
+   var on       : Bool    = true;                  // Флаг работы логгера
+   var showD    : Bool    = true;                  // Флаг печати log.d
+   var showE    : Bool    = true;                  // Флаг печати log.e
+   var showI    : Bool    = true;                  // Флаг печати log.i
+   var tryErr   : Integer = 10;                    // Количество попыток доступа к файлу
+   var tryDelay : Integer = 0;                     // Задержка перед повторной попыткой
+   var printToScreen : Bool = false;               // Выводить на экран
+   var printToFile   : Bool = true;                // Печатать в файл
+
+   private var filepath;
+   private var basePath;
+   private var baseName;
+   private var baseExt;
+   private var fileStream;
+   private var operUser    = ExecMacro2("getUserNumber");         // Можно заменить номером опера {oper} из BankInter
+   private var curTry      = 1;
+   private var noError     = true;
+
+   if(ValType(isOn) == V_BOOL)
+      on = isOn;
+   end;
+
+   Private Macro getStr(msgPreffix : String, msgText : String) : String
+      return "["+ msgPreffix + "] - " + "Oper: " + operUser + ", " + date + ", " + time + " [" + msgText + "] ";
+   End;
+
+   Private Macro writeStr(msgPreffix : String, shortmsg : String)
+      if(not(on)) return; end;
+      if(printToFile and noError)
+         var fullmsg = getStr(msgPreffix, shortmsg);
+         filestream.WriteLine(fullmsg);
+      end;
+      if(printToScreen)
+        println(shortmsg);
+      end;
+   End;
+
+   Macro i(MessageText : String)
+      if(showI)
+         writeStr("INFO ", MessageText);
+      end;
+   End;
+
+   Macro e(MessageText : String)
+      if(showE)
+         writeStr("ERROR", MessageText);
+      end;
+   End;
+
+   Macro d(MessageText : String)
+      if(showD)
+         writeStr("DEBUG", MessageText);
+      end;
+   End;
+
+   Private Macro makeDirs(path : String)
+      var arr = ExecMacro2("StrSplitToArr", path, "\\");
+      var i = 0;
+      var p = "";
+      for(i, 0, arr.size - 2)
+         p = p + arr(i) + "\\";
+         Makedir(p);
+      end;
+   End;
+
+   Private Macro tryFileStream(fpath) : Bool
+      fileStream = TStreamDoc(fpath, "A", "rsansi");
+      return true;
+      OnError(er)
+         return false;
+   End;
+
+   Private Macro getCurPath() : String
+      if(curTry == 1)
+         return basePath + baseName + "_" + operUser + baseExt;
+      else
+         return basePath + baseName + "_" + operUser + "_" + curTry + baseExt;
+      end;
+   End;
+
+   Private Macro ini(fpath : String)
+      if(on == false) return; end;
+      MakeDirs(fpath);
+      basePath = SplitFile(fpath, baseName, baseExt);
+      filepath = getCurPath();
+
+      while(curTry <= TryErr)
+         if(tryFileStream(filepath));
+            return;
+         end;
+         curTry = curTry + 1;
+         filepath = getCurPath();
+      end;
+      noError = false;
+   End;
+
+   Macro Destructor()
+      fileStream = null;
+   End;
+
+   ini(fullname);
+End;
+
+/*
+   При необходимости писать логи всех юзеров в один файл используем SingleLogger
+   Приспособлен к конкурентной записи, однако работает на порядок медленней, т.к для записи каждой строки открывает файл заново
+   Поэтому не рекомендуется выводить подробные логи
+*/
+Class (Logger) SingleLogger(fullname : String, isOn : Bool)
+   initLogger(fullname, isOn);
+   showD = false;                   // По умолчанию не показывает дебаг логи
+   tryDelay = 5;                    // Если файл случано занят подождем чуток перед повторной попыткой
+
+   Private Macro getCurPath() : String
+      return basePath + baseName + baseExt;
+   End;
+
+   Private macro getStream()
+      curTry = 1;
+      while(curTry <= TryErr)
+         if(tryFileStream(filepath));
+            return fileStream;
+         end;
+         curTry = curTry + 1;
+         RslDelay(tryDelay);
+      end;
+      noError = false;
+   End;
+
+   Private Macro writeStr(msgPreffix : String, shortmsg : String)
+      if((on and PrintToFile) and (noError))
+         var fullmsg = getStr(msgPreffix, shortmsg);
+         fileStream = getStream();
+         if(ValType(filestream) != V_UNDEF)
+            filestream.WriteLine(fullmsg);
+            filestream = null;
+         end;
+      end;
+      if(on and printToScreen)
+        println(shortmsg);
+      end;
+   End;
+
+   Private Macro ini(fpath : String)
+      if(on == false) return; end;
+      MakeDirs(fpath);
+      basePath = SplitFile(fpath, baseName, baseExt);
+      filepath = getCurPath();
+   End;
+End;
+
+
+Private Macro StrSplitToArr(str : String, delim : String)
+   var pos;
+   var stPos = 1;
+   var i = -1;
+   var res = TArray();
+   pos = Index(str, delim);
+
+   while(pos>0)
+      i = i + 1;
+      res(i) = substr(str, stPos, pos - stpos);
+      stpos = pos + 1;
+      pos = Index(str, delim, stpos);
+   end;
+   i = i + 1;
+   res(i) = substr(str, stpos);
+   return res;
+End;
+
+
+Macro getUserNumber()
+   if (isStandalone)
+      return userNumber;
+   else
+      InstLoadModule("bankInter");
+      var {oper};
+      return {oper};
+   end;
+   OnError(err)
+      return userNumber;
+End;

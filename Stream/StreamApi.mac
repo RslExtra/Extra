@@ -1,0 +1,702 @@
+import "..\\Mac\\Extra\\Collections\\collections.mac";
+import "..\\Mac\\Extra\\Stream\\EXTbfile.mac";
+
+Private var factory  = GenObject("StreamFactory");
+
+Macro callLambda(obj,_func, parm1, parm2) : Variant
+   var res = CallR2M(_func, parm1, parm2);
+   return res;
+End;
+
+Class StreamInter(_func)
+   var upstream;
+   var downstream;
+   var needStop = false;
+   var func     = _func;
+   var applyFunc = R2M(this, "callFunc");
+
+   Macro getSize()
+      return 0;
+   End;
+
+   Macro checkAggregateStream()
+      if(ValType(upstream)!=V_UNDEF)
+         upstream.checkAggregateStream();
+         return true;
+      end;
+      if(IsEqClass("AgregateStream", this))
+         this.accumulate();
+      end;
+   End;
+
+   Macro stopStream()
+      needStop = true;
+      if(Valtype(downstream) != V_UNDEF)
+         downstream.stopStream();
+      end;
+   End;
+
+   Macro hasnext() : Bool
+      if(needStop)
+         return false;
+      end;
+      return upstream.hasnext();
+   end;
+
+   Macro next() : Variant
+      return upstream.next();
+   End;
+
+   Macro callFunc(_func, parm1, parm2)
+      return ExecMacro2(_func, parm1, parm2);
+   End;
+
+   Macro apply(parm)
+      return callFunc(func, parm);
+   End;
+
+   Macro accept(FunClass : StreamInter)
+      this.downstream = FunClass;
+      FunClass.upstream = this;
+   End;
+
+   Macro newFunByClass(name : String, _isTerminal : Bool, func1, func2, func3)
+      var isTerminal = ifNull(_isTerminal, false);
+      var newStream = factory.getInstanceByName(name, func1, func2, func3);
+      accept(newStream);
+      if(isTerminal)
+         return newStream.apply();
+      else
+         return newStream;
+      end;
+   End;
+
+   Macro map(func)
+      return newFunByClass("map", false, func);
+   End;
+
+   Macro flatMap(func)
+      return newFunByClass("flatMap", false, func);
+   End;
+
+   Macro filter(func)
+      return newFunByClass("filter", false, func);
+   End;
+
+   Macro limit(count)
+      return newFunByClass("limit", false, count);
+   End;
+
+   Macro skip(count)
+      return newFunByClass("skip", false, count);
+   End;
+
+
+   Macro takeWhile(func)
+      return newFunByClass("takeWhile",false,func);
+   End;
+
+   Macro distinct(func)
+      return newFunByClass("distinct", false, func);
+   End;
+
+   Macro peek(peekfunc)
+      return newFunByClass("peek", false, peekfunc);
+   End;
+
+   Macro progr(func)
+      return newFunByClass("progr", false, func);
+   End;
+
+   Macro groupBy(func)
+      return newFunByClass("groupBy", false, func);
+   End;
+
+   Macro sort (func)
+      return newFunByClass("sort", false, func)
+   End;
+
+   Macro forEach(func)
+      return newFunByClass("forEach", true, func);
+   End;
+
+   Macro toScreen()
+      return newFunByClass("toScreen", true);
+   End;
+
+   Macro toReport(hdr, arrayOfParms, headers)
+      return newFunByClass("toReport", true, hdr, arrayOfParms, headers);
+   End;
+
+   Macro collectToArray()
+      return newFunByClass("collectToArray", true, func);
+   End;
+
+   Macro fold(initParm, func)
+      return newFunByClass("fold", true, func, initParm);
+   End;
+
+   Macro sum()
+      return newFunByClass("sum", true);
+   End;
+
+   Macro sumBy(parmFunc)
+      return newFunByClass("sumBy", true, parmFunc);
+   End;
+
+   Macro zipWithIndex()
+      return newFunByClass("zipWithIndex", false);
+   End;
+
+End;
+
+
+Class (StreamInter) ChainStream(_func)
+   initStreamInter(_func);
+   Macro next()
+      var el = upstream.next();
+      if(needStop) return stopStream(); end;
+      return this.apply(el);
+   End;
+End;
+
+Class (StreamInter) MapStream(_func)
+   InitStreamInter(_func);
+   Macro next()
+      var el = upstream.next();
+      if(needStop) return stopStream; end;
+      return this.apply(el);
+   End;
+End;
+
+Class (StreamInter) FlatMapStream(_func)
+   initStreamInter(_func);
+   var curSubStream = null;
+
+   Macro getNextSubStream() : Bool
+      var el = upstream.next();
+      if(needStop) return false; end;
+      curSubStream = this.apply(el);
+      if(IsEqClass("Iterable",curSubStream))
+         curSubStream = GenObject("Stream").of(curSubStream);
+      end;
+      return true;
+   End;
+
+   Macro next()
+      if((Valtype(curSubStream) == V_UNDEF))
+         if (getNextSubStream == False)
+            return stopStream;
+         end;
+      end;
+      var el;
+      while(true)
+         el = curSubStream.next();
+         if(curSubStream.needStop == false)
+            return el;
+         else
+            if (getNextSubStream == False)
+               return stopStream;
+            end;
+         end;
+      end;
+
+   End;
+End;
+
+Class (StreamInter) FilterStream(_func)
+   initStreamInter(_func);
+   Macro next()
+      while(true)
+         var el = upstream.next();
+         if(needStop) return stopStream; end;
+         if(apply(el))
+            return el;
+         end;
+      end;
+      stopStream();
+   End;
+End;
+
+Class (StreamInter) LimitStream(_count : Integer)
+   initStreamInter();
+   var needCount = _count;
+   var curCount = 0;
+   Macro next()
+      var el = upstream.next();
+      if(needStop) return stopStream; end;
+      curCount = curCount + 1;
+      if(curCount > needCount)
+         stopStream();
+         return null;
+      end;
+      return el;
+   End;
+End;
+
+Class (StreamInter) SkipStream(_count : Integer)
+   initStreamInter();
+   var needCount = _count;
+   var curCount = 0;
+   var skipped = false;
+   Macro next()
+      var el;
+      if(skipped == false)
+         while(curCount < needCount)
+            el = upstream.next();
+            if(needStop) return stopStream; end;
+            curCount = curCount + 1;
+         end;
+         skipped = true;
+      end;
+      el = upstream.next();
+      if(needStop) return stopStream; end;
+      return el;
+   End;
+End;
+
+Class (StreamInter) ProgrStream()
+   initStreamInter();
+   var isInit = false;
+   var count = 0;
+   var curCount = 0;
+
+   Macro ini()
+      InitProgress(upstream.getSize());
+      isInit = true;
+   End;
+
+   Macro next()
+      var el = upstream.next();
+      if(Not(isInit))
+         ini();
+      end;
+      if(needStop)
+         RemProgress(curCount);
+         return stopStream;
+      end;
+      curCount = curCount + 1;
+      UseProgress(curCount);
+      return el;
+   End;
+End;
+
+Class (StreamInter) TakeWhileStream(_func)
+   initStreamInter(_func);
+
+   Macro next()
+      var el = upstream.next();
+      if(needStop) return stopStream(); end;
+      if(apply(el))
+         return el;
+      end;
+      return stopStream();
+   End;
+End;
+
+Class (StreamInter) DistinctStream(_func)
+   initStreamInter(_func);
+   var set = hashSet(10000,0.1);
+   Macro next()
+      while(true)
+         var el = upstream.next();
+         if(needStop) return stopStream; end;
+         var parm = el;
+         if(ValType(func)!=V_UNDEF)
+            parm = apply(el);
+         end;
+         if(set.add(parm))
+            return el;
+         end;
+      end;
+      stopStream();
+   End;
+End;
+
+Class (StreamInter) PeekStream(_func)
+   initStreamInter(_func);
+   Macro next()
+      var el = upstream.next();
+      if(needStop) return stopStream; end;
+      apply(el);
+      return el;
+   End;
+End;
+
+
+// Agreagate
+
+Class (StreamInter) AgregateStream(_func)
+   initStreamInter(_func);
+   var isReadyToGive = false;
+   var iter;
+
+   Macro getSize()
+   end;
+
+   Macro stopStream()
+      needStop = true;
+      if(isReadyToGive)
+         downstream.stopStream();
+      end;
+   End;
+
+   Macro accumulate()
+      // implement in child
+   end;
+
+   Macro next()
+      if(isReadyToGive == false)
+         accumulate();
+      end;
+
+      if(iter.hasNext() == false)
+         return stopStream();
+      end;
+      var res = iter.next();
+      return res;
+   End;
+End;
+
+Class (AgregateStream) GroupByStream(_func)
+   initAgregateStream(_func);
+   var hmap = LinkedHashMap(10000,0.1);
+
+   Macro getSize()
+      return hmap.size;
+   end;
+
+   Macro accumulate()
+      while(true)
+         var el = upstream.next();
+         if(needStop) break; end;
+
+         var parm = apply(el);
+         var list = hmap.get(parm);
+         if(Valtype(list) == V_UNDEF)
+            list = LinkedList();
+            hmap.put(parm,list);
+         end;
+         list.linkLast(el);
+      end;
+
+      iter = hmap.newEntryIterator();
+      isReadyToGive = true;
+      needStop = false;
+   End;
+End;
+
+Class (AgregateStream) SortStream(_func)
+   initAgregateStream(_func);
+   var arr = TArray();
+
+   Macro accumulate()
+      while(true)
+         var el = upstream.next();
+         if(needStop) break; end;
+         arr[arr.size] = el;
+      end;
+      ifNull(func, @CF_ComparePrimitive);
+      ExQSort(arr, func);
+      iter = Arrays.newIterator(arr);
+      isReadyToGive = true;
+      needStop = false;
+   End;
+End;
+
+
+// Borning
+Class (StreamInter) BornStream(iterator)
+   initStreamInter();
+   var iter = iterator;
+   var inc = 0;
+   var asc = true;
+
+   Macro next()
+      var res;
+      if(asc)
+         if(iter.hasNext == false)
+            return stopStream();
+         end;
+         res = iter.next;
+      else
+         if(iter.hasPrev == false)
+            return stopStream();
+         end;
+         res = iter.previous;
+      end;
+      inc = inc+1;
+      Message(inc);
+      return res;
+   End;
+
+   Macro prev()
+      if(iter.hasPrev == false)
+         return stopStream();
+      end;
+      inc = inc+1;
+      Message(inc);
+      var res = iter.previous;
+      return res;
+   End;
+
+   Macro invert()
+      asc = false;
+      return this;
+   End;
+End;
+
+
+Class (BornStream) TBFileStream(tbFile)
+   var extb = EXTBFile(tbFile);
+   var front = true;
+   initBornStream(extb.iter);
+
+   Macro getGE()
+      var props = TArray();
+      var curProp;
+      var i = 0;
+      while(true)
+         if(GetParm(i+1, curProp))
+            props(i) = curProp;
+            i = i + 1;
+         else
+            break;
+         end;
+      end;
+      var hn = extb.getGE(props);
+      return this;
+   End;
+
+   Macro getGT()
+      var props = TArray();
+      var curProp;
+      var i = 0;
+      while(true)
+         if(GetParm(i+1, curProp))
+            props(i) = curProp;
+            i = i + 1;
+         else
+            break;
+         end;
+      end;
+      var hn = extb.getGT(props);
+      return this;
+   End;
+
+    Macro getLE()
+      var props = TArray();
+      var curProp;
+      var i = 0;
+      while(true)
+         if(GetParm(i+1, curProp))
+            props(i) = curProp;
+            i = i + 1;
+         else
+            break;
+         end;
+      end;
+      var hn = extb.getLE(props);
+      return this;
+   End;
+
+   Macro getLT()
+      var props = TArray();
+      var curProp;
+      var i = 0;
+      while(true)
+         if(GetParm(i+1, curProp))
+            props(i) = curProp;
+            i = i + 1;
+         else
+            break;
+         end;
+      end;
+      var hn = extb.getLT(props);
+      return this;
+   End;
+
+   Macro getEQ()
+      var props = TArray();
+      var curProp;
+      var i = 0;
+      while(true)
+         if(GetParm(i+1, curProp))
+            props(i) = curProp;
+            i = i + 1;
+         else
+            break;
+         end;
+      end;
+      var hn = extb.getEQ(props);
+      return this;
+   End;
+End;
+
+Class (StreamInter) TerminalStream(parm)
+   var countPass = 0;
+   Macro inc()
+      countPass = countPass + 1;
+   End;
+
+   Macro showProgress(msg)
+      Message(msg);
+   End;
+End;
+
+
+Class (TerminalStream) collectToArrayStream()
+   Macro apply()
+      var resArr = TArray();
+      var i = 0;
+      while(true)
+         var el = upstream.next();
+         if(needStop) break; end;
+         resArr[i] = el;
+         i = i + 1;
+         showProgress(i);
+      end;
+      return resArr;
+   End;
+End;
+
+
+Class (StreamInter) ForEachStream(_func)
+   initStreamInter(_func);
+   Macro apply(parm)
+      while(true)
+         var el = upstream.next();
+         if(needStop) break; end;
+         callFunc(func, el);
+      End;
+   End;
+End;
+
+Class (ForEachStream) toScreenStream()
+   initForEachStream(R2M(this, "funcPrint"));
+   Macro funcPrint(par)
+      println(par);
+   End;
+End;
+
+Class (StreamInter) ZipStream(_s1, _s2, _bifunc)
+   initStreamInter(getFunOrLambda(_bifunc));
+   var s1 = _s1;
+   var s2 = _s2;
+
+   Macro next()
+      var e1 = s1.next;
+      var e2 = s2.next;
+      if(s1.needStop or s2.needStop) return stopStream(); end;
+      var rese = callFunc(func, e1, e2);
+      return rese;
+   End;
+End;
+
+
+Class (StreamInter) zipWithIndexStream()
+   initStreamInter();
+   var ind = 0;
+
+   Macro next()
+      var el = upstream.next();
+      if(needStop) return stopStream; end;
+      ind = ind + 1;
+      return Pair(ind, el);
+   End;
+End;
+
+
+Macro zipStreams(s1 : StreamInter, s2 : StreamInter, bifunc)
+   return ZipStream(s1, s2, bifunc);
+End;
+
+Class (StreamInter) FoldStream(_func, initParm)
+   initStreamInter(_func);
+   var acc : Numeric = initParm;
+
+   Macro SumFunc(x,y)
+      return x + y;
+   End;
+
+   Macro apply(parm)
+      while(true)
+         var el = upstream.next();
+         if(needStop) break; end;
+         acc = callFunc(func, this.acc, el);
+      End;
+      return acc;
+   End;
+End;
+
+Class (FoldStream) SumStream()
+   initFoldStream(R2M(this, "SumFunc"), 0);
+End;
+
+Class (FoldStream) SumByStream(_funcParm)
+   initFoldStream(R2M(this,"SumFunc"), 0);
+   var funcParm = _funcParm;
+   Macro apply(parm)
+      while(true)
+         var el = upstream.next();
+         if(needStop) break; end;
+         var x = callFunc(funcParm, el);
+         acc = callFunc(func, this.acc, x);
+      End;
+      return acc;
+   End;
+End;
+
+
+Class Stream(obj)
+   Macro ofArray(_arr)
+      return BornStream(Arrays.newIterator(_arr));
+   End;
+
+   Macro ofTbFile(tbFile : TbFile, fixed)
+      return TBFileStream(tbFile, fixed);
+   End;
+
+   Macro of(Iterable : Iterable)
+      return BornStream(Iterable.newIterator);
+   end;
+
+   // ------ Constructor ------
+
+   Macro ini(obj)
+      var tp = ValType(obj);
+      if (tp == V_STRING)
+
+      elif (tp == V_UNDEF)
+         RunError();
+
+      else
+
+
+      end;
+   End;
+
+
+
+End;
+
+
+Class StreamFactory()
+   Macro getInstanceByName(name : String, parm1, parm2, parm3)
+      var fun = getFunOrLambda(parm1);
+      var streamObj = GenObject(name + "Stream", fun, parm2, parm3);
+
+      var clName = GenClassName(fun);
+      if(clName == "METHODREF")
+         GenAttach(streamObj, "callFunc", @callLambda);
+      end;
+
+      return streamObj;
+   End;
+End;
+
+//factory = StreamFactory();
+
+Macro StreamLoadedMarker()
+   return 1;
+End;

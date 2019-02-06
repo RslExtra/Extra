@@ -1,0 +1,7 @@
+var isUnitTest = false;
+
+Private macro checkLoad()
+    if(not(ExecMacro2("UnitTestMarker"))) return; end;
+    isUnitTest = true;
+End;
+checkLoad();

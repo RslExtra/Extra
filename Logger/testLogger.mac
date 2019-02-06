@@ -1,0 +1,41 @@
+import "..\\mac\\extra\\Logger\\Logger.mac";
+
+var logr = Logger("..\\txtfile\\logger_test\\logger.log", true);     // Объявляем в глобальном контексте
+var sl   = SingleLogger("..\\txtfile\\logger_test\\single.log");     // singleLogger, все методы те же. Отличается реализация.
+
+//logr.on = false;          // Так можно отключить логгирование, без комментирования строк. По умолчанию true.
+logr.printToScreen = true;  // Будем выводить на экран - по умолчанию false
+logr.printToFile = true;    // И печатать в файл - по умолчанию true
+logr.showD = true;          // Можно отключить вывод определенных сообщений. По умолчанию для Logger - true, SingleLogger - false.
+
+
+logr.i("Информационное сообщение");    // Основные сообщения о действиях пользователя
+logr.d("Сообщение дебага");            // Для дебага
+logr.e("Сообщение ошибки");            // Для ошибок
+
+Macro testLogger()
+   logr.d("Начало макроса testLogger");
+   for(var i, 0, 100000)
+      var a = Random();
+      logr.d(a);
+      var e = i / a;    // Будем получать ошибку деления на ноль
+   end;
+
+   OnError(err)
+      logr.i("Выполнено " + i + " итераций");
+      logr.e(err.message);
+End;
+
+Macro testSingleLogger()
+   sl.i("Начало макроса testSingleLogger");
+   sl.d("Этого сообщения не будет в логе, т.к. флаг showD по умолчанию false");
+
+   var a = null;
+   a.someMethod();   // словим NPE
+
+   OnError(err)
+      sl.e(err.Message);
+End;
+
+testLogger;
+testSingleLogger;
