@@ -6,5 +6,5 @@ Additional libraries for RSL
 1) Клонируем или сохраняем репозиторий на локальной машине.
 2) Папку Extra перемещаем на сервер RS-BANK в папку /Mac/
 3) Импортируем необходимые библиотеки по отдельности или всю библиотеку 
-import "../Mac/Extra/Extra.mac
+import "../Mac/Extra/Extra.mac"
 
