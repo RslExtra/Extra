@@ -1,9 +1,21 @@
 /**
    @Package Utils
-   Расширение стандартного класса [TArray].
+
+   Расширение стандартного класса [TArray]. Реализует всю базовую функциональность, за исключением переопределенного метода [SArray.sort sort].
+
+   Преимущества:
+   - Имеется возможность заполнять массив при инициализации
+   - Имеются дополнительные методы позволяющие легко манипулировать содержимым
+   - Имеются методы-цепочки (помеченны тегом 'chain') и методы-билдеры (помечены тегом 'builder')
+   - Переопределен метод [SArray.sort sort], улучшая производительность и изменяющий вид функции-компаратора на более чистый.
+
+   @version 0.9
+   @author Dzhanybaev M.P.
 */
 
-
+Private Macro isBankInterLoaded()
+   return (ValType(ExecMacro2("isAlpha", "a")) != V_UNDEF);
+End;
 
 Private Class SAIterator(_arr)
    private var arr  = _arr;
@@ -30,6 +42,16 @@ End;
 
 Private Macro isStreamLoaded()
    return (ValType(ExecMacro2("StreamLoadedMarker")) != V_UNDEF);
+End;
+
+Private Macro CF_ComparePrimitive(el1, el2) : Integer
+   if(el1 > el2)
+      return 1;
+   elif(el1 < el2)
+      return -1;
+   else
+      return 0;
+   end;
 End;
 
 
@@ -72,20 +94,20 @@ Private Class ArrayIterator(_arr : TArray)
    Macro remove()
       return;
       // не реализовано, по причине неизменности исходного массива
-      /*
-      var el = arr[nextIndex-1];
-      var newArr = Arrays.subArray(arr, 0, nextIndex-1);
-      Arrays.addArray(newArr, Arrays.subArray(arr, nextIndex));
-      arr = StrongRef(newArr);
-      return el;
-      */
    End;
 End;
 
 
 /**
-   Расширение стандартного класса [TArray]. Реализует всю базовую функциональность, дополнительно предоставляя методы для удобной работы с массивом.
-   Не уступает в производительности оригинальному [TArray].
+   Расширение стандартного класса [TArray].
+   Массив объявляется стандартным способом, за исключением случая с предопределенными значениями.
+
+   Пример:
+   ```
+      var arr = SArray();
+      var arr2 = SArray(1, 2, 3);  // Создастcя массив [1, 2, 3]
+   ```
+
 */
 Class (TArray) SArray()
    initTArray();
@@ -96,7 +118,6 @@ Class (TArray) SArray()
    end;
 
    // -----------------------
-
    /**
       Возвращает `true` если массив пустой.
    */
@@ -104,8 +125,7 @@ Class (TArray) SArray()
       return (size == 0);
    End;
 
-
-   /**
+   /*
       Добавляет элементы указанные в качестве аргументов. Массив должен быть пустым.
       @oparam varargs - добавляемые элементы
    */
@@ -119,12 +139,11 @@ Class (TArray) SArray()
 
    /**
       Добавляет 'element' на позицию 'ind', сдвигая последующие элементы вправо. Если 'ind' не указан или равен `null` добавляет вконец массива. Возвращает текущий экземпляр класса.
-   ```
-      var arr = SArray();
-      arr.add(1);        // [1]
-      arr.add("two");    // [1, "two"]
-      arr.add("new", 1)  // [1, "new", "two"]
-   ```
+
+      Пример:
+      @sample [samples.sArray.add]
+
+      @tag builder
    */
    Macro add(element : Variant, ind : Integer) : SArray
       if (ValType(ind) == V_UNDEF)
@@ -139,15 +158,39 @@ Class (TArray) SArray()
    end;
 
    /**
+      Добавляет в исходный массив множество элементов.
+      @oparam varargs
+   */
+   Macro addAll()
+      var p;
+      for (var i, 1, Parmcount-1, 1)
+         GetParm(i, p);
+         value(size) = p;
+      end;
+   End;
+
+   /**
       Добавляет элементы массива 'arr' в конец массива. Возвращает текущий экземпляр класса.
+      @tag builder
    */
    Macro addArray(arr) : SArray
       if (IsEqClass("TArray", arr) == false) RunError("Illegal argument"); end;
+      var sz = size;
       size = size + arr.size;
       for (var i, 0, arr.size - 1, 1)
-         value(size + i) = arr[i];
+         value(sz + i) = arr[i];
       end;
       return this;
+   End;
+
+   /**
+      Возвращает элемент под индексом 'ind' или бросает ошибку, если индекс выходит за границы массива.
+      Метод аналогичен получению через `[]` за исключением того, что не позволит изменить элемент в массиве.
+   */
+   Macro get(ind) : Variant
+      if (ValType(ind) == V_UNDEF) RunError("Illegal argument"); end;
+      if ((ind < 0) or (ind >= size)) RunError("Index of bound"); end;
+      return value(ind);
    End;
 
    /**
@@ -180,11 +223,11 @@ Class (TArray) SArray()
 
    /**
       Добавляет 'element' в конец массива. Возвращает текущий экземпляр класса.
-   ```
-      var arr = SArray();
-      arr.push(1);      // [1]
-      arr.push("two");  // [1, "two"]
-   ```
+
+      Пример:
+      @sample [samples.sArray.push]
+
+      @tag builder
    */
    Macro push(element : Variant) : SArray
       value(size) = element;
@@ -202,7 +245,7 @@ Class (TArray) SArray()
    End;
 
    /**
-      Удаляет и возвращает последний элемент массива.
+      Удаляет и возвращает последний элемент массива, возвращает `null` если массив пустой.
    */
    Macro poll() : Variant
       if (size == 0) return; end;
@@ -222,6 +265,15 @@ Class (TArray) SArray()
 
    /**
       Возвращает новый массив состоящий из элементов текущего с индекса 'from' (включительно) по индекс 'to'(исключительно).
+      Если не указан или равен `null` аргумент 'from' - копироваться будет с 0 аргумента.
+      Если не указан или равен `null` аргумент 'to' - копироваться будет до конца массива.
+      Так вызывая метод [slice] без параметров, будет создаваться копия исходного массива, при том примитивы будут скопированны полностью, в случае объектов - скопируется ссылка.
+
+      Пример:
+
+      @sample [samples.sArray.slice]
+
+      @tag chain
    */
    Macro slice(from, to) : SArray
       if (ValType(from) == V_UNDEF)
@@ -239,6 +291,15 @@ Class (TArray) SArray()
 
    /**
       "Разворачивает" исходный массив
+
+      Пример:
+```
+   var arr = SArray(1, 2, 3);
+   arr.reverse();
+   arr.toScreen();  // [3, 2, 1]
+```
+
+      @tag builder
    */
    Macro reverse() : SArray
       if (size <= 1) return this; end;
@@ -249,20 +310,25 @@ Class (TArray) SArray()
       end;
       return this;
    End;
+
    /**
-      Возвращает новый массив, состоящий из элементов исходного и массива 'arr'.
+      Возвращает новый массив, состоящий из элементов исходного и массива 'arr', исходный массив и массив 'arr' изменены не будут.
+
+      Пример:
+
+      @sample [samples.sArray.concat]
+
+      @chain
    */
-   Macro concat(arr)
+   Macro concat(arr) : SArray
       var newArr = SArray();
       if (size + arr.size  == 0) return newArr; end;
       newArr[size + arr.size - 1] = null;
       for(var i, 0, size - 1, 1);
          newArr[i] = value(i);
       end;
-      var j = i;
       for(i, 0, arr.size - 1, 1);
-         newArr[j] = arr[i];
-         j = j + 1;
+         newArr[i + size] = arr[i];
       end;
       return newArr;
    End;
@@ -271,22 +337,25 @@ Class (TArray) SArray()
       Возвращает индекс элемента массива 'arr' равного 'element', '-1' в случае если ничего не найдено.
       Если 'element' является 'null', функция вернет индекс первого элемента массива равный `null`.
       Так же есть возможность указать ссылку на функцию компаратор или её имя в 2 аргументе 'compfunc'.
-      Функция-компаратор должна принимать два аргумента и возвращать 0 в случае их равенства.
+      Функция-компаратор должна принимать два аргумента и возвращать `true` в случае их равенства.
       Если функцию-компаратор не указывать сравнение будет проходить через `==` т.е. в случае когда 'element' объектного типа, сравнение будет проходить по ссылке.
+
+      Пример:
+      @sample [samples.sArray.indexOf]
    */
-   Macro indexOf(element, compfunc)
+   Macro indexOf(element, equalfunc) : Integer
       var i;
-      if (ValType(compfunc) != V_UNDEF)
+      if (ValType(equalfunc) != V_UNDEF)
          if (ValType(element) == 19)
             var clName = GenClassName(element);
             for (i, 0, size-1, 1)
-               if (isEqClass(clName, value(i)) and (ExecMacro2(compfunc, element, value(i)) == 0))
+               if (isEqClass(clName, value(i)) and (ExecMacro2(equalfunc, element, value(i))))
                   return i;
                end;
             end;
          else
             for (i, 0, size-1, 1)
-               if (ExecMacro2(compfunc, element, value(i)) == 0)
+               if (ExecMacro2(equalfunc, element, value(i)))
                   return i;
                end;
             end;
@@ -311,19 +380,19 @@ Class (TArray) SArray()
    /**
       Метод аналогичен [SArray.indexOf indexOf]; но возвращает индекс 'последнего' элемента или -1;
    */
-   Macro lastIndexOf(element, compfunc)
+   Macro lastIndexOf(element, equalfunc) : Integer
       var i;
-      if (ValType(compfunc) != V_UNDEF)
+      if (ValType(equalfunc) != V_UNDEF)
          if (ValType(element) == 19)
             var clName = GenClassName(element);
             for (i, size-1, 0, -1)
-               if (isEqClass(clName, value(i)) and (ExecMacro2(compfunc, element, value(i)) == 0))
+               if (isEqClass(clName, value(i)) and (ExecMacro2(equalfunc, element, value(i))))
                   return i;
                end;
             end;
          else
             for (i, size-1, 0, -1)
-               if (ExecMacro2(compfunc, element, value(i)) == 0)
+               if (ExecMacro2(equalfunc, element, value(i)))
                   return i;
                end;
             end;
@@ -345,9 +414,11 @@ Class (TArray) SArray()
    End;
 
    /**
-      Очищает текущий массив. Возвращает текущий экземпляр класса.
+      Очищает и возвращает текущий массив.
+
+      @builder
    */
-   Macro clear()
+   Macro clear() : SArray
       size = 0;
       return this;
    end;
@@ -357,17 +428,12 @@ Class (TArray) SArray()
       Возвращает новый массив, состоящий из элементов исходного массива 'arr', для которых функция-предикат 'predicFunc' возвращает `true`.
 
       Пример:
-      ```
-         Macro isEven(el) : Bool
-            return (mod(el,2) == 0);
-         End;
-         var arr = SArray(1,2,3,4,5);
-         var even = arr.filter(@isEven);
-         even.toScreen();  // [2, 4]
 
-      ```
+      @sample [samples.sArray.filter]
+
+      @tag chain
    */
-   Macro filter(predicFunc)
+   Macro filter(predicFunc) : SArray
       if (ValType(predicFunc) == V_UNDEF)
          RunError("Не указана функция-предикат");
       elif ((ValType(predicFunc) == V_STRING) and isLambdaLoaded)
@@ -386,18 +452,13 @@ Class (TArray) SArray()
       Возвращает новый массив преобразованных функцией 'mapFunc' всех элементов исходного массива.
 
       Пример:
-      ```
-         Macro squareInt(el)
-            return (el*el);
-         End;
-         var arr = SArray(1,2,3,4);
-         var sq = arr.map(@squareInt);
-         sq.toScreen(); // [1, 4, 9, 16]
-      ```
+
+      @sample [samples.sArray.map]
 
       @see [Definitions.SampleMap map-функция]
+      @tag chain
    */
-   Macro map(mapFunc)
+   Macro map(mapFunc) : SArray
       if (ValType(mapFunc) == V_UNDEF)
          RunError("Не указана функция-преобразования");
       elif ((ValType(mapFunc) == V_STRING) and isLambdaLoaded)
@@ -418,20 +479,13 @@ Class (TArray) SArray()
       'identity' - начальное значение.
 
       Пример:
-      ```
-         Macro sumReduce(ident, el)
-            return ident + el;
-         End;
 
-         var arr = SArray(1,2,3,4);
-         var res = arr.reduce(0, @sumReduce);
-         println(res);    //10
-      ```
+      @sample [samples.sArray.reduce]
 
       @param identity начальное значение
       @param accumulator  функция-редюсер
    */
-   Macro reduce(identity, accumulator)
+   Macro reduce(identity, accumulator) : SArray
       if (ValType(accumulator) == V_UNDEF)
          RunError("Не указана функция-редюсер");
       elif ((ValType(accumulator) == V_STRING) and isLambdaLoaded)
@@ -443,8 +497,11 @@ Class (TArray) SArray()
       return identity;
    End;
 
-   /*
+   /**
       Вызывает 'func' для каждого элемента массива, возвращает `null`.
+      Пример:
+
+      @sample [samples.sArray.forEach]
    */
    Macro forEach(func)
       if (ValType(func) == V_UNDEF)
@@ -457,28 +514,135 @@ Class (TArray) SArray()
       end;
    End;
 
-   Macro sort(comp) : SArray
-      if (ValType(comp) == V_UNDEF)
-         RunError("Не указана функция компаратор");
-      elif ((ValType(comp) == V_STRING) and isLambdaLoaded)
-         comp = ExecMacro2("GetFunOrLambda", comp);
+   /**
+      Сортирует исходный массив согласно функции-компаратору 'compfunc' и возвращает ссылку на исходный массив.
+      Если 'compfunc' не указана или равна `null` сортировка будет проводиться в натуральном порядке.
+
+      Пример:
+      @sample [samples.sArray.sort]
+
+      @tags builder
+   */
+   Macro sort(compfunc) : SArray
+      if (isBankInterLoaded() == false)
+         RunError("Module not loaded: bankinter");
       end;
-      ExecMacro2("QSort", this, comp);
+      if (ValType(compfunc) == V_UNDEF)
+         compfunc = @CF_ComparePrimitive;
+      elif ((ValType(compfunc) == V_STRING) and isLambdaLoaded)
+         compfunc = ExecMacro2("GetFunOrLambda", compfunc);
+      end;
+      ExecMacro2("QSort", this, compfunc);
       return this;
    End;
-   /**
-      Выводит элементы массива на экран разделенные ",".
-   */
-   Macro toScreen()
-      print("[");
-      for (var i, 0, size-1, 1)
-         print(value(i));
-         if (i != size-1)
-            print(", ");
+
+   Private Macro distinctPrim() : SArray
+      var resArr = SArray();
+      var i, j;
+      for (i, 0, size - 1, 1)
+         var el = value(i);
+         var uniq = true;
+         for (j, 0, resArr.size - 1, 1)
+            if (el == resArr[j])
+               uniq = false;
+               break;
+            end;
+         end;
+         if (uniq)
+            resArr.value(resArr.size) = el;
          end;
       end;
-      print("]");
-      println();
+      return resArr;
+   End;
+
+   /**
+      Возвращает новый массив [SArray] уникальных элементов исходного массива согласно функции 'equalfunc'. Если 'equalfunc' не задана или равняется `null`, сравнение будет проводиться по ссылке для объектов и по значению для примитивов через `==`.
+      Функция 'equalfunc' должна принимать два аргумента и возращать `true` если аргументы считаются равными, `false` в противном случае;
+
+      Пример:
+      @sample [samples.sArray.distinct]
+
+      @tag chain
+   */
+   Macro distinct(equalfunc) : SArray
+      if (ValType(equalfunc) == V_UNDEF)
+         return distinctPrim();
+      end;
+      var resArr = SArray();
+      var i, j;
+      for (i, 0, size - 1, 1)
+         var el = value(i);
+         var uniq = true;
+         for (j, 0, resArr.size - 1, 1)
+            if (ExecMacro2(equalFunc, el, resArr[j]))
+               uniq = false;
+               break;
+            end;
+         end;
+         if (uniq)
+            resArr.value(resArr.size) = el;
+         end;
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает новый массив [SArray] уникальных элементов исходного массива в порядке возрастания согласно функции-компаратору 'compfunc'. Если 'compfunc' не задана или равняется `null`, сравнение будет проводиться по ссылке для объектов и по значению для примитивов через `> , < , ==`.
+      В среднем работает быстрее чем [distinct].
+      @tag chain
+   */
+   Macro distinctSort(compfunc) : SArray
+      if (size == 0) return SArray(); end;
+      if (ValType(compfunc) == V_UNDEF)
+         compfunc = @CF_ComparePrimitive;
+      elif ((ValType(compfunc) == V_STRING) and isLambdaLoaded)
+         compfunc = ExecMacro2("GetFunOrLambda", compfunc);
+      end;
+      var copyArr = slice().sort(compfunc);
+      var oldVal = copyArr[0];
+      var resArr = SArray(oldVal);
+      for (var i, 1, copyArr.size - 1, 1)
+         var v = copyArr[i];
+         if (ExecMacro2(compfunc, v, oldVal) != 0)
+            resArr.push(v);
+            oldVal = v;
+         end;
+      end;
+      return resArr;
+   End;
+
+   /**
+      Объединяет элементы масcива в строку, разделяя их значением 'sep', значение 'pre' - будет добавлено в начало строки, значение 'post' в конце.
+      Каждый из параметров по умолчанию равен пустой строке '""'.
+
+      Пример:
+      @sample [samples.sArray.join]
+
+      @oparam [sep] = "" разделитель
+      @oparam [pre] = "" префикс
+      @oparam [pos] = "" постфикс
+   */
+   Macro join(sep : String, pre : String, pos : String) : String
+      if (ValType(sep) == V_UNDEF) sep = ""; end;
+      if (ValType(pre) == V_UNDEF) pre = ""; end;
+      if (ValType(pos) == V_UNDEF) pos = ""; end;
+      var res = pre;
+      for (var i, 0, size - 1, 1)
+         res = res + value(i);
+         if (i != size - 1)
+            res = res + sep;
+         end;
+      end;
+      res = res + pos;
+      return res;
+   End;
+
+
+   /**
+      Выводит элементы массива на экран разделенные ", " внутри скобок `[]`.
+   */
+   Macro toScreen()
+      println(join(", ", "[", "]"));
    End;
 
    /**
@@ -491,9 +655,9 @@ Class (TArray) SArray()
    End;
 
    /**
-      Приводит массив к типу [TArray].
+      Создаёт массив типа [TArray] и копирует в него все элементы исходного массива.
    */
-   Macro toArray()
+   Macro toTArray() : TArray
       var resArr = TArray();
       if (size == 0) return resArr; end;
       resArr[size-1] = null;
@@ -503,6 +667,7 @@ Class (TArray) SArray()
       return resArr;
    End;
 
+   /** Возвращает итератор [ArrayIterator] */
    Macro newIterator() : ArrayIterator
       return GenObject("ArrayIterator", this);
    End;
@@ -515,6 +680,8 @@ Class (TArray) SArray()
    End;
 
    Macro createEnum()
-     return SAIterator(this);
+      return SAIterator(this);
    End;
 End;
+
+

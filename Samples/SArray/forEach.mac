@@ -1,0 +1,12 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+// Возводит в квадрат и выводит на синий экран
+Macro sqAnPr(el)
+   println(el*el);
+End;
+
+var arr = SArray(1, 2, 3);
+arr.forEach(@println);  // [1, 2, 3]
+
+arr.forEach(@sqAnPr);   // [1, 4, 9]
+//>

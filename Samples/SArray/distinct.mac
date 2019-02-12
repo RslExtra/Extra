@@ -1,0 +1,13 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+var arr = SArray(-1, 2, 1, -1, 3, 0, 4, 3, 0);
+var dist = arr.distinct();
+dist.toScreen();  // [-1, 2, 1, 3, 0, 4]
+
+// Числа будут считаться равными по абсолютному значению
+Macro equalAbs(i1, i2) : bool
+   return (abs(i1) == abs(i2));
+End;
+
+var dist2 = arr.distinct(@equalAbs);
+dist2.toScreen();   // [-1, 2, 3, 0, 4]

@@ -1,0 +1,6 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+   var arr = SArray();
+   arr.push(1);      // [1]
+   arr.push("two");  // [1, "two"]
+//>
