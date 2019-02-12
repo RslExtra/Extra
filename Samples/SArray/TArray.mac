@@ -1,0 +1,16 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+import bankinter;      // Импортируем для использования sort()
+
+var arr = SArray(1, 2, 3);   // Объявяем и инициализируем массив
+
+arr.addAll(10, 20, 30);      // Добавляем в конец еще 3 элемента
+
+arr.push(1);                 // Добавляем еще 1 в конец
+
+var ind = arr.lastIndexof(1); // Находим '1' с конца
+
+arr.remove(ind);              // Удаляем последнюю единицу
+
+
+//>

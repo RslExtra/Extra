@@ -406,6 +406,4 @@ End;
 
 TestArrayUtil();
 */
-debugbreak;
-var arr = TArray(10, 20);
 TestSArray();
