@@ -1,0 +1,11 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+// Прибавляет каждое число el к начальному ident
+Macro sumReduce(ident, el)
+    return ident + el;
+End;
+
+var arr = SArray(1, 2, 3, 4);
+var res = arr.reduce(0, @sumReduce);
+println(res);    //10
+//>

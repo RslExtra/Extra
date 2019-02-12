@@ -1,0 +1,9 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+
+var arr = SArray("start", "use", "this");
+println(arr.join());  // startusethis
+println(arr.join(" "));  // start use this
+println(arr.join(" ", "just ", "!"));  // just start use this!
+
+//>

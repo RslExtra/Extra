@@ -1,0 +1,11 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+// Возвращает квадрат числа
+Macro squareInt(el)
+   return (el*el);
+End;
+
+var arr = SArray(1, 2, 3, 4);
+var sq = arr.map(@squareInt);
+sq.toScreen(); // [1, 4, 9, 16]
+//>

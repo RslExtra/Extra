@@ -381,6 +381,7 @@ Private Class (AssertClass) AssertErrorClass(_expCode, _err)
       strAssert = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_expCode) + " , " + String(_err.code) + " )";
       result = AssertResult(strAssert);
    end;
+
    Macro runAssert()
       var expCode = val1;
       var err = val2;

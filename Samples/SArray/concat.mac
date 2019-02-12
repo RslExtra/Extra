@@ -1,0 +1,9 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+var arr1 = SArray(1, 2, 3);
+var arr2 = SArray(10, 20, 30);
+var conc = arr1.concat(arr2);
+arr1.toScreen();     // [1, 2, 3]
+arr2.toScreen();     // [10, 20, 30]
+conc.toScreen();     // [1, 2, 3, 10, 20, 30]
+//>
