@@ -1,0 +1,261 @@
+
+/**
+   Объект класса [PredicateFunctions].
+*/
+var Predicates = GenObject("PredicateFunctions");
+var accums     = GenObject("AccumulatorFunctions");
+/* Хранит ссылку на объект с методом, чтобы тот не собрался GC */
+private var tmpObjects = TArray();
+
+Private Class FunctionalClass()
+   tmpObjects[tmpObjects.size] = this;
+
+   Macro apply()
+   end;
+
+   Macro getFunc()
+      return R2M(this, "apply");
+   end;
+End;
+
+Private Class (FunctionalClass) PredicFuncClass (p1, p2)
+   initFunctionalClass();
+   var parm1 = p1;
+   var parm2 = p2;
+
+   Macro apply(el) : Bool
+   End;
+End;
+
+Private Class (FunctionalClass) AccumFuncClass ()
+   initFunctionalClass();
+
+   Macro apply(identity, el) : Variant
+   End;
+End;
+
+Private Class (PredicFuncClass) NonNull_Class()
+   initPredicFuncClass();
+   Macro apply(el : Variant)
+      return (ValType(el) != V_UNDEF);
+   End;
+End;
+
+Private Class (PredicFuncClass) IsNull_Class()
+   initPredicFuncClass();
+   Macro apply(el : Variant)
+      return (ValType(el) == V_UNDEF);
+   End;
+End;
+
+Private Class (PredicFuncClass) EQ_Class(val)
+   initPredicFuncClass(val);
+   Macro apply(el : Variant)
+      return (el == parm1);
+   End;
+End;
+
+Private Class (PredicFuncClass) NOTEQ_Class(val)
+   initPredicFuncClass(val);
+   Macro apply(el : Variant)
+      return (el != parm1);
+   End;
+End;
+
+Private Class (PredicFuncClass) LT_Class(val)
+   initPredicFuncClass(val);
+   Macro apply(el : Variant)
+      return (el < parm1);
+   End;
+End;
+
+Private Class (PredicFuncClass) LE_Class(val)
+   initPredicFuncClass(val);
+   Macro apply(el : Variant)
+      return (el <= parm1);
+   End;
+End;
+
+Private Class (PredicFuncClass) GT_Class(val)
+   initPredicFuncClass(val);
+   Macro apply(el : Variant)
+      return (el > parm1);
+   End;
+End;
+
+Private Class (PredicFuncClass) GE_Class(val)
+   initPredicFuncClass(val);
+   Macro apply(el : Variant)
+      return (el >= parm1);
+   End;
+End;
+
+Private Class (PredicFuncClass) ClassEquals_Class(clName)
+   initPredicFuncClass(clName);
+
+   Macro apply(el : Variant)
+      return (IsEqClass(parm1, el));
+   End;
+End;
+
+Private Class (PredicFuncClass) TypeNameIs_Class(typeName)
+   initPredicFuncClass(StrUpr(typeName));
+
+   Macro apply(el : Variant)
+      return (parm1 == GenClassName(el));
+   End;
+End;
+
+
+Private Class PredicPropWrapper(prName)
+   private var properName = prName;
+   var funcClass = null;
+   tmpObjects[tmpObjects.size] = this;
+
+   Macro apply(val) : Bool
+      var ind = GenPropId(val, properName);
+      if (ind < 0)
+         return false;
+      end;
+      return funcClass.apply(val[ind]);
+   End;
+
+   Macro getFunc()
+      return R2M(this, "apply");
+   End;
+End;
+
+
+Private Class FunctionalFactory()
+   Macro getFuncClass(parm1, parm2, parm3) : Variant
+      var fromF = GetCallStack()[1];
+         var cl = GenObject(fromF + "_Class", parm1, parm2, parm3);
+      return cl.getFunc();
+   End;
+End;
+
+Private Class (FunctionalFactory) PredicateFunctions()
+   /**
+      Позволяет установить функцию для свойства объекта, а не самого объекта.
+   */
+   Macro byprop(prName)
+      return GenObject("PredicProperClass", prName);
+   End;
+
+   /** Возвращает функцию предикат, которая возвращает `true` если аргумент не равен `null`.*/
+   Macro NonNull()
+      return getFuncClass();
+   End;
+
+   /** Возвращает функцию предикат, которая возвращает `true` если аргумент равен `null`.*/
+   Macro IsNull()
+      return getFuncClass();
+   End;
+
+   /** Возвращает функцию предикат, которая возвращает `true` если аргумент того же класса или класса-наследника с именем 'clName'.*/
+   Macro ClassEquals(clName)
+      return getFuncClass(clName);
+   End;
+
+   /**  Возвращает функцию предикат, которая возвращает `true` если имя типа аргумента равно 'typeName'. */
+   Macro TypeNameIs(typeName)
+      return getFuncClass(typeName);
+   End;
+
+   /** Возвращает функцию предикат, которая возвращает `true` если аргумент равен 'val'.*/
+   Macro EQ(val)
+      return getFuncClass(val);
+   End;
+
+   /**Возвращает функцию предикат, которая возвращает `true` если аргумент не равен 'val'. */
+   Macro NOTEQ(val)
+      return getFuncClass(val);
+   End;
+
+   /** Возвращает функцию предикат, которая возвращает `true` если аргумент меньше 'val'.*/
+   Macro LT(val)
+      return getFuncClass(val);
+   End;
+   /** Возвращает функцию предикат, которая возвращает `true` если аргумент меньше или равен 'val'.*/
+   Macro LE(val)
+      return getFuncClass(val);
+   End;
+   /** Возвращает функцию предикат, которая возвращает `true` если аргумент больше 'val'.*/
+   Macro GT(val)
+      return getFuncClass(val);
+   End;
+   /** Возвращает функцию предикат, которая возвращает `true` если аргумент больше или равен 'val'.*/
+   Macro GE(val)
+      return getFuncClass(val);
+   End;
+End;
+
+Private Class (PredicateFunctions) PredicProperClass(prName)
+   var wrapper =  PredicPropWrapper(prName);
+
+   Macro getFuncClass(parm1, parm2, parm3) : Variant
+      var fromF = GetCallStack()[1];
+      var cl = GenObject(fromF + "_Class", parm1, parm2, parm3);
+      wrapper.funcClass = cl;
+      return wrapper.getFunc();
+   End;
+End;
+
+Class (FunctionalFactory) AccumulatorFunctions()
+
+   Macro byprop(prName)
+      return GenObject("AccumProperClass", prName);
+   End;
+
+   Macro sum()
+      return getFuncClass();
+   End;
+
+   Macro mult()
+      return getFuncClass();
+   End;
+End;
+
+Private Class AccumPropWrapper(prName)
+   private var properName = prName;
+   var funcClass = null;
+   tmpObjects[tmpObjects.size] = this;
+
+   Macro apply(identity, val) : Variant
+      var ind = GenPropId(val, properName);
+      if (ind < 0)
+         return 0;
+      end;
+      return funcClass.apply(identity, val[ind]);
+   End;
+
+   Macro getFunc()
+      return R2M(this, "apply");
+   End;
+End;
+
+Private Class (AccumulatorFunctions) AccumProperClass(prName)
+   var wrapper =  AccumPropWrapper(prName);
+
+   Macro getFuncClass(parm1, parm2, parm3) : Variant
+      var fromF = GetCallStack()[1];
+      var cl = GenObject(fromF + "_Class", parm1, parm2, parm3);
+      wrapper.funcClass = cl;
+      return wrapper.getFunc();
+   End;
+End;
+
+
+Class (AccumFuncClass) Sum_Class()
+   InitAccumFuncClass();
+   Macro apply(a, b)
+      return (a + b);
+   End;
+End;
+
+Class (AccumFuncClass) Mult_Class()
+   InitAccumFuncClass();
+   Macro apply(a, b)
+      return (a * b);
+   End;
+End;

@@ -1,6 +1,8 @@
 import "../mac/extra/RUnit/RUnit.Mac";
 import "../mac/extra/utils/SArray.mac";
+import "../mac/extra/utils/functions.mac";
 import bankinter;
+import rcw;
 RUnitTest.SHOW_ONLY_FAILED_UNIT_FUN = false;
 
 // Тестовый класс для объектных коллекций
@@ -243,167 +245,53 @@ Class (UnitTest) TestSArray()
    End;
 
    Macro test_iterator()
+      arr.addAll(1, 2, 3, 4, 5, 6);
+      var itr = arr.newIterator();
+      var a = itr.next();
+      assertEquals(1, a);
+      assertTrue(itr.hasNext());
+      itr.remove();
+      itr.next();
+      itr.remove();
 
+      arr = SArray(1, 2, 3);
+      itr = arr.newIterator();
+      assertTrue(itr.hasNext);
+      assertEquals(1, itr.next);
+      assertTrue(itr.hasNext);
+      assertEquals(2, itr.next);
+      assertTrue(itr.hasNext);
+      assertEquals(3, itr.next);
+      assertFalse(itr.hasNext);
+
+      assertTrue(itr.hasPrev);
+      assertEquals(3, itr.prev);
+      assertEquals(2, itr.prev);
+      assertEquals(1, itr.prev);
+      assertFalse(itr.hasPrev);
+      assertTrue(itr.hasNext);
    End;
 
    Macro test_toTarray()
 
    End;
-
-
 End;
 
+
+
+
+var arr = SArray;
+for(var i, 0, 1000)
+   arr.push(Account("ran" + Random, Random(10000)));
+end;
+
+var t0 = time();
 /*
-Class (UnitTest) TestArrayUtil()
-   var arr;
-
-   Macro beforeTest()
-      arr = Arrays.of("first", 2, null, Account("4081700000000123", 100), 3, 12, Account("4081700000000666", 505), null, 2);
-   End;
-
-   Macro afterTest()
-
-   End;
-
-   Macro test_of()
-      arr = Arrays.of("first", 2, null);
-      assertEquals("first", arr[0]);
-      assertEquals(2, arr[1]);
-      assertNull(arr[2]);
-      arr = Arrays.of();
-      assertEquals(1, arr.size);
-   End;
-
-   Macro test_indexOf()
-      var ind = Arrays.indexOf(arr, null);
-      assertEquals(2, ind);
-      ind = Arrays.indexOf(arr, 2);
-      assertEquals(1, ind);
-      ind = Arrays.indexOf(arr, Account("4081700000000123", 100));
-      assertEquals(-1, ind);
-      ind = Arrays.IndexOf(arr, Account("4081700000000123", 100), @compareJustAcc);
-      assertEquals(3, ind);
-      ind = Arrays.IndexOf(arr, Account("4081700000000123", 200), "compareJustAcc");
-      assertEquals(3, ind);
-   End;
-
-   Macro test_lastIndexOf()
-      var ind = Arrays.lastIndexOf(arr, null);
-      assertEquals(7, ind);
-      ind = Arrays.lastIndexOf(arr, 2);
-      assertEquals(8, ind);
-      ind = Arrays.lastIndexOf(arr, 4);
-      assertEquals(-1, ind);
-
-      ind = Arrays.lastIndexOf(arr, Account("4081700000000123", 100), @compareJustAcc);
-      assertEquals(3, ind);
-      ind = Arrays.lastIndexOf(arr, Account("4081700000000123", 200), "compareJustAcc");
-      assertEquals(3, ind);
-   End;
-
-   Macro test_contains()
-      assertTrue(Arrays.contains(arr, null));
-      assertTrue(Arrays.contains(arr, 3));
-      assertFalse(Arrays.contains(arr, 444));
-      assertFalse(Arrays.contains(arr, Account("4081700000000123", 200)));
-      AssertTrue(Arrays.containsNull(arr));
-   End;
-
-   Macro test_remove()
-      var el = Arrays.remove(arr, 1);
-      assertEquals(2, el);
-      assertEquals(8, arr.size);
-   End;
-
-   Macro test_reverse()
-      arr = Arrays.of(1,2,3);
-      Arrays.reverse(arr);
-      AssertArrays(arr_(3,2,1), arr);
-   End;
-
-   Macro test_subArray()
-      arr = Arrays.of(1,2,3,4,5,6);
-      var arrs = Arrays.subArray(arr, 2, 4);
-      AssertArrays(arr_(3,4), arrs);
-      arrs = Arrays.subArray(arr, 1);
-      AssertArrays(arr_(2,3,4,5,6), arrs);
-      arrs = Arrays.subArray(arr);
-      AssertArrays(arr_(1,2,3,4,5,6), arrs);
-   End;
-
-   Macro test_margeArray()
-      var arr1 = Arrays.of(1,2,3,4);
-      var arr2 = Arrays.of(5,6,7);
-      var resArr = Arrays.mergeArrays(arr1,arr2);
-      assertEquals(7, resArr.size);
-      assertArrays(arr_(1,2,3,4,5,6,7), resArr);
-   End;
-
-   Macro test_addArray()
-      var arr1 = Arrays.of(1,2,3,4);
-      var arr2 = Arrays.of(5,6,7);
-
-      Arrays.addArray(arr1, arr2);
-      assertArrays(arr_(1,2,3,4,5,6,7), arr1);
-   End;
-
-
-   Macro test_filter()
-      var filtArr = Arrays.filter(arr, @filterFunc);
-      assertArrays(arr_(2,3,12,2), filtArr);
-   End;
-
-   Macro test_map()
-      arr = Arrays.of(1,2,3,4);
-      var mapArr = Arrays.map(arr, @mapFunc);
-      assertArrays(arr_(1,4,9,16), mapArr);
-   End;
-
-   Macro test_reduce()
-      arr = Arrays.of(1,2,3,4);
-      var red = Arrays.reduce(arr, @reduceFunc, 0);
-      assertEquals(10, red);
-   End;
-
-   Macro test_iterator()
-      arr = Arrays.of(1,2,3);
-      var itr = Arrays.newIterator(arr);
-      assertTrue(itr.hasNext);
-      assertFalse(itr.hasPrev);
-      var el = itr.next();
-      AssertEquals(1, el);
-      assertTrue(itr.hasPrev);
-      el = itr.prev();
-      AssertEquals(1, el);
-      assertFalse(itr.hasPrev);
-      el = itr.next();
-      AssertEquals(1, el);
-      el = itr.next();
-      AssertEquals(2, el);
-      el = itr.next();
-      AssertEquals(3, el);
-      AssertFalse(itr.hasNext);
-      el = itr.next();
-      AssertNull(el);
-      AssertEquals(4, arr.size);
-   End;
-
-   Macro test_iterator_add_set_remove()
-      arr = Arrays.of(1,2,3);
-      var itr = Arrays.newIterator(arr);
-      itr.next();
-      itr.set(111);
-      AssertArrays(arr_(111,2,3), arr);
-      debugbreak;
-      itr.add(222);
-      AssertArrays(arr_(111,222,2,3), arr);
-      var el = itr.next();
-      AssertEquals(222, el);
-   End;
-
-End;
-
-
-TestArrayUtil();
+for(var ac, arr)
+   if (ac.summ > 9900) println(ac); end;
+end;
 */
-TestSArray();
+var a = arr.reduce(0, accums.byprop("summ").sum());
+
+println(a);
+

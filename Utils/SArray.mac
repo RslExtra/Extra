@@ -54,36 +54,44 @@ Private Macro CF_ComparePrimitive(el1, el2) : Integer
    end;
 End;
 
-
-Private Class ArrayIterator(_arr : TArray)
+/**
+   Класс итератора массива.
+*/
+Private Class ArrayIterator(_arr : @TArray)
    var arr = _arr;
    var nextIndex : Integer = 0;
    var lastReturned;
 
+/** Возвращает `true`, если имеется доступный для получения следующий элемент массива, `false` в противном случае. */
    Macro hasNext() : Bool
       return (nextIndex < arr.size);
    End;
 
+/** Возвращает `true`, если имеется доступный для получения предыдущий элемент массива, `false` в противном случае.*/
    Macro hasPrev() : Bool
       return (nextIndex != 0);
    End;
 
+/** Возвращает следующий элемент. */
    Macro next() : Variant
       lastReturned = arr[nextIndex];
       nextIndex = nextIndex + 1;
       return lastReturned;
    End;
 
+/** Возвращает предыдущий элемент. */
    Macro prev() : Variant
       nextIndex = nextIndex - 1;
       lastReturned = arr[nextIndex];
       return lastReturned;
    End;
 
+/** Помещает в ячейку массива новое значение.*/
    Macro set(el : Variant)
       arr[nextIndex-1] = el;
    End;
 
+/** Добавляет в массив новое значение*/
    Macro add(el : Variant)
       for(var i, arr.size, nextIndex, -1)
          arr[i] = arr[i-1];
@@ -91,9 +99,12 @@ Private Class ArrayIterator(_arr : TArray)
       arr[nextIndex] = el;
    End;
 
+/** Удаляет текущий элемент, не оставляя дырку, перемещаясь на шаг назад, т.е следующим вызовом [ArrayIterator.next next] переходит на следующий после удаляемого элемент. */
    Macro remove()
-      return;
-      // не реализовано, по причине неизменности исходного массива
+      if (nextIndex == 0) RunError("No such element") end;
+      var el = arr.remove(nextIndex - 1);
+      nextIndex = nextIndex - 1;
+      return el;
    End;
 End;
 
@@ -115,7 +126,7 @@ Class (TArray) SArray()
 
    // -----------------------
    /**
-      Возвращает `true` если массив пустой.
+      Возвращает `true` если массив е содержит элементов, `false` в противном случае.
    */
    Macro isEmpty() : Bool
       return (size == 0);
@@ -263,7 +274,7 @@ Class (TArray) SArray()
       Возвращает новый массив состоящий из элементов текущего с индекса 'from' (включительно) по индекс 'to'(исключительно).
       Если не указан или равен `null` аргумент 'from' - копироваться будет с 0 аргумента.
       Если не указан или равен `null` аргумент 'to' - копироваться будет до конца массива.
-      Так вызывая метод [slice] без параметров, будет создаваться копия исходного массива, при том примитивы будут скопированны полностью, в случае объектов - скопируется ссылка.
+      Так вызывая метод без параметров, будет создаваться копия исходного массива, при этом примитивы будут скопированны полностью, в случае объектов - скопируются ссылки.
 
       Пример:
 
@@ -289,11 +300,7 @@ Class (TArray) SArray()
       "Разворачивает" исходный массив
 
       Пример:
-```
-   var arr = SArray(1, 2, 3);
-   arr.reverse();
-   arr.toScreen();  // [3, 2, 1]
-```
+      @sample [samples.sArray.reverse]
 
       @tag builder
    */
@@ -444,6 +451,7 @@ Class (TArray) SArray()
       return resArr;
    End;
 
+
    /**
       Возвращает новый массив преобразованных функцией 'mapFunc' всех элементов исходного массива.
 
@@ -481,7 +489,7 @@ Class (TArray) SArray()
       @param identity начальное значение
       @param accumulator  функция-редюсер
    */
-   Macro reduce(identity, accumulator) : SArray
+   Macro reduce(identity, accumulator) : Variant
       if (ValType(accumulator) == V_UNDEF)
          RunError("Не указана функция-редюсер");
       elif ((ValType(accumulator) == V_STRING) and isLambdaLoaded)
@@ -665,7 +673,7 @@ Class (TArray) SArray()
 
    /** Возвращает итератор [ArrayIterator] */
    Macro newIterator() : ArrayIterator
-      return GenObject("ArrayIterator", this);
+      return GenObject("ArrayIterator", @this);
    End;
 
    /**
