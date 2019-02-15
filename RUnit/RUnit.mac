@@ -48,6 +48,7 @@ Private Class AssertResult(_assertString : String)
    var assertString = _assertString;
    var isOk;
    var message = "";
+   var num = 0;
 
    Macro toScreen()
       if(RUnitTest.SHOW_ONLY_FAILED_UNIT_ASSERT and isOk) return; end;
@@ -55,7 +56,7 @@ Private Class AssertResult(_assertString : String)
       if(not(isOk))
          st = "fail";
       end;
-      println("      " + st + " - "+ assertString + " - " + message);
+      println("      " + String(num:2:0) + " : " + st + " : " + " - "+ assertString + " - " + message);
    End;
 
    Macro toLog()
@@ -250,6 +251,12 @@ Private Class AssertClass(_val1, _val2)
    var val2 = _val2;
    private var strAssert = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " , " + String(_val2) + " )";
    var result = AssertResult(strAssert);
+   var num = 0;
+
+   Macro setNum(n : Integer)
+      num = n;
+      result.num = n;
+   End;
 
    Macro runAssert() : Bool
       return true;
@@ -411,7 +418,7 @@ Private Class UnitFun(_parent, _name : String)
    var name = _name;
    var expectedErrCode;
    var result = FunResult(_name);
-
+   var curAssNum = 0;
    Macro runTest()
       var curTest = 0;
       var t0 = time();
@@ -425,6 +432,8 @@ Private Class UnitFun(_parent, _name : String)
    End;
 
    Macro addAssert(ass)
+      curAssNum = curAssNum + 1;
+      ass.setNum(curAssNum);
       ass.RunAssert();
       result.addAssertResult(ass.result);
    End;

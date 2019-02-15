@@ -3,7 +3,7 @@
    Объект класса [PredicateFunctions].
 */
 var Predicates = GenObject("PredicateFunctions");
-var accums     = GenObject("AccumulatorFunctions");
+var Accums     = GenObject("AccumulatorFunctions");
 /* Хранит ссылку на объект с методом, чтобы тот не собрался GC */
 private var tmpObjects = TArray();
 
@@ -31,6 +31,13 @@ Private Class (FunctionalClass) AccumFuncClass ()
    initFunctionalClass();
 
    Macro apply(identity, el) : Variant
+   End;
+End;
+
+Private Class (FunctionalClass) MapFuncClass ()
+   initFunctionalClass();
+
+   Macro apply(el) : Variant
    End;
 End;
 
@@ -134,9 +141,10 @@ Private Class FunctionalFactory()
    End;
 End;
 
+/** Предопределенные функции-предикаты.*/
 Private Class (FunctionalFactory) PredicateFunctions()
    /**
-      Позволяет установить функцию для свойства объекта, а не самого объекта.
+      Позволяет установить функцию для поля объекта, а не самого объекта.
    */
    Macro byprop(prName)
       return GenObject("PredicProperClass", prName);
@@ -201,17 +209,44 @@ Private Class (PredicateFunctions) PredicProperClass(prName)
    End;
 End;
 
-Class (FunctionalFactory) AccumulatorFunctions()
-
+/**
+   Предопределенные функции-аккумуляторы.
+*/
+Private Class (FunctionalFactory) AccumulatorFunctions()
+   /**
+      Позволяет установить функцию для поля объекта, а не самого объекта.
+   */
    Macro byprop(prName)
       return GenObject("AccumProperClass", prName);
    End;
 
+   /** Возвращает функцию-аккумулятор, которая возвращает сумму элементов.*/
    Macro sum()
       return getFuncClass();
    End;
 
+   /** Возвращает функцию-аккумулятор, которая возвращает произведение элементов.*/
    Macro mult()
+      return getFuncClass();
+   End;
+
+   /** Возвращает функцию-аккумулятор, которая возвращает минимальный элемент.*/
+   Macro min()
+      return getFuncClass();
+   End;
+
+   /** Возвращает функцию-аккумулятор, которая возвращает максимальный элемент.*/
+   Macro max()
+      return getFuncClass();
+   End;
+
+   /** Возвращает функцию-аккумулятор, которая возвращает индекс минимального элемента.*/
+   Macro minInd()
+      return getFuncClass();
+   End;
+
+   /** Возвращает функцию-аккумулятор, которая возвращает индекс максимального элемента.*/
+   Macro maxInd()
       return getFuncClass();
    End;
 End;
@@ -246,16 +281,86 @@ Private Class (AccumulatorFunctions) AccumProperClass(prName)
 End;
 
 
-Class (AccumFuncClass) Sum_Class()
+Private Class (AccumFuncClass) Sum_Class()
    InitAccumFuncClass();
-   Macro apply(a, b)
-      return (a + b);
+   Macro apply(identity, el)
+      return (identity + el);
    End;
 End;
 
-Class (AccumFuncClass) Mult_Class()
+Private Class (AccumFuncClass) Mult_Class()
    InitAccumFuncClass();
-   Macro apply(a, b)
-      return (a * b);
+   Macro apply(identity, el)
+      return (identity * el);
+   End;
+End;
+
+Private Class (AccumFuncClass) Min_Class()
+   InitAccumFuncClass();
+   Macro apply(identity, el)
+      if ((ValType(identity) == V_UNDEF) or (el < identity))
+         identity = el;
+      end;
+      return identity;
+   End;
+End;
+
+Private Class (AccumFuncClass) Max_Class()
+   InitAccumFuncClass();
+   Macro apply(identity, el)
+      if ((ValType(identity) == V_UNDEF) or (el > identity))
+         identity = el;
+      end;
+      return identity;
+   End;
+End;
+
+Private Class (AccumFuncClass) MinInd_Class()
+   InitAccumFuncClass();
+   var curMin = null;
+   var i = 0;
+   Macro apply(identity, el)
+      if ((ValType(curMin) == V_UNDEF) or (el < curMin))
+         curMin = el;
+         identity = i;
+      end;
+      i = i + 1;
+      return identity;
+   End;
+End;
+
+Private Class (AccumFuncClass) MaxInd_Class()
+   InitAccumFuncClass();
+   var curMax = null;
+   var i = 0;
+   Macro apply(identity, el)
+      if ((ValType(curMax) == V_UNDEF) or (el > curMax))
+         curMax = el;
+         identity = i;
+      end;
+      i = i + 1;
+      return identity;
+   End;
+End;
+
+
+Private Class (FunctionalFactory) MapFunctions()
+   initFunctionalFactory();
+
+   Macro toProp(prName)
+      return getFuncClass(prName);
+   End;
+End;
+
+Private Class (MapFuncClass) ToProp_Class(prName)
+   InitMapFuncClass();
+   var properName = prName;
+
+   Macro apply(el)
+      var ind = GenPropId(el, properName);
+      if (ind < 0)
+         return null;
+      end;
+      return el[ind];
    End;
 End;

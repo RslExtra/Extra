@@ -1,6 +1,7 @@
 import "../mac/extra/RUnit/RUnit.Mac";
 import "../mac/extra/utils/SArray.mac";
 import "../mac/extra/utils/functions.mac";
+import "../mac/extra/utils/CompareFunc.mac";
 import bankinter;
 import rcw;
 RUnitTest.SHOW_ONLY_FAILED_UNIT_FUN = false;
@@ -241,7 +242,22 @@ Class (UnitTest) TestSArray()
    End;
 
    Macro test_sort()
+      arr = SArray(4, 5, 6, 5, 1, 3, 2);
+      arr.sort();
+      assertArrays(arr_(1, 2, 3, 4, 5, 5, 6), arr);
 
+      var sf = CF_ObjectComparator("-summ", "acc").getFunc();
+      arr = SArray(Account("123", 100), Account("124", 100), Account("123", 200), Account("124", 200));
+      arr.sort(sf);
+      assertEquals("123", arr[0].acc);
+      assertEquals(200, arr[0].summ);
+      assertEquals("124", arr[1].acc);
+      assertEquals(200, arr[1].summ);
+      assertEquals("123", arr[2].acc);
+      assertEquals(100, arr[2].summ);
+      assertEquals("124", arr[3].acc);
+      assertEquals(100, arr[0].summ);
+      assertTrue(false);
    End;
 
    Macro test_iterator()
@@ -277,9 +293,9 @@ Class (UnitTest) TestSArray()
    End;
 End;
 
+TestSArray;
 
-
-
+/*
 var arr = SArray;
 for(var i, 0, 1000)
    arr.push(Account("ran" + Random, Random(10000)));
@@ -291,7 +307,10 @@ for(var ac, arr)
    if (ac.summ > 9900) println(ac); end;
 end;
 */
-var a = arr.reduce(0, accums.byprop("summ").sum());
+
+arr = SArray(0, 20, 3, 2, 5);
+var a = arr.reduce(null, accums.minind);
 
 println(a);
 
+*/

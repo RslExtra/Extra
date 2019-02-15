@@ -1,0 +1,11 @@
+import rcw;
+
+Macro getPrivateProp(obj, prop)
+   var upr = StrUpr(prop);
+   var props = GetObjProps(obj, false);
+   for(var i, 0, props.size - 1, 1)
+      if (props[i] == upr)
+         return obj[i];
+      end;
+   end;
+End;
