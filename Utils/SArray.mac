@@ -1,15 +1,15 @@
 /**
    @Package Utils
 
-   Расширение стандартного класса [TArray]. Реализует всю базовую функциональность, за исключением переопределенного метода [SArray.sort sort].
+   Расширение стандартного класса [TArray]. Реализует всю базовую функциональность, за исключением переопределенного метода [SArray.sort sort()].
 
    Преимущества:
    - Имеется возможность заполнять массив при инициализации
    - Имеются дополнительные методы позволяющие легко манипулировать содержимым
    - Имеются методы-цепочки (помеченны тегом 'chain') и методы-билдеры (помечены тегом 'builder')
-   - Переопределен метод [SArray.sort sort], улучшая производительность и изменяющий вид функции-компаратора на более чистый.
+   - Переопределен метод [SArray.sort sort()], улучшая производительность и изменяющий вид функции-компаратора на более чистый.
 
-   @version 0.9
+   @version 0.91
    @author Dzhanybaev M.P.
 */
 
@@ -23,7 +23,7 @@ Private Class SAIterator(_arr)
    private var lastReturned;
 
    Macro next() : Bool
-      if(arr.size > nextIndex)
+      if (arr.size > nextIndex)
          lastReturned = arr[nextIndex];
          nextIndex = nextIndex + 1;
          return true;
@@ -45,9 +45,9 @@ Private Macro isStreamLoaded()
 End;
 
 Private Macro CF_ComparePrimitive(el1, el2) : Integer
-   if(el1 > el2)
+   if (el1 > el2)
       return 1;
-   elif(el1 < el2)
+   elif (el1 < el2)
       return -1;
    else
       return 0;
@@ -93,7 +93,7 @@ Private Class ArrayIterator(_arr : @TArray)
 
 /** Добавляет в массив новое значение*/
    Macro add(el : Variant)
-      for(var i, arr.size, nextIndex, -1)
+      for (var i, arr.size, nextIndex, -1)
          arr[i] = arr[i-1];
       end;
       arr[nextIndex] = el;
@@ -137,7 +137,7 @@ Class (TArray) SArray()
       @oparam varargs - добавляемые элементы
    */
    Macro of() : SArray
-      if(size != 0) RunError("Not Empty SArray cannot be initialized"); end;
+      if (size != 0) RunError("Not Empty SArray cannot be initialized"); end;
       for (var i, 1, Parmcount-1, 1)
          GetParm(i, value(i-1));
       end;
@@ -156,7 +156,7 @@ Class (TArray) SArray()
       if (ValType(ind) == V_UNDEF)
          value(size) = element;
       else
-         for(var i, size, ind + 1, -1)
+         for (var i, size, ind + 1, -1)
             value(i) = value(i-1);
          end;
          value(ind) = element;
@@ -221,7 +221,7 @@ Class (TArray) SArray()
    */
    Macro remove(ind) : Variant
       var r = value(ind);
-      for(var i, ind, size - 2, 1)
+      for (var i, ind, size - 2, 1)
          value(i) = value(i + 1);
       end;
       size = size - 1;
@@ -297,7 +297,7 @@ Class (TArray) SArray()
    End;
 
    /**
-      "Разворачивает" исходный массив
+      "Разворачивает" исходный массив.
 
       Пример:
       @sample [samples.sArray.reverse]
@@ -306,7 +306,7 @@ Class (TArray) SArray()
    */
    Macro reverse() : SArray
       if (size <= 1) return this; end;
-      for(var i, 0, size/2-1, 1)
+      for (var i, 0, size/2-1, 1)
          var t = value(i);
          value(i) = value(size-i-1);
          value(size-i-1) = t;
@@ -327,10 +327,10 @@ Class (TArray) SArray()
       var newArr = SArray();
       if (size + arr.size  == 0) return newArr; end;
       newArr[size + arr.size - 1] = null;
-      for(var i, 0, size - 1, 1);
+      for (var i, 0, size - 1, 1);
          newArr[i] = value(i);
       end;
-      for(i, 0, arr.size - 1, 1);
+      for (i, 0, arr.size - 1, 1);
          newArr[i + size] = arr[i];
       end;
       return newArr;
@@ -443,8 +443,8 @@ Class (TArray) SArray()
          predicFunc = ExecMacro2("GetFunOrLambda", predicFunc);
       end;
       var resArr = SArray();
-      for(var el, this)
-         if(ExecMacro2(predicFunc, el))
+      for (var el, this)
+         if (ExecMacro2(predicFunc, el))
             resArr.push(el);
          end;
       end;
@@ -471,7 +471,7 @@ Class (TArray) SArray()
       var resArr = SArray();
       if (size != 0)
          resArr[size-1] = null;
-         for(var i, 0, size-1, 1)
+         for (var i, 0, size-1, 1)
             resArr[i] = ExecMacro2(mapFunc, value(i));
          end;
       end;
@@ -495,7 +495,7 @@ Class (TArray) SArray()
       elif ((ValType(accumulator) == V_STRING) and isLambdaLoaded)
          accumulator = ExecMacro2("GetFunOrLambda", accumulator);
       end;
-      for(var el, this)
+      for (var el, this)
          identity = ExecMacro2(accumulator, identity, el);
       end;
       return identity;
@@ -521,6 +521,7 @@ Class (TArray) SArray()
    /**
       Сортирует исходный массив согласно функции-компаратору 'compfunc' и возвращает ссылку на исходный массив.
       Если 'compfunc' не указана или равна `null` сортировка будет проводиться в натуральном порядке.
+      Для использования необходимо предварительно импортировать 'bankinter' для возможности задействования функции QSort.
 
       Пример:
       @sample [samples.sArray.sort]
@@ -529,7 +530,7 @@ Class (TArray) SArray()
    */
    Macro sort(compfunc) : SArray
       if (isBankInterLoaded() == false)
-         RunError("Module not loaded: bankinter");
+         RunError("Module is not loaded: bankinter");
       end;
       if (ValType(compfunc) == V_UNDEF)
          compfunc = @CF_ComparePrimitive;
@@ -590,6 +591,18 @@ Class (TArray) SArray()
       return resArr;
    End;
 
+   Private Macro findUnique(compFunc, data : @SArray, from : Integer, to : Integer, skipfirst : Bool, result : @SArray)
+      if (ExecMacro2(compfunc, data[from], data[to]) == 0)
+         if (skipfirst == false)
+            result[result.size] = data[from];
+         end;
+      else
+         var mid = (from + to) / 2;
+         findUnique(compfunc, @data, from, mid, skipfirst, @result);
+         findUnique(compfunc, @data, mid+1, to, (ExecMacro2(compfunc, data[mid], data[mid+1]) == 0), @result);
+      end;
+   End;
+
    /**
       Возвращает новый массив [SArray] уникальных элементов исходного массива в порядке возрастания согласно функции-компаратору 'compfunc'. Если 'compfunc' не задана или равняется `null`, сравнение будет проводиться по ссылке для объектов и по значению для примитивов через `> , < , ==`.
       В среднем работает быстрее чем [distinct].
@@ -603,15 +616,8 @@ Class (TArray) SArray()
          compfunc = ExecMacro2("GetFunOrLambda", compfunc);
       end;
       var copyArr = slice().sort(compfunc);
-      var oldVal = copyArr[0];
-      var resArr = SArray(oldVal);
-      for (var i, 1, copyArr.size - 1, 1)
-         var v = copyArr[i];
-         if (ExecMacro2(compfunc, v, oldVal) != 0)
-            resArr.push(v);
-            oldVal = v;
-         end;
-      end;
+      var resArr = SArray();
+      findUnique(compfunc, @copyArr, 0, copyArr.size-1, false, resArr);
       return resArr;
    End;
 

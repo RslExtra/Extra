@@ -4,7 +4,7 @@
 */
 var Predicates = GenObject("PredicateFunctions");
 var Accums     = GenObject("AccumulatorFunctions");
-/* Хранит ссылку на объект с методом, чтобы тот не собрался GC */
+/* Хранит ссылку на объект с методом, чтобы тот не собрался GC до завершения программы. */
 private var tmpObjects = TArray();
 
 Private Class FunctionalClass()

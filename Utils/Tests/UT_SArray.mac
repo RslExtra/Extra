@@ -172,8 +172,11 @@ Class (UnitTest) TestSArray()
       arr.addAll(1, 2, -1, 2, 3, -4, 4, 3, 0);
       assertArrays(arr_(1, 2, -1, 3, -4, 4, 0), arr.distinct);
       assertArrays(arr_(1, 2, 3, -4, 0), arr.distinct(@equalAbs));
-      var a = arr.distinctSort;
-      assertArrays(arr_(-4, -1, 0, 1, 2, 3, 4), arr.distinctSort());
+
+      arr = SArray(2, 1, 1, 2, 3, 3, 3, 3, 3);
+      debugbreak;
+      var a = arr.distinctSort();
+      assertArrays(arr_(1,2,3), a);
    End;
 
 
