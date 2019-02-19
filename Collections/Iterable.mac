@@ -1,0 +1,731 @@
+/**
+ *  @package Collections
+ *  @version 1.0
+ *  @author Dzhanybaev M.P.
+ *
+ *  Базовые классы и функции коллекций.
+*/
+
+import "..\\Mac\\Extra\\Utils\\Common.mac";         // ifNull
+import "..\\Mac\\Extra\\Utils\\StringUtil.mac";  // JoinToString
+import "..\\Mac\\Extra\\Lambda\\SArray.mac";
+import "..\\Mac\\Extra\\Utils\\CompareFunc.mac";
+import "..\\Mac\\Extra\\Utils\\SortingFunc.mac";
+import "..\\Mac\\Extra\\Utils\\Exceptions.mac";
+import "..\\Mac\\Extra\\Lambda\\lambda.mac";
+
+import rcw;
+
+Class Pair(k, v)
+   var key = k;
+   var value = v;
+   Macro toString() : String
+      return "(" + key + " - " + value + ")";
+   End;
+End;
+
+/**
+   Функция расчета хэшкода String.
+*/
+Macro CalcStringHash(key : String) : Integer
+   var h = 7;
+   for (var i, 1, StrLen(key), 1)
+      h = h * 31 + CodeFor(SubStr(key, i, 1));
+   end;
+   return abs(h);
+End;
+
+Private Class EmptyObj()
+   Macro equals() : Bool
+      return true;
+   End;
+
+   Macro compareTo() : Integer
+      return 0;
+   End;
+
+   Macro hash()
+
+   End;
+
+   Macro toString() : String
+      return "Empty";
+   End;
+End;
+
+Class Any()
+   Macro compareTo(obj) : Integer
+      return 0;
+   End;
+
+   Macro hash()
+      var h = 0;
+      for(var i, 0, GenNumProps(this) - 1, 1)
+         var p = this[i];
+         if ((ValType(p) != V_UNDEF) and (ValType(p) < 10))
+            h = h + CalcStringHash(String(p));
+         end;
+      end;
+      return abs(h);
+   End;
+
+   Macro equals(obj) : Bool
+      if (ValType(obj) == V_UNDEF)
+         return false;
+      elif (this == obj)
+         return true;
+      elif (this.hash() != obj.hash())
+         return false;
+      end;
+      return CF_objectEquals(this, obj);
+   End;
+
+   Macro toString() : String
+      var res = GenClassName(this) + " [";
+      var propnames = GetObjProps(this, true);
+      for (var i, 0, propnames.size - 1, 1)
+         res = res + propnames[i] + " : " + String(this[i]);
+         if (i != propnames.size-1)
+            res = res + ", ";
+         end;
+      end;
+      res = res + "]";
+      return res;
+   End;
+End;
+
+/** Нулевой объект-загулшка для HashSet*/
+Const PRESENT = EmptyObj();  //
+
+/** Видимость до и после текущего значения итератора в отладчике */
+Const NVIS = 2;  //
+
+/**
+   Интерфейс базового итератора для всех коллекций,
+   методы обязательны для переопределения
+*/
+Class BaseIterator()
+   /** Возвращает следующий элемент коллекции или `null` если находится в конце списка*/
+   Macro next() : Variant
+   End;
+   /** Возвращает `true` если имеется следующий элемент коллекции. `false`  в противном случае. */
+   Macro hasNext() : Bool
+   End;
+
+   /** Возвращает предыдущий элемент коллекции или `null` если находится в начале списка*/
+   Macro previous() : Variant
+   End;
+
+   /** Возвращает `true` если имеется предыдущий элемент коллекции. `false`  в противном случае. */
+   Macro hasPrev() : Bool
+   End;
+
+   /** Повторно возвращает последний уже отданный элемент*/
+   Macro getLastReturned() : Variant
+   End;
+
+   /** Переводит указатель итератора в начало списка */
+   Macro clear()
+   End;
+End;
+
+/**
+   Обертка для [BaseIterator]. Позволяет перебирать элементы коллекций (наследников [Iterable]) нативным `for(e, iterable)`;
+*/
+Class NativeIterator(_itr : BaseIterator)
+   var itr  = _itr;
+
+   Macro next() : Bool
+      if(itr.hasNext())
+         itr.next;
+         return true;
+      end;
+      return false;
+   End;
+
+   Macro item() : Variant
+      return itr.getLastReturned();
+   End;
+
+   Macro toString() : String
+      return String(itr);
+   End;
+End;
+
+/**
+   Базовый класс коллекций. Содержит описание интерфейса коллекций.
+*/
+Class Iterable()
+   //var size;
+   /** Ссылка на функцию компаратор для элементов коллекции*/
+   var compareRef;
+   /** Равен `true` когда элементы являются примитивами. `false` - объектами */
+   var isPrimitive = false;
+
+   /** Возвращает новый экземпляр текущего класса */
+   Macro newInstance()
+   End;
+
+   /** Удаляет все элементы коллекции*/
+   Macro clear()
+   End;
+
+
+   /** Дефалтное добавление (для chain - функций) */
+   Macro append(baseCollectionElement)
+   End;
+
+   /** Возвращает новый итератор */
+   Macro newIterator() : BaseIterator
+   End;
+
+   /** Устанавливает флаг [isPrimitive] в `true`; Возвращает себя
+      @return this
+   */
+   Macro setPrimitive()
+      isPrimitive = true;
+      compareRef = @CF_comparePrimitive;
+      return this;
+   End;
+
+   /** Задает функцию компаратор */
+   Macro setCompareFun(_compareRef)
+      compareRef = _compareRef;
+      return this;
+   End;
+
+   /** Возвращает
+      - '1' - если 'o1 > o2',
+      -'-1' - если 'o1 < o2'
+      - '0' - если 'o1 = o2'
+   */
+   Private Macro compare(o1, o2) : Integer
+   End;
+
+   /** Возвращает строку из элементов коллекции, разделенных '_delim', начинается с '_prefix' заканчивается '_postfix'*/
+   Macro join(_delim, _prefix, _postfix) : String
+      var delim   = ifNull(_delim, ", ");
+      var prefix  = ifNull(_prefix, "[");
+      var postfix = ifNull(_postfix,"]");
+      return joinToString(this, delim, prefix, postfix);
+   End;
+
+   // Chain - функции
+
+   /** Возвращает объект того же типа коллекции с элементами подходящими под условия функции
+      @param _func - ссылка на функцию - предикат вида Macro func(el : Variant) : Bool
+   */
+   Macro filter(_func) : Iterable
+      var func = getFunOrLambda(_func);
+      var result = newInstance();
+      if(isPrimitive)
+         result.setPrimitive();
+      end;
+      var el;
+      var itr = newIterator();
+      while(itr.hasNext)
+         el = itr.next;
+         if(ExecMacro2(func, el))
+            result.append(el);
+         end;
+      end;
+      return result;
+   End;
+
+   // Возвращает объект того же типа коллекции с элементами преобразованными функцией
+   // _func - ссылка на функцию вида Macro func(el : Variant) : Variant
+   Macro map(_func) : Iterable
+      var func = getFunOrLambda(_func);
+      var result = newInstance();
+      if(isPrimitive)
+         result.setPrimitive();
+      end;
+      var el, outEl;
+      var itr = newIterator();
+      while(itr.hasNext)
+         el = itr.next;
+         outEl = ExecMacro2(func, el);
+         result.append(outEl);
+      end;
+      return result;
+   End;
+
+   // Возвращает сумму элементов коллекции (только для примитивной)
+   Macro sum() : Numeric
+      var sum = 0;
+      var itr = newIterator();
+      while(itr.hasnext())
+         sum = sum + itr.next();
+      end;
+      return sum;
+   end;
+
+   // Возвращает сумму элементов коллекции по свойству объектов (для объектной)
+   // propname - имя свойство объекта
+   Macro sumByProp(_propName) : Numeric
+      var sum : Numeric = 0;
+      var itr = newIterator();
+      var v,p;
+      while(itr.hasnext())
+         v = itr.next();
+         p = GenGetProp(v, _propName);
+         sum = sum + p;
+      end;
+      return sum;
+   End;
+
+   // Возвращает сумму элементов коллекции(для объектной и примитивной)
+   // _func - ссылка на функцию - преобразователь вида Macro func(el : Variant) : Numeric
+   Macro sumBy(_func)
+      var func = getFunOrLambda(_func);
+      var sum : Numeric = 0;
+      var itr = newIterator();
+      var p;
+      while(itr.hasnext())
+         p = ExecMacro2(func, itr.next());
+         sum = sum + p;
+      end;
+      return sum;
+   End;
+
+   /** Возвращает максимальное значение коллекции.
+      oparam _func = @CF_ComparePrimitive ссылка на функцию компаратор.
+   */
+   Macro max(_func) : Variant
+      var func = _func;
+      if(ValType(func) == V_UNDEF)
+         func = @CF_ComparePrimitive;
+      end;
+      var v;
+      var itr = newIterator();
+      var maxV = itr.next();
+      while(itr.hasNext())
+         v = itr.next();
+         if(ExecMacro2(func, v, maxV) > 0)
+            maxV = v;
+         end;
+      end;
+      return maxV;
+   End;
+
+   /** Возвращает максимальное значение объекта в порядке величины его полей заданных как String [varargs]*/
+   Macro maxByProp(varargs) : Variant
+      var pc = ParmCount();
+      var i,p;
+      var parmArr = TArray;
+      for(i, 1, pc - 1,1)
+         GetParm(i,p);
+         parmArr[parmArr.size] = p;
+      end;
+      var comparator = CF_ObjectComparator(parmArr);
+      var func = R2M(comparator, "compare");
+      return this.max(func);
+   End;
+
+   /** Возвращает минимальное значение коллекции.
+      oparam _func = @CF_ComparePrimitive ссылка на функцию компаратор.
+   */
+   Macro min(_func) : Variant
+      var func = _func;
+      if(ValType(func) == V_UNDEF)
+         func = @CF_ComparePrimitive;
+      end;
+      var itr = newIterator();
+      var v;
+      var minV = itr.next();
+      while(itr.hasNext())
+         v = itr.next();
+         if(ExecMacro2(func, v, minV) < 0)
+            minV = v;
+         end;
+      end;
+      return minV;
+   End;
+
+   /** Возвращает минимальное значение объекта в порядке величины его полей заданных как String [varargs]*/
+   Macro minByProp(varargs) : Variant
+      var pc = ParmCount();
+      var i,p;
+      var parmArr = TArray;
+      for(i, 1, pc - 1,1)
+         GetParm(i,p);
+         parmArr[parmArr.size] = p;
+      end;
+      var comparator = CF_ObjectComparator(parmArr);
+      var func = R2M(comparator, "compare");
+      return this.min(func);
+   End;
+
+
+   Macro toStr() : String
+      return join();
+   End;
+
+   /** Выводит коллекцию на экран с переносом строк*/
+   Macro toScreen()
+      joinToPrint(this, "\n","[\n", "\n]");
+   End;
+   /** Выводит коллекцию на экран без переноса строк*/
+   Macro toScreen2()
+      joinToPrint(this,", ", "[", "]");
+   End;
+
+   // Метод для возможности перечисления нативным for(el, collection)
+   Macro createEnum()
+      return NativeIterator(newIterator());
+   End;
+
+   compareRef = @CF_compareObjFromInner;
+End;
+
+/** Максимальное количество элементов выводимых на экран*/
+Private Const SHOW_NUM = 50;
+
+/** Базовый интерфейс для списков*/
+Class (Iterable) BaseList()
+   initIterable();
+   var size = 0;
+   Macro clear()
+      // В наследниках
+   End;
+
+   Macro setCompareFun(_compRef)
+      compareRef = _compRef;
+      return this;
+   End;
+
+   Macro Compare(el1, el2)
+      var res = execMacro2(compareRef, el1, el2);
+      return res;
+   End;
+
+   Macro isEquals(o1,o2) : Bool
+      if((ValType(o1)==V_UNDEF) or (ValType(o2) == V_UNDEF))
+         return false;
+      end;
+      return (compare(o1,o2) == 0);
+   End;
+
+   /** Возвращает позицию первого элемента `obj` в коллекции согласно функции компаратору для списка */
+   Macro indexOf(obj : Variant) : Integer
+   End;
+
+   /** Возвращает позицию последнего элемента `obj` в коллекции согласно функции компаратору для списка */
+   Macro lastIndexOf(obj : Variant) : Integer
+   End;
+
+   /** Сортирует и возвращает текущую коллекцию.*/
+   Macro sort(_compareFun)
+      return this;
+   End;
+
+   /** Возвращает `true`, если коллекция отсортирована. `false` в противном случае*/
+   Macro isSorted(_compareFun) : Bool
+      if(size <= 1)
+         return true;
+      end;
+      if((ValType(compareRef) == V_UNDEF) and (ValType(_compareFun) == V_UNDEF))
+         return false;
+      end;
+      var compareFun = compareRef;
+      if(ValType(_compareFun) != V_UNDEF)
+         compareFun = _compareFun;
+      end;
+
+      var itr = newIterator();
+      var pr = itr.next;
+      var cur;
+      while(itr.hasNext())
+         cur = itr.next;
+         if(execMacro2(compareFun,pr,cur)>0)
+            //println(itr.nextIndex);
+            //println(pr + " -> " + cur);
+            return false;
+         end;
+         pr = cur;
+      end;
+      return true;
+      OnError(err)
+         if(err.code == 37)
+            RunError("Не верно определена функция-компаратор для isSorted()", err);
+         end;
+   End;
+
+   /** Заполняет коллекцию элементами из массива 'arr'*/
+   Macro fromArray(arr : TArray)
+      return this;
+   End;
+
+   /** Заполняет список элементов 'varargs'*/
+   Macro of(varargs)
+      var arr = TArray();
+      var p;
+      var i = 1;
+      var count = ParmCount();
+      while(i < count)
+         GetParm(i, p);
+         arr[i-1] = p;
+         i = i + 1;
+      end;
+      return fromArray(arr);
+   End;
+
+   // Используется только в дебагере
+   // Для отображения полного списка в строке использовать метод toStr() : String, toScreen(), toScreen2() - для вывода а экран
+   Macro toString(_showAll : Bool) : String
+      var showAll = false;
+      if(ValType(_showAll)!=V_UNDEF)
+         showAll = _showAll;
+      end;
+      var i = 0;
+      var s : String = "";
+      var inItr = newIterator();
+      s = s + "[ ";
+      while(inItr.hasnext())
+         s = s + inItr.next();
+         i = i + 1;
+         if(inItr.hasNext())
+            s = s +" ,";
+         end;
+         if(not(showAll) and (i>=SHOW_NUM))
+            break;
+         end;
+      end;
+      s = s + " ]";
+      inItr = null;
+      return s;
+   End;
+
+   Macro Destructor()
+      clear();
+   End;
+End;
+
+/**
+   Базовый класс для итераторов списка.
+   @param iList объект списка
+   @oparam ind = 0 начальный индекс
+*/
+Class (BaseIterator) ListIterator(ilist : BaseList, ind : Integer)
+   var list = ilist;
+   var curIndex  : Integer = -1;
+   var nextIndex : Integer = 0;
+   var lastReturned;
+
+   if(ValType(ind)==V_UNDEF)
+      ind = 0;
+   end;
+
+   nextIndex = ind;
+
+   Macro getLastReturned()
+      return lastReturned;
+   End;
+
+   Macro getNextIndex()
+      return nextIndex;
+   End;
+
+   Macro clear()
+      nextIndex = 0;
+      lastReturned = null;
+   End;
+
+   Macro hasNext() : Bool
+      return (nextIndex < list.size);
+   End;
+
+   Macro hasPrev()
+      return (nextIndex>0);
+   End;
+
+   Macro next() : Variant
+      lastReturned = list.get(nextIndex);
+      curIndex = nextIndex;
+      nextIndex = nextIndex + 1;
+      return lastReturned;
+   End;
+
+   Macro previous() : Variant
+      if(not(hasPrev))
+         return;
+      end;
+      nextIndex = nextIndex - 1;
+      curIndex = nextIndex;
+      lastReturned = list.get(nextIndex);
+      return lastReturned;
+   End;
+
+   Macro toPos(ind : Integer)
+      if((ind<0) or (ind>list.size-1)) return; end;
+      curIndex = ind;
+      nextIndex = ind + 1;
+   End;
+End;
+
+/**
+   Реализация неизменяемого списка на основе массива [TArray].
+*/
+Class (BaseList) ImmutableList()
+   size = 0;
+   var items : TArray;
+   //items.checkbounds = false;
+
+   /** Возвращает элемент списка под индексом 'ind' */
+   Macro get(ind) : Variant
+      if((ind <0) or (ind>=size))
+         return null;
+      end;
+      return items[ind];
+   End;
+
+   /** Возвращает первый элемент списка или `null` если список пуст.*/
+   Macro getFirst() : Variant
+      if(size == 0) return null; end;
+      return items[0];
+   End;
+
+   /** Возвращает последний элемент списка или `null` если список пуст.*/
+   Macro getLast() : Variant
+      if(size == 0) return null; end;
+      return items[size - 1];
+   End;
+
+   Macro add()
+      // Error
+   End;
+
+   Macro set()
+      // Error
+   End;
+
+   Macro remove()
+      // Error
+   End;
+
+   Macro append(el : Variant) : Bool
+      //items.checkbounds = false;
+      items[size] = el;
+      size = size + 1;
+      //items.checkbounds = true;
+      return true;
+      OnError
+         return false;
+   End;
+
+   Macro newInstance()
+      return ImmutableList().fromArray(TArray);
+   End;
+
+   Macro indexOf(obj : Variant) : Integer
+      var i;
+      for (i, 0, size-1,1)
+         if(isEquals(obj, items[i]))
+            return i;
+         end;
+      end;
+      return -1;
+   End;
+
+   Macro lastIndexOf(obj : Variant) : Integer
+      var i;
+      for(i, size-1, 0, -1)
+         if(isEquals(obj, items[i]))
+            return i;
+         end;
+      end;
+      return -1;
+   End;
+
+   Macro contains(obj : Variant) : Bool
+      return (indexOf(obj)>=0);
+   End;
+
+   Macro clear()
+      if(ValType(items) == V_UNDEF) return; end;
+      var p;
+      for(p, items)
+         p = null;
+      end;
+      items = null;
+   End;
+
+   Macro copy()
+      var newList = newInstance();
+      var i;
+      for(i, 0, size-1, 1)
+         newList.add(items[i]);
+      end;
+   End;
+
+   Macro reverse()
+      var newItems = TArray();
+      newItems[items.size - 1] = null;
+      var i;
+      for(i, 0, size-1, 1)
+         newItems[i] = items[size - i - 1];
+      end;
+      items = newItems;
+      //items.checkbounds = true;
+   End;
+
+   Macro newIterator()
+      return ListIterator(this);
+   End;
+
+   Macro fromArray(arr : TArray)
+      items = arr;
+      size = arr.size;
+      //items.checkbounds = true;
+      return this;
+   End;
+
+   Macro toArray() : TArray
+      return items;
+   End;
+
+   Macro sort(_compareFun)
+      var compareFun = compareRef;
+      if(ValType(_compareFun)!=V_UNDEF)
+         compareFun = _compareFun;
+      end;
+      ExQSort(items, compareFun);
+      return this;
+   End;
+End;
+
+/** Возвращает иммутабельный список [ImmutableList] из элементов 'varargs' */
+Macro listOf(varargs) : ImmutableList
+   var arr = TArray();
+   var p;
+   var i = 0;
+   var count = Parmcount();
+   while(i < count)
+      getParm(i, p);
+      arr[i] = p;
+      i = i + 1;
+   end;
+   return ImmutableList.fromArray(arr);
+End;
+
+/**
+   Возвращает иммутабельный список [ImmutableList] элементов 'Integer'
+   начиная с 'from' заканчивая 'to' с шагом 'step'.
+   @param from начало диапозона
+   @param to   конец диапозона
+   @oparam step = 1 шаг
+*/
+Macro range(from : Integer, to: Integer, step: Integer) : ImmutableList
+   var arr = TArray();
+   var istep = ifNull(step, 1);
+   if(from>to)
+      istep = -istep;
+   end;
+   var i;
+   for(i,from,to,istep)
+      arr[arr.size] = i;
+   end;
+   return ImmutableList.fromArray(arr);
+End;
+
+

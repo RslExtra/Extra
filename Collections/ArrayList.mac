@@ -1,0 +1,339 @@
+/**
+   @package Collections
+   @version 1.0
+
+   Реализация списка на основе массива [TArray].
+*/
+
+import "..\\Mac\\Extra\\Collections\\Iterable.mac";
+
+/**
+   Реализация итератора для [ArrayList].
+   @param _arrList : ArrayList Объект списка
+   @oparam _ind = 0 Индекс стартового элемента
+*/
+Private Class (ListIterator) ArrayListIterator(_arrList : BaseList, _ind : Integer)
+   InitListIterator(_arrList, _ind);
+   // var list = _arrList;
+   // var curIndex  : Integer = -1;
+   // var nextIndex : Integer = 0;
+   // var lastReturned;
+
+   if(ValType(_ind)==V_UNDEF)
+      _ind = 0;
+   end;
+
+   nextIndex = _ind;
+
+   Macro add(el : Variant) : Bool      // Add after curEl
+      list.add(el, nextIndex);
+   End;
+
+   Macro addBefore(el : Variant)
+      list.add(el, nextIndex - 1);
+      curIndex = curIndex + 1;
+      nextIndex = nextIndex + 1;
+   End;
+
+   Macro set(el : Variant) : Variant
+      var oldVal;
+      if(ValType(lastReturned) != V_UNDEF)
+         return list.set(el, curIndex);
+      end;
+   End;
+
+   Macro remove() : Variant   // Удаяем текущий элемент и никуда не идем
+      if(curIndex >=0)
+         var rem = list.remove(curIndex);
+         curIndex = -1;
+         return rem;
+      end;
+   End;
+
+   Macro toPos(ind : Integer)
+      if((ind<0) or (ind>list.size-1)) return; end;
+      curIndex = ind;
+      nextIndex = ind + 1;
+   End;
+End;
+
+/** Вместимость списка при инициализации. */
+Private CONST INIT_CAPACITY = 128;
+
+
+/** Реализация списка на основе массива [TArray]. Реализует все классические методы как в реализации Java.Collection [ArrayList.add add()], [ArrayList.get() get()] и т.д.
+@see [Collections.LinkedList Двусвязный список]
+@see [NativeIterator]
+*/
+Class (ImmutableList) ArrayList()
+   var capacity = INIT_CAPACITY;
+   size  = 0;
+   items = TArray();
+   items[capacity - 1] = null; // Инициализируем null-ами
+
+   compareRef = @CF_CompareObjFromInner;
+
+   Macro resize()
+      capacity = capacity * 2;
+      items[capacity-1] = null;
+   end;
+
+   /** Добавляет указанный элемент `v` на позицию `ind`. Если  `ind` не указан, добавляет элемент в конец списка.
+      @sample [samples.Collections.ArrayList.add]
+   */
+   Macro add(v, ind) : Bool
+      if((ValType(ind) == V_UNDEF) or (ind == size))
+         items[size] = v;
+      elif((ind<0) or (ind>=size))
+         return false;
+         // or ERROR?
+      else
+         var i;
+         for(i, size - 1, ind, -1)
+            items[i + 1] = items[i];
+         end;
+         items[i] = v;
+      end;
+      size = size + 1;
+      if(size == capacity)
+         resize();
+      end;
+      return true;
+   End;
+
+   Macro addFirst(v : Variant) : Bool
+      return add(v,0);
+   End;
+
+   Macro addLast(v : Variant) : Bool
+      return add(v);
+   End;
+
+   Macro set(ind : Integer , v : Variant) : Variant
+      if((ValType(ind) == V_UNDEF) or (ind<0) or (ind >= size))
+         return null;
+      end;
+      var oldVal = items[ind];
+      items[ind] = v;
+      return oldVal;
+   End;
+
+   Macro remove(ind : Integer) : Variant
+      if((ValType(ind) == V_UNDEF) or (ind<0) or (ind >= size))
+         return null;
+      end;
+      var remVal = items[ind];
+      for(var i, ind, size-2,1)
+         items[i] = items[i+1];
+      end;
+      items[size-1] = null;
+      size = size - 1;
+      return remVal;
+   End;
+
+   Macro removeFirst() : Variant
+      return remove(0);
+   End;
+
+   Macro removeLast() : Variant
+      return remove(size-1);
+   End;
+
+   Macro addArray(arr : TArray, ind : Integer)
+      if(ValType(arr) == V_UNDEF)
+         return;
+      end;
+      var fromInd = ind;
+      if(ValType(ind) != V_INTEGER)
+         fromInd = size;
+      end;
+      var i = 0;
+      while(i < arr.size)
+         add(arr[i], fromInd);
+         fromInd = fromInd + 1;
+         i = i + 1;
+      end;
+   End;
+
+   Macro addAll(list : Iterable, ind : Integer)
+      if(ValType(list) == V_UNDEF) return; end;
+      if(list.size == 0) return; end;
+      var fromInd = ind;
+      if(ValType(ind) != V_INTEGER)
+         fromInd = size;
+      end;
+      var ofs = list.size;
+      while(capacity <= (size + ofs))     // Раздвигаем массив
+         resize();
+      end;
+      var i;
+      for(i, size-1, fromInd, -1)
+         items[i + ofs] = items[i];
+      end;
+      i = fromInd;
+      var itr = list.newIterator();
+      while(itr.hasnext())
+         items[i] = itr.next;
+         i = i + 1;
+      end;
+      size = size + list.size;
+      return this;
+   End;
+
+   Macro indexOf(v : Variant) : Integer
+      var i;
+      if(ValType(v) == V_UNDEF)
+         for (i, 0, size-1, 1)
+            if(ValType(items[i]) == V_UNDEF)
+               return i;
+            end;
+         end;
+      else
+         for (i, 0, size-1, 1)
+            if(isEquals(v, items[i]))
+               return i;
+            end;
+         end;
+      end;
+      return -1;
+   End;
+
+   Macro lastIndexOf(v : Variant) : Integer
+      var i;
+      if(ValType(v) == V_UNDEF)
+         for(i, size - 1, 0, -1)
+            if(ValType(items[i]) == V_UNDEF)
+               return i;
+            end;
+         end;
+      else
+         for(i, size-1, 0, -1)
+            if(isEquals(v, items[i]))
+               return i;
+            end;
+         end;
+      end;
+      return -1;
+   End;
+
+   Macro contains(v : Variant) : Bool
+      return (indexOf(v)>=0);
+   End;
+
+   /** Бинарный поиск по списку элемента `el`. Возвращает индекс найденного элемента или -1.*/
+   Macro binarySearch(el, comp) : Integer
+      if(ValType(comp) != V_UNDEF)
+         compareRef = comp;
+      end;
+      var low = 0;
+      var high = size;
+      var mid, x;
+      var i = -1;
+      while(low < high)
+         mid = (low + high) / 2;
+         x = items[mid];
+         var resCompare = ExecMacro2(compareRef, el, x);
+         if(resCompare == 0)
+            i = mid;
+            break;
+         elif(resCompare < 0)
+            high = mid;
+         else
+            low = mid + 1;
+         end;
+      end;
+      return i;
+   End;
+
+   Macro clear()
+      var i;
+      for(i, 0, size - 1, 1)
+         items[i] = null;
+      end;
+      items = TArray();
+      items[capacity - 1] = null;
+      size = 0;
+   End;
+
+   Macro copy()
+      var newList = ArrayList();
+      var i;
+      for(i, 0, size-1, 1)
+         newList.add(items[i]);
+      end;
+      return newList;
+   End;
+
+   Macro reverse()
+      var newItems = TArray();
+      newItems[items.size - 1] = null;
+      var i;
+      for(i, 0, size-1, 1)
+         newItems[i] = items[size - i - 1];
+      end;
+      items = newItems;
+   End;
+
+   Macro getInstance()
+      return ArrayList();
+   End;
+
+   Macro newInstance()
+      return ArrayList();
+   End;
+
+   Macro fromList(list : Iterable)
+      if(IsEqClass("ImmutableList", list))
+         while(capacity <= list.size)
+            resize();
+         end;
+         items = list.items;
+         size = list.size;
+         capacity = size;
+      else
+         clear();
+         addAll(list);
+      end;
+      return this;
+   End;
+
+   Macro fromArray(arr : TArray)
+      while(capacity <= arr.size)
+         resize();
+      end;
+      items = arr;
+      size = arr.size;
+      items[capacity - 1] = null;
+      return this;
+   End;
+
+   Macro toArray() : TArray
+      var retArr = TArray;
+      retArr[size - 1] = null;
+      var i;
+      for(i, 0, size - 1, 1)
+         retArr[i] = items[i];
+      end;
+      return retArr;
+   End;
+
+   Macro sort(_compareFun)
+      var compareFun = compareRef;
+      if(Valtype(_compareFun)!=V_UNDEF)
+         compareFun = _compareFun;
+      end;
+      var arr = toArray();
+      ExQSort(arr, compareFun);
+      clear();
+      fromArray(arr);
+      return this;
+      OnError(err)
+         if(err.code == 37)
+            RunError("Не верно определена функция-компаратор для sort()", err);
+         end;
+   End;
+
+   Macro newIterator()
+      return ArrayListIterator(this);
+   End;
+End;

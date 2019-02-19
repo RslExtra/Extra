@@ -1,0 +1,726 @@
+/**
+   @package Collections
+   Файл включает в себя реализацию классического интерфейса 'map' через хэш-таблицу.
+   Операции поиска, вставки и удаления осуществляются за 'O(1)' в лучшем случае и 'O(n)' в худшем, при неправильной подобранной хэш-функции.
+
+   @see [Collections.TreeMap]
+*/
+import "..\\Mac\\Extra\\Collections\\Iterable.mac";
+
+
+/**
+   Класс узла хэш-таблицы.
+*/
+Class (Pair) HashMapEntry(k : Variant, v : Variant, _hash : Integer)
+   InitPair(k, v);
+   var hash : Integer = _hash;
+   var nxt;
+End;
+
+Private Macro calcObjHashFromInner(obj) : Integer
+   return obj.hash();
+end;
+
+/**
+   Функция расчета хэшкода для Integer.
+*/
+Private Macro calcIntHash(key) : Integer
+   return key;
+End;
+
+/**
+   Класс итератора HashMap.
+*/
+Private Class (BaseIterator) HashIterator(_map)
+   var map           = _map;
+   var nxt           = null;
+   var lastReturned  = null;
+   var busk : Integer = 0; // текущая корзина
+
+   if (map.size > 0)
+      while (busk < map.table.size)   // ищем первую ненулевую корзину
+         if (map.table[busk] != null)
+            nxt = map.table[busk];
+            break;
+         end;
+         busk = busk + 1;
+      end;
+   end;
+
+   Macro hasNext() : Bool
+      return nxt!=null;
+   End;
+
+   Macro nextEntry()
+      var ent = nxt;
+      nxt = ent.nxt;
+      if (nxt == null)
+         while (busk < map.table.size - 1)
+            busk = busk + 1;
+            if (map.table[busk] != null)
+               nxt = map.table[busk];
+               break;
+            end;
+         end;
+      end;
+      lastReturned = ent;
+      return ent;
+   End;
+
+   Macro remove() : Variant
+      if (lastReturned == null)
+         return null;
+      end;
+      return map.removeEntry(lastReturned.key);
+   End;
+
+   Macro getLastReturned() : Variant
+      return lastReturned;
+   End;
+
+   Macro getNextIndex() : Integer
+
+   End;
+End;
+
+/**
+   Класс итератора значений
+*/
+Private Class (HashIterator) ValueIterator(_map)
+   initHashIterator(_map);
+   Macro next() : Variant
+      return nextEntry().value;
+   End;
+End;
+
+
+/**
+   Класс итератора ключей
+*/
+Private Class (HashIterator) KeyIterator(_map)
+   initHashIterator(_map);
+   Macro next() : Variant
+      return nextEntry().key;
+   End;
+End;
+
+/**
+   Класс итератора узлов
+*/
+Private Class (HashIterator) EntryIterator(_map)
+   initHashIterator(_map);
+   Macro next() : Variant
+      return nextEntry();
+   End;
+End;
+
+/**
+   Load Factor по умолчанию.
+*/
+Const DEFAULT_LOAD_FACTOR : Double    = 0.1;
+
+/**
+   Вместимость хэш-таблицы по умолчанию.
+*/
+Const DEFAULT_INIT_CAPACITY : Integer = 256;
+
+/**
+   Возвращает целое число ближайшее к 'cap', являющееся степенью 2.
+*/
+Macro toLowPwr2(cap : Integer) : Integer
+   if (cap <= DEFAULT_INIT_CAPACITY) return DEFAULT_INIT_CAPACITY; end;
+   for (var i, 8, 30)
+      var res = pow(2, i);
+      if (cap / res < 2)
+         return int(res);
+      end;
+   end;
+   RunError("Too large capacity for HashMap");
+End;
+
+
+/**
+   Реализация коллекции элементов пары ключ-значении на основе хэш-таблицы.
+   В качестве ключа может выступать один из следующих типов
+      - V_STRING  - Используется по умолчанию. В качестве типа ключа выступает String.
+      - V_INTEGER - В качестве типа ключа выступает Integer. Существенно ускоряет работу таблицы при использовании целочисленных ключей.
+      - V_GENOBJ  - Для объектных ключей.
+
+   В качестве значения может выступать любой тип RSL (в т.ч `null`).
+
+   Примеры объявления:
+```
+   var map = HashMap();   // Хэш-таблица с ключом типа String
+
+   var objmap = HashMap().setKeyType(V_GENOBJ); // Хэш-таблица с ключем объектного типа
+
+   var intmap = HashMap.setKeyType(V_INTEGER);
+
+```
+
+
+   @OParam _InitialCapacity  начальная вместимость таблицы, при null значение будет равно DEFAULT_INIT_CAPACITY = 256
+   @OParam _LoadFactor       начальный фактор загрузки, при null значение будет равно DEFAULT_LOAD_FACTOR = 0.1
+   @OParam _compareValRef    ссылка на метод-компаратор для значений, при null - будет использоваться метод класса CompareTo(obj) : Integer
+   @OParam _compareKeyRef    ссылка на метод-компаратор для ключей,   при null - будеи использоваться процедура ComparePrimitive(p1,p2) : Integer
+
+   Необходимо указать эти функции или (предпочтительней) реализовать в классе следующие методы:
+   equals(obj) : Integer   - сравнение с объектами того же вида
+   calcHash() : Integer    - вычисление хэша объекта
+   При этом ОБЯЗАТЕЛЬНО выполнение условия: Если equals(obj) == true(объекты считаются равными) o1.calcHash == o2.calcHash (у равных объектов равны Хэши).
+*/
+Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _compareValRef, _compareKeyRef)
+   /** Размер коллекции.*/
+   var size                   = 0;
+   private var loadfactor : Double  = DEFAULT_LOAD_FACTOR;
+   private var capacity   : Integer = DEFAULT_INIT_CAPACITY;
+   private var curdepth   : Integer = 1;
+   private var treshold   : Integer = 0;
+   var table              : TArray  = TArray();
+   private var hashfunc             = @CalcObjHashFromInner;
+   private var keyEqualFunc         = @CF_EqualsFromInner;
+   private var keyComparator        = @CF_CompareObjFromInner;
+   private var valueComparator      = @CF_ComparePrimitive;
+
+   /**
+      Устанавливает тип ключа 'type' из языка RSL.
+
+      Возможные варианты:
+      - V_STRING  - В качестве типа ключа выступает String.
+      - V_INTEGER - В качестве типа ключа выступает Integer. Существенно ускоряет работу таблицы при использовании целочисленных ключей.
+      - V_GENOBJ  - Для объектных ключей. Пользовательский класс должен реализовать методы `macro compareTo(obj) : Integer` и `macro calchash() : Integer` с необходимым условием если два экземпляра считаются равными (compareTo возвращает 0), тогда и calcHash должен вернуть равный хэш. Однако экземпляры с равным hash не обязательно должны быть равны.
+   */
+   Macro setKeyType(type : Integer)
+      if (type == V_STRING)
+         hashfunc = @CalcStringHash;
+         keyEqualFunc = @CF_PrimitiveEquals;
+         keyComparator = @CF_ComparePrimitive;
+      elif (type == V_INTEGER)
+         hashfunc = @calcIntHash;
+         keyEqualFunc = @CF_PrimitiveEquals;
+         keyComparator = @CF_ComparePrimitive;
+      elif (type == V_GENOBJ)
+         hashfunc     = @CalcObjHashFromInner;
+         keyEqualFunc = @CF_EqualsFromInner;
+         keyComparator = @CF_CompareObjFromInner;
+      else
+         RunError("Данный тип не предусмотрен." + type);
+      end;
+      return this;
+   End;
+
+   // setKeyType(V_STRING);
+   /**
+      Устанавливает компаратор ключей '_keyComparator'.
+   */
+   Macro setKeyComparator(_keyComparator)
+      keyComparator = _keyComparator;
+      return this;
+   End;
+   /**
+      Устанавливает ссылку на хэшфункцию '_hasfunc'.
+   */
+   Macro setHashfunc(_hashfunc)
+      hashfunc = _hashFunc;
+      return this;
+   End;
+
+   Macro setKeyEquals(_equalFunc)
+      keyEqualFunc = _equalFunc;
+      return this;
+   End;
+   /**
+      Устанавливает компаратор значений '_valueComparator'.
+   */
+   Macro setValueComparator(_valueComparator)
+      valueComparator = _valueComparator;
+      return this;
+   End;
+
+   Macro setValuePrimitive()
+      valueComparator = @CF_ComparePrimitive;
+      return this;
+   End;
+
+   Macro getInstance()
+      return HashMap();
+   End;
+
+   Macro newInstance()
+      var ni = HashMap(capacity, loadfactor)
+               .setHashfunc(hashfunc)
+               .setKeyComparator(keyComparator)
+               .setValueComparator(valueComparator);
+      return ni;
+   End;
+
+   Macro isEmpty() : Bool
+      return (size == 0);
+   End;
+
+   Private Macro calcHash(key) : Integer
+      return ExecMacro2(hashfunc, key);
+   End;
+
+   Private Macro newNode(_key, _value, _hash)
+      return HashMapEntry(_key,_value,_hash);
+   End;
+
+   Private Macro compare(v1,v2) : Integer
+      return execMacro2(valueComparator, v1, v2);
+   End;
+
+   Private Macro comparePairsByValue(p1, p2)
+      return execMacro2(valueComparator, p1.value, p2.value);
+   End;
+
+   Private Macro comparePairsByKey(p1, p2)
+       return execMacro2(keyComparator, p1.key, p2.key);
+   End;
+
+   Private Macro equals(v1, v2) : Bool
+      return (compare(v1, v2) == 0);
+   End;
+
+   Private Macro keyEquals(k1, k2) : Bool
+      return ExecMacro2(keyEqualFunc, k1, k2);
+     // return (ExecMacro2(keyComparator, k1, k2) == 0);
+   End;
+
+   Private Macro valueEquals(v1, v2) : Bool
+      return (ExecMacro2(valueComparator, v1, v2) == 0);
+   End;
+
+   // перераспределяем ноды в новое место при Resize()
+   Private Macro putInNewPlace(busk : Integer, ent)
+      ent.nxt = null;
+      var curE = table[busk];
+      if (curE == null)
+         table[busk] = ent;
+      else
+         while (true)
+            if (curE.nxt == null)
+               curE.nxt = ent;
+               break;
+            end;
+            curE = curE.nxt;
+         end;
+      end;
+   End;
+
+   Private Macro resize ()
+   //println("resize, my size is " + this.size);
+      var oldTab = table;
+      var oldCap = oldTab.size;
+      var newCap = oldCap * 2;
+      var newTr  = treshold * 2;
+      var i = 0;
+      var curE;
+      var nxtE;
+      table = TArray(newCap);
+      treshold = newTr;
+      capacity = newCap;
+      if (oldTab.size > 0)
+         var newBusk;
+         while (i<oldCap)
+            curE = oldTab[i];
+            while (curE != null)
+               nxtE = curE.nxt;
+               newBusk = mod(curE.hash, newCap);
+               putInNewPlace(newBusk, curE);
+               curE = nxtE;
+            end;
+            i = i + 1;
+         end;
+      end;
+   End;
+
+   // Для LinkedHashMap
+   Private Macro afterNodeAccess(entry)
+   End;
+
+   Private Macro afterNodeInsertion(evict : Bool)
+   End;
+
+   Private Macro afterNodeRemoval(entry)
+   End;
+
+
+   Macro putVal(key, value, _onlyIfAbsent : Bool, evict : Bool) : Variant
+      if (ValType(key) == V_UNDEF) RunError("Illegal state exception"); end;
+      var hash = calcHash(key);
+      var busk = mod(hash, capacity);
+      var curE = table[busk];
+      var i = 1;
+      var oldEntry = null;
+      if (curE == null)
+         table[busk] = newNode(key, value, hash);
+         size = size + 1;
+      else
+         while (true)
+            if ((hash == curE.hash) and (keyEquals(key, curE.key)))
+               oldEntry = curE;
+               break;
+            end;
+            if (curE.nxt == null)
+               curE.nxt = newNode(key, value, hash);
+               curdepth = i;
+               size = size + 1;
+               break;
+            end;
+            curE = curE.nxt;
+            i = i + 1;
+         end;
+      end;
+      if (oldEntry != null)
+         var oldVal = oldEntry.value;
+         curE.value = value;
+         afterNodeAccess(oldEntry);
+         return oldVal;
+      end;
+      if (curdepth >= treshold)
+         resize();
+      end;
+      afterNodeInsertion(evict);
+      return null;
+   End;
+
+   /**
+      Добавляет пару с ключём 'key' и значением 'value' в хэш-таблицу и возвращает `null`, если в таблице уже существует пара с таким же ключом, значение перезаписывается, а метод возвращает перезаписываемое значение.
+   */
+   Macro put(key, value) : Variant
+      var retVal = putVal(key, value);
+      return retVal;
+   End;
+
+   Macro append(_pair) : Bool
+      putVal(_pair.key, _pair.value);
+      return true;
+      OnError
+         return false;
+   End;
+
+   /**
+      Помещает все элементы из 'map' в текущую хэштаблицу.ы
+   */
+   Macro putMapEntries(map : HashMap)
+      var iter = map.newEntryIterator();
+      var curE;
+      while (iter.hasnext())
+         curE = iter.next();
+         putVal(curE.key, curE.value);
+      end;
+      return this;
+   End;
+
+   /**
+      Помещает в хэштаблицу элементы поиндексно в соотвествии ключей из массива '_ArrKeys'`', значений из массива  '_ArrValues'.
+   */
+   Macro putArrays(_ArrKeys : TArray, _ArrValues : TArray)
+      var i = 0;
+      if (ValType(_ArrKeys) == V_UNDEF)
+         return;
+      end;
+      while (i < _ArrKeys.size - 1)
+         if (ValType(_ArrKeys[i]) != V_UNDEF)
+            put(_ArrKeys[i],_ArrValues[i]);
+         end;
+         i = i + 1;
+      end;
+   End;
+
+/**
+   Возращает объект типа [HashMapEntry] соответствующую ключу 'key' или `null`, если такого ключа не найдено.
+*/
+   Macro getEntry(key)
+      var hash = CalcHash(key);
+      var busk = mod(hash, capacity);
+      var curE = table[busk];
+      if (curE == null)
+         return curE;
+      else
+         if (keyEquals(key, curE.key))
+            return curE;
+         end;
+
+         while (true)
+            if (keyEquals(key, curE.key))
+               return curE;
+            end;
+            if (curE.nxt == null)
+               return null;
+            end;
+            curE = curE.nxt;
+         end;
+      end;
+   End;
+
+
+   /**
+      Возвращает значение из хэш-таблицы с ключем 'key' или `null`, если значения не найдено.
+   */
+   Macro get(key) : Variant
+      var ent = getEntry(key);
+      if (ent == null)
+         return ent;
+      else
+         return ent.value;
+      end;
+   End;
+
+   Private Macro removeEntry(_key)
+      var hash = CalcHash(_key);
+      var busk = mod(hash, capacity);
+      var curE = table[busk];
+
+      if (curE == null)
+         return null;
+      else
+         if (keyEquals(_key, curE.key))
+            table[busk] = curE.nxt;
+            size = size - 1;
+         else
+            var prEnt = curE;
+            curE = curE.nxt;
+            while (curE != null)
+               if (keyEquals(_key, curE.key))
+                  prEnt.nxt = curE.nxt;
+                  size = size - 1;
+                  break;
+               end;
+               prEnt = curE;
+               curE  = curE.nxt;
+            end;
+         end;
+         afterNodeRemoval(curE);
+         return curE;
+      end;
+   End;
+
+   /**
+      Удаляет узел с ключем 'key' и возвращает значение удаленного элемента. Если узла с таким ключем не найдено возвращает `null`.
+   */
+   Macro remove(key) : Variant
+      var remEnt = removeEntry(key);
+      if (remEnt == null)
+         return null;
+      else
+         return remEnt.value;
+      end;
+   End;
+
+
+   /**
+      Меняет значение соотвествующее ключу 'key' и возвращает `true`, если ключ отстутствует, возвращает 'false'.
+   */
+   Macro replace(key, value) : Bool
+      var ent = getEntry(key);
+      if (ent != null)
+         ent.value = value;
+         return true;
+      end;
+      return false;
+   End;
+
+   /**
+      Возвращает `true`, если есть элемент с ключем 'key', иначе `false`.
+   */
+   Macro containsKey(key) : Bool
+      return (getEntry(key) != null);
+   End;
+
+   /**
+      Возвращает `true`, если есть значение 'value', иначе `false`. Для поиска объектов предварительно необходимо задать компаратор функцией [setValueComparator], в противном случае поиск будет вестись по ссылке.
+   */
+   Macro containsValue(value) : Bool
+      var curE;
+      var i = 0;
+      while (i < capacity)
+         curE = table[i];
+         if (curE != null)
+            while (true)
+               if (valueEquals(curE.value, value))
+                  return true;
+               end;
+               if (curE.nxt == null)
+                  break;
+               end;
+               curE = curE.nxt;
+            end;
+         end;
+         i = i + 1;
+      end;
+      return false;
+   End;
+
+   /**
+      Возвращает массив 'TArray' пар.
+   */
+   Macro toArray() : TArray
+      var resArr : TArray = TArray();
+      if (size > 0)
+         resArr[size - 1] = null;
+         var i = 0;
+         var k = 0;
+         var curE;
+         while (i < capacity)
+            curE = table[i];
+            while (curE != null)
+               resArr[k] = curE;
+               k = k + 1;
+               curE = curE.nxt;
+            end;
+            i = i + 1;
+         end;
+      end;
+      return resarr;
+   End;
+
+   /**
+      Возвращает массив 'TArray' ключей.
+   */
+   Macro keysArray() : TArray
+      var resArr : TArray = TArray();
+      if (size > 0)
+         resArr[size - 1] = null;
+         var i = 0;
+         var k = 0;
+         var curE;
+         while (i < capacity)
+            curE = table[i];
+            while (curE != null)
+               resArr[k] = curE.key;
+               k = k + 1;
+               curE = curE.nxt;
+            end;
+            i = i + 1;
+         end;
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает массив 'TArray' значений.
+   */
+   Macro valuesArray() : TArray
+      var resArr : TArray = TArray();
+      if (size > 0)
+         resArr[size - 1] = null;
+         var i = 0;
+         var k = 0;
+         var curE;
+         while (i < capacity)
+            curE = table[i];
+            while (curE != null)
+               resArr[k] = curE.value;
+               k = k + 1;
+               curE = curE.nxt;
+            end;
+            i = i + 1;
+         end;
+      end;
+      return resArr;
+   End;
+
+   /**
+      Возвращает [ImmutableList] пар.
+   */
+   Macro entrySet() : Iterable
+      return ImmutableList.fromArray(toArray());
+   End;
+
+   /**
+      Возвращает [ImmutableList] ключей.
+   */
+   Macro keys() : Iterable
+      return ImmutableList.fromArray(keysArray());
+   End;
+
+   /**
+      Возвращает [ImmutableList] значений.
+   */
+   Macro values() : Iterable
+      return ImmutableList.fromArray(valuesArray());
+   End;
+
+
+   Macro clear()
+      for (var i, 0, capacity - 1, 1)
+         table[i] = null;
+      end;
+      size = 0;
+   End;
+
+   /**
+      Возвращает итератор ключей.
+   */
+   macro newKeyIterator() : KeyIterator
+      return KeyIterator(this);
+   end;
+
+   /**
+      Возвращает итератор значений.
+   */
+   Macro newValueIterator() : ValueIterator
+      return ValueIterator(this);
+   End;
+
+   /**
+      Возвращает итератор пар.
+   */
+   Macro newEntryIterator() : EntryIterator
+      return EntryIterator(this);
+   End;
+
+   /**
+      Возвращает итератор пар.
+   */
+   Macro newIterator() : EntryIterator
+      return EntryIterator(this);
+   End;
+
+   Macro Destructor()
+      clear();
+   End;
+
+   //!@Constructor
+   if (ValType(_InitialCapacity) == V_INTEGER)
+      capacity = toLowPwr2(_InitialCapacity);
+   end;
+
+   if ((ValType(_loadFactor) == V_DOUBLE) or (ValType(_loadFactor) == V_INTEGER))
+      loadFactor = Double(_loadFactor);
+   end;
+
+   if (ValType(_compareValRef) != V_UNDEF)
+      valueComparator = _compareKeyRef;
+   end;
+
+   if (ValType(_compareKeyRef) != V_UNDEF)
+      keyComparator = _compareKeyRef;
+   end;
+
+   treshold = int(capacity * loadfactor);
+   table[capacity - 1] = null;
+End;
+
+/**
+   Создаёт и возращает [HashMap] для работы с ключами типа [String].
+*/
+Macro StringHashMap(_InitialCapacity : Integer, _LoadFactor : Double) : HashMap
+   return HashMap(_InitialCapacity, _LoadFactor).setKeyType(V_STRING);
+End;
+
+/**
+   Создаёт и возращает [HashMap] для работы с ключами типа [Integer].
+*/
+Macro IntHashMap(_InitialCapacity : Integer, _LoadFactor : Double) : HashMap
+   return HashMap(_InitialCapacity, _LoadFactor).setKeyType(V_INTEGER);
+End;
+
+/**
+   Создаёт и возращает [HashMap] для работы с ключами объектного типа.
+*/
+Macro ObjectHashMap(_InitialCapacity : Integer, _LoadFactor : Double) : HashMap
+   return HashMap(_InitialCapacity, _LoadFactor).setKeyType(V_GENOBJ);
+End;

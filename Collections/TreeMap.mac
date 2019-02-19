@@ -1,0 +1,642 @@
+/**
+   @package Collections
+   Файл включает в себя реализацию классического интерфейса [map] через красно-черное дерево.
+   Операции поиска, вставки и удаления осуществляются за 'O(logn)'. Работает медленней чем [HashMap],
+   однако имеет ряд преимуществ:
+   - все пары (ключ-значение) расположены в порядке возрастания ключей.
+   - занимает меньше места в оперативной памяти.
+
+   @see [Collections.HashMap]
+   @see [Collections.TreeSet]
+*/
+
+import "..\\Mac\\Extra\\Collections\\Iterable.mac";
+
+/**
+   Класс элемента коллекции [TreeMap].
+*/
+Private Class (Pair) TreeEntry(k, v, p)
+   key = k;
+   value = v;
+   var left;
+   var right;
+   var parent = p;
+   var color : Bool = true;  // Black
+End;
+
+/**
+   Класс итератора [TreeMap]. Возвращает объект класса [TreeEntry].
+*/
+Private Class (BaseIterator) TreeMapEntryIterator(treeMapInstance)
+   var inMap = treeMapInstance;
+   var nxt = inMap.getFirstEntry();
+   var lastReturned = null;
+
+
+   Macro hasNext()
+      return (nxt != null);
+   End;
+
+   Macro nextEntry()
+      lastReturned = nxt;
+      nxt = inMap.successor(lastReturned);
+      return lastReturned;
+   End;
+
+   Macro next()
+      return nextEntry();
+   End;
+
+   Macro getLastReturned() : Variant
+      return lastReturned;
+   End;
+End;
+
+/**
+   Класс итератора ключей [TreeMap].
+*/
+
+Class (TreeMapEntryIterator) TreeMapKeyIterator(treeMapInstance)
+   initTreeMapEntryIterator(treeMapInstance);
+
+   Macro next()
+      return nextEntry().key;
+   End;
+
+   Macro getLastReturned() : Variant
+      return lastReturned.key;
+   End;
+End;
+
+/**
+   Класс итератора значений [TreeMap].
+*/
+Class (TreeMapEntryIterator) TreeMapValueIterator(treeMapInstance)
+   initTreeMapEntryIterator(treeMapInstance);
+
+   Macro next()
+      return nextEntry.value;
+   End;
+
+   Macro getLastReturned() : Variant
+      return lastReturned.value;
+   End;
+End;
+
+
+/**
+   Реализация коллекции элементов пары ключ-значении на основе красно-черного дерева.
+   Пары располагают в порядке возрастания ключей согласно функции компаратору '_keyComparator'.
+   По умолчанию в качестве ключа используется ненулевой 'object'. В качестве значения может выступать любой тип данных RSL. (примитив, объект, null).
+
+   Пример использования:
+```
+   var map = TreeMap();     // Инициализируем
+   map.setKeyPrimitive();   // Будем использовать примитивные ключи String.
+
+   for(var i, 1, 100)
+      map.put("key_" + i, "value is " + i);   // Заполняем
+   end;
+
+   map.toScreen();                // Выводим на экран
+   var val = map.get("key_50");   // Получаем значение по ключу
+   println(val);                  // value is 50;
+```
+*/
+Class (Iterable) TreeMap(_keyComparator)
+   var size = 0;
+   /** Корневой элемент дерева.*/
+   var root = null;
+   //var comparator = ifNull(_comparator, @CF_CompareByKeyPrimitive);\
+
+   /** Компаратор ключей */
+   private var keyComparator = ifNull(_keyComparator, @CF_CompareObjFromInner);
+   /** Компаратор значений */
+   private var valueComparator = null;
+
+   Macro setComparator(_comparator) : TreeMap
+      // comparator = _comparator;
+      return this;
+   End;
+
+   /**
+      Для текущей коллекции задаёт компаратор для ключей `_keyComparator`.
+   */
+   Macro setKeyComparator(_keyComparator)
+      keyComparator = _keyComparator;
+      return this;
+   End;
+
+   /**
+      Для текущей коллекции задаёт компаратор для значений `_valueComparator`.
+   */
+   Macro setValueComparator(_valueComparator)
+      valueComparator = _valueComparator;
+      return this;
+   End;
+
+   /**
+      Возвращает текущий экземпляр с установленным компаратором для примитивных типов.
+   */
+   Macro setKeyPrimitive()
+      keyComparator = @CF_ComparePrimitive;
+      return this;
+   End;
+
+   /**
+      Устанавливает тип ключа 'type' из языка RSL и возвращает текущий экземпляр.
+
+      Возможные варианты:
+      - V_STRING  - Используется по умолчанию. В качестве типа ключа выступает String.
+      - V_INTEGER - В качестве типа ключа выступает Integer. Существенно ускоряет работу таблицы при использовании целочисленных ключей.
+      - V_GENOBJ  - Для объектных ключей. Пользовательский класс должен реализовать методы `macro compareTo(obj) : Integer` и `macro calchash() : Integer` с необходимым условием если два экземпляра считаются равными (compareTo возвращает 0), тогда и calcHash должен вернуть равный хэш. Однако экземпляры с равным hash не обязательно должны быть равны.
+   */
+   Macro setKeyType(type : Integer)
+      if (type == V_STRING)
+         keyComparator = @CF_ComparePrimitive;
+      elif (type == V_INTEGER)
+         keyComparator = @CF_ComparePrimitive;
+      elif (type == V_GENOBJ)
+         keyComparator = @CF_CompareObjFromInner;
+      else
+         RunError("Данный тип не предусмотрен." + type);
+      end;
+      return this;
+   End;
+
+   Private Macro rightOf(ent)
+      if (ent != null) return ent.right; end;
+   End;
+
+   Private Macro leftOf(ent)
+      if (ent != null) return ent.left; end;
+   End;
+
+   Private Macro parentOf(ent)
+      if (ent != null) return ent.parent; end;
+   End;
+
+   Private Macro colorOf(ent)
+      if (ent == null) return true; end;
+      return false;
+   End;
+
+   Private Macro setColor(ent, clr : Bool)
+      if (ent != null) ent.color = clr; end;
+   End;
+
+   Private Macro rotateLeft(ent : TreeEntry)
+      if (ent != null)
+         var r = ent.right;
+         ent.right = r.left;
+         if (r.left != null) r.left.parent = ent; end;
+         r.parent = ent.parent;
+         if (ent.parent == null)
+            root = r;
+         elif (ent.parent.left == ent)
+            ent.parent.left = r;
+         else
+            ent.parent.right = r;
+         end;
+         r.left = ent;
+         ent.parent = r;
+      end;
+   End;
+
+   Private Macro rotateRight(ent : TreeEntry)
+      if (ent != null)
+         var l = ent.left;
+         ent.left = l.right;
+         if (l.right != null) l.right.parent = ent; end;
+         l.parent = ent.parent;
+         if (ent.parent == null)
+            root = l;
+         elif (ent.parent.right == ent)
+            ent.parent.right = l;
+         else
+            ent.parent.left = l;
+         end;
+         l.right = ent;
+         ent.parent = l;
+      end;
+
+   End;
+
+   Private Macro fixAfterInsertion(ent : TreeEntry)
+
+      ent.color = false;
+
+      while ((ent != null) and (ent != root) and (ent.parent.color == false))
+         var father = ent.parent;
+         var granny = ent.parent.parent;
+         var uncle;
+         if ((granny != null) and (father == granny.left))
+            uncle = granny.right;
+            if (colorOf(uncle) == false)
+               father.color = true;
+               uncle.color = true;
+               granny.color = false;
+               ent = granny;
+            else
+               if (ent == father.right)
+                  ent = father;
+                  rotateLeft(ent);
+               end;
+               setColor(ent.parent, true);
+               if (ent.parent.parent != null)
+                  ent.parent.parent.color = false;
+                  rotateRight(ent.parent.parent);
+               end;
+            end;
+         else
+            uncle = granny.left;
+            if ((uncle != null) and (uncle.color == false))
+               father.color = true;
+               uncle.color = true;
+               if (granny != null)
+                  granny.color = false;
+               end;
+               ent = granny;
+            else
+               if (ent == father.left)
+                  ent = father;
+                  rotateRight(ent);
+               end;
+               if (ent.parent != null)
+                  setColor(ent.parent, true);
+                  if (ent.parent.parent != null)
+                     ent.parent.parent.color = false;
+                     rotateLeft(ent.parent.parent);
+                  end;
+               end;
+            end;
+         end;
+      end;
+      root.color = true;
+   End;
+
+   /**
+      Добавляет пару с ключём 'key' и значением 'value' в 'Treemap' и возвращает `null`, если в таблице уже существует пара с таким же ключом, значение перезаписывается, а метод возвращает перезаписываемое значение.
+   */
+   Macro put(key, value : Variant) : Variant
+      var t = root;
+      var newNode = TreeEntry(key, value, null);
+      if (t == null)
+         root = newNode;
+         size = 1;
+         return null;
+      end;
+      var cmp;
+      var par;
+      while(t != null)
+         par = t;
+         cmp = ExecMacro2(keyComparator, key, t.key);
+         if (cmp < 0)
+            t = t.left;
+         elif (cmp > 0)
+            t = t.right;
+         else
+            var retVal = t.value;
+            t.value = value;
+            return retVal;
+         end;
+      end;
+      if (cmp < 0)
+         par.left = newNode;
+      else
+         par.right = newNode;
+      end;
+      newNode.parent = par;
+      fixAfterInsertion(newNode);
+      size = size + 1;
+      return null;
+   End;
+
+   Macro getNode(key)
+      var n = root;
+      while (n != null)
+         var cmp = ExecMacro2(keyComparator, key, n.key);
+         if (cmp < 0)
+            n = n.left;
+         elif (cmp > 0)
+            n = n.right;
+         else
+            return n;
+         end;
+      end;
+   End;
+
+   Macro get(key) : Variant
+      var nd = getNode(key);
+      if (nd != null) return nd.value; end;
+   End;
+
+   Macro getFirstEntry() : TreeEntry
+      var n = root;
+      if (n != null)
+         while (n.left != null)
+            n = n.left;
+         end;
+      end;
+      return n;
+   End;
+
+   Macro getLastEntry() : TreeEntry
+      var n = root;
+      if (n != null)
+         while (n.right != null)
+            n = n.right;
+         end;
+      end;
+      return n;
+   End;
+
+   Macro successor(ent : TreeEntry)
+      if (ent == null)
+         return null;
+      end;
+      var n;
+      if (ent.right != null)
+         n = ent.right;
+         while(n.left != null)
+            n = n.left;
+         end;
+         return n;
+      else
+         n = ent.parent;
+         var ch = ent;
+         while((n != null) and (ch == n.right))
+            ch = n;
+            n = n.parent;
+         end;
+         return n;
+      end;
+   End;
+
+   Macro set(key, value)
+      var nd = getNode(key);
+      if (nd != null)
+         var oldValue = nd.value;
+         nd.value = value;
+         return oldValue;
+      end;
+   End;
+
+   Macro containsKey(key) : Bool
+
+   End;
+
+   Macro containsValue(value) : Bool
+
+   End;
+
+   Macro isEmpty() : Bool
+
+   End;
+
+   Private Macro fixAfterDeletion(nd : TreeEntry)
+      while ((nd != root) and colorOf(nd))
+         var sib;
+         if (nd == nd.parent.left)
+            sib = nd.parent.right;
+            if (colorOf(sib) == false)
+               setColor(sib, true);
+               setColor(nd.parent, false);
+               rotateLeft(nd.parent);
+               sib = nd.parent.right;
+            end;
+
+            if (colorOf(leftOf(sib)) and colorOf(rightOf(sib)))
+               setColor(sib, false);
+               nd = nd.parent;
+            else
+               if (colorOf(rightOf(sib)))
+                  setColor(leftOf(sib),true);
+                  setColor(sib, false);
+                  rotateRight(sib);
+                  sib = rightOf(nd.parent);
+               end;
+               setColor(sib, colorOf(nd.parent));
+               setColor(nd.parent, true);
+               setColor(rightOf(sib), true);
+               rotateLeft(nd.parent);
+               nd = root;
+            end;
+         else
+            sib = nd.parent.left;
+            if (colorOf(sib) == false)
+               setColor(sib, true);
+               setColor(nd.parent, true);
+               rotateRight(nd.parent);
+               sib = leftOf(nd.parent);
+            end;
+
+            if (colorOf(rightOf(sib) and colorOf(leftOf(sib))))
+
+               setColor(sib, true);
+               setColor(nd.parent, true);
+               nd = nd.parent;
+            else
+
+               if (colorOf(leftOf(sib)) and colorOf(rightOf(sib)))
+                  setColor(rightOf(sib), true);
+                  setColor(sib, false);
+                  rotateLeft(sib);
+                  sib = leftOf(nd.parent);
+               end;
+               setColor(sib, colorOf(nd.parent));
+               setColor(nd.parent, true);
+               setColor(leftOf(sib), true);
+               rotateRight(nd.parent);
+               nd = root;
+            end;
+         end;
+      end;
+
+      nd.color = true;
+   End;
+
+   Macro deleteNode(nd : TreeEntry)
+      size = size - 1;
+
+      if ((nd.left != null) and (nd.right != null))
+         var s = successor(nd);
+         nd.key = s.key;
+         nd.value = s.value;
+         nd = s;
+      end;
+
+      var repl = nd.left;
+      if (nd.left == null)
+         repl = nd.right;
+      end;
+
+      if (repl != null)
+         repl.parent = nd.parent;
+         if (nd.parent == null)
+            root = repl;
+         elif (nd == nd.parent.left)
+            nd.parent.left = repl;
+         else
+            nd.parent.right = repl;
+         end;
+         nd.left = null;
+         nd.right = null;
+         nd.parent = null;
+         if (nd.color)
+            fixAfterDeletion(repl);
+         end;
+      elif (nd.parent == null)
+         root = null;
+      else
+         if (nd.color)
+            fixAfterDeletion(nd);
+         end;
+
+         if (nd.parent != null)
+            if (nd == nd.parent.left)
+               nd.parent.left = null;
+            elif (nd = nd.parent.right)
+               nd.parent.right = null;
+            end;
+            nd.parent = null;
+         end;
+      end;
+
+
+   End;
+
+   Macro remove(key)
+      var nd = getNode(key);
+      if (nd != null)
+         var oldValue = nd.value;
+         deleteNode(nd);
+         return oldValue;
+      end;
+   End;
+
+   Macro clear()
+      size = 0;
+      root = null;
+   End;
+
+
+   Macro newIterator()
+      return TreeMapEntryIterator(this);
+   End;
+
+   /**
+      Возвращает итератор пар.
+   */
+   Macro newEntryIterator()
+      return TreeMapEntryIterator(this);
+   End;
+
+   Macro newKeyIterator()
+      return TreeMapKeyIterator(this);
+   End;
+
+   Macro newValueIterator()
+      return TreeMapValueIterator(this);
+   End;
+
+   Macro toArray() : TArray
+      var resArr = TArray();
+      if (size > 0)
+         resArr[size-1] = null;
+         var itr = newEntryIterator();
+         var i = 0;
+         while(itr.hasNext())
+            resArr[i] = itr.next();
+            i = i + 1;
+         end;
+      end;
+      return resArr;
+   End;
+
+   Macro keys()
+      var resArr = TArray();
+      if (size > 0)
+         resArr[size-1] = null;
+         var itr = newKeyIterator();
+         var i = 0;
+         while(itr.hasNext())
+            resArr[i] = itr.next();
+            i = i + 1;
+         end;
+      end;
+      return resArr;
+   End;
+
+   Macro values()
+      var resArr = TArray();
+      if (size > 0)
+         resArr[size-1] = null;
+         var itr = newValueIterator();
+         var i = 0;
+         while(itr.hasNext())
+            resArr[i] = itr.next();
+            i = i + 1;
+         end;
+      end;
+      return resArr;
+   End;
+
+   Macro keySet()
+
+   End;
+
+   Macro keysToArray() : TArray
+      if (size == 0) return TArray(); end;
+      var resArr = TArray();
+      resArr[size-1] = null;
+      var itr = newKeyIterator;
+      var i = 0;
+      while(itr.hasNext())
+         resArr[i] = itr.next();
+         i = i + 1;
+      end;
+      return resArr;
+   End;
+
+   Macro valuesToArray() : TArray
+      if (size == 0) return TArray(); end;
+      var resArr = TArray();
+      resArr[size-1] = null;
+      var itr = newValueIterator();
+      var i = 0;
+      while(itr.hasNext())
+         resArr[i] = itr.next();
+         i = i + 1;
+      end;
+      return resArr;
+   End;
+End;
+
+/*
+Macro testTreeMap()
+   var keys = TArray();
+   var map = TreeMap();
+   for(var i, 1, 1000)
+      var r = Random(i);
+      map.put(r, i);
+      keys[keys.size] = r;
+   end;
+   println(map.size);
+   for(i, 1, 1000)
+      map.get(i);
+   end;
+   println(map.size);
+   for(i, 0, keys.size-1)
+      map.set(keys[i], "newVal" + i);
+   end;
+   map.toScreen();
+   for(i, 0, keys.size-1)
+      map.remove(keys[i]);
+   end;
+   println(map.size);
+   map.toScreen();
+End;
+*/
+//testTreeMap;
+

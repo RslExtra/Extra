@@ -1,0 +1,137 @@
+/**
+   @package Collections
+   Файл включает в себя реализацию классического интерфейса 'set', коллекцию уникальных значений.
+
+*/
+import "..\\Mac\\Extra\\Collections\\HashMap.mac";
+
+/**
+   Коллекция уникальных значений. Реализована на основе [HashMap].
+*/
+Class (HashMap) HashSet(_InitialCapacity : Integer, _LoadFactor : Double)
+   InitHashMap(_InitialCapacity, _LoadFactor);
+
+   Macro setType(type : Integer)
+      setKeyType(type);
+      return this;
+   End;
+
+   Macro contains(el : Variant)
+      return containsKey(el);
+   End;
+
+   Macro add(el : Variant) : Bool
+      var oldval = putVal(el, PRESENT, CalcHash(el));
+      return (ValType(oldVal) == V_UNDEF);
+   End;
+
+   Macro remove(el : Variant) : Bool
+      return (removeEntry(el) == PRESENT);
+   End;
+
+   Macro toArray()
+      var resArr : TArray = TArray();
+      resArr[size - 1] = null;
+      var i = 0;
+      var k = 0;
+      var curE;
+      while(i < capacity)
+         curE = table[i];
+         if(curE != null)
+            while(true)
+               resArr[k] = curE.key;
+               k = k + 1;
+               if(curE.nxt == null)
+                  break;
+               end;
+               curE = curE.nxt;
+            end;
+         end;
+         i = i + 1;
+      end;
+      return resArr;
+   End;
+
+   Macro fromArray(arr : TArray)
+      var el;
+      for(el, arr)
+         add(el);
+      end;
+      return this;
+   End;
+
+   Macro newIterator()
+      return newKeyIterator();
+   End;
+End;
+
+// Коллекция уникальных Integer
+
+Class (HashSet) IntHashSet(InitialCapacity : Integer, _LoadFactor : Double)
+   initHashSet(InitialCapacity, _LoadFactor);
+   Macro CalcHash(key) : Integer
+      return key;
+   End;
+End;
+
+
+// Коллекция уникальных Объектов.
+// _compareKeyRef - ссылка на процедуру вида compare(o1,o2) : Integer, сравнение двху элементов Set-а
+// _hashfunRef    - ссылка на процедуру вида calcHash(obj) : Integer, расчет хэша объекта
+// Необходимо указать эти функции или (предпочтительней) реализовать в хранимом классе процедуры
+// compareTo(o2) : Integer - сравнение с объектами того же вида
+// calcHash() : Integer    - вычисление хэша объекта
+// При этом ОБЯЗАТЕЛЬНО выполнение условия: Если compareTo(o2) == 0 (объекты считаются равными) o1.calcHash == o2.calcHash (у равных объектов равны Хэши)
+/*
+Class (ObjectHashMap) ObjectHashSet(_InitialCapacity : Integer, _LoadFactor : Double, _compareKeyRef, _hashfunRef)
+   initObjectHashMap(_InitialCapacity, _LoadFactor, null, _compareKeyRef, _hashfunRef);
+
+   Macro contains(el : Variant)
+      return containsKey(el);
+   End;
+
+   Macro add(el : Variant) : Bool
+      return (putVal(el, PRESENT, CalcHash(el)) == null);
+   End;
+
+   Macro remove(el : Variant) : Bool
+      return (removeEntry(el) == PRESENT);
+   End;
+
+   Macro toArray()
+      var resArr : TArray = TArray();
+      if(size == 0) return resArr; end;
+      resArr[size - 1] = null;
+      var i = 0;
+      var k = 0;
+      var curE;
+      while(i < capacity)
+         curE = table[i];
+         if(curE != null)
+            while(true)
+               resArr[k] = curE.key;
+               k = k + 1;
+               if(curE.nxt == null)
+                  break;
+               end;
+               curE = curE.nxt;
+            end;
+         end;
+         i = i + 1;
+      end;
+      return resArr;
+   End;
+
+   Macro fromArray(arr : TArray)
+      var el;
+      for(el, arr)
+         add(el);
+      end;
+      return this;
+   End;
+
+   Macro newIterator()
+      return newKeyIterator();
+   End;
+End;
+*/

@@ -1,0 +1,30 @@
+/**
+    @package  Collections
+    @ancestor Extra
+    Библиотека коллекций для языка RSL.
+
+    Создана с целью взаимодействия с объектами описанными на языке RSL в объектно-ориентированном и функциональном стилях программирования.
+    В большинстве своём схожа с 'Java.collections'.
+    Для начала использования, достаточно импортировать библиотеку в макрофайл директивой `import "../Mac/Extra/Collection/collections.mac";`
+    Также возможен импорт отдельных макрофайлов.
+
+    В составе библиотеки доступны следующие реализации коллекций:
+     - [ArrayList] - список на основе массива TArray.
+     - [LinkedList] - двусвязный список. Присутствуют методы стека и очереди.
+     - [HashMap]    - она же хэштаблица, словарь, ассоциативный список. Предназначена для работы с парами "ключ-значение" <Variant, Variant>
+     - [LinkedHashMap] - упорядоченная реализация HashMap. Сохраняет порядок добавления, т.е. порядок итерирования равен порядку добавления. Однако эта особенность требует больше памяти.
+     - [HashSet] - коллекция уникальных значений.
+     - [LinkedHashSet] - упорядоченная реализация HashSet.
+     - [TreeMap] - реализация Map (карты) основанная на красно-черных деревьях. Как и [LinkedHashMap] является упорядоченной. По-умолчанию коллекция сортируется по ключам в натуральном порядке. Однако можно реализовать функцию-компаратор для изменения поведения.
+     - [TreeSet] - отсортированный список уникальных значений.
+
+*/
+
+import "..\\Mac\\Extra\\Collections\\ArrayList.mac";
+import "..\\Mac\\Extra\\Collections\\LinkedList.mac";
+import "..\\Mac\\Extra\\Collections\\HashMap.mac";
+import "..\\Mac\\Extra\\Collections\\HashSet.mac";
+import "..\\Mac\\Extra\\Collections\\LinkedHashMap.mac";
+import "..\\Mac\\Extra\\Collections\\LinkedHashSet.mac";
+import "..\\Mac\\Extra\\Collections\\TreeMap.mac";
+import "..\\Mac\\Extra\\Collections\\TreeSet.mac";

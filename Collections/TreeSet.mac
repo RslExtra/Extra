@@ -1,0 +1,69 @@
+/**
+   @package Collections
+   Реализация отсортированной коллекции уникальных значений.
+*/
+
+import "..\\Mac\\Extra\\Collections\\TreeMap.mac";
+
+
+Class (TreeMap) TreeSet(_keyComparator)
+   initTreeMap(_keyComparator);
+
+   Macro setPrimitive() : TreeSet
+      keyComparator = @CF_ComparePrimitive;
+      return this;
+   End;
+
+   Macro add(element : Variant) : Bool
+      return (put(element, PRESENT) != PRESENT);
+   End;
+
+   Macro addAll(iterable) : Bool
+      for(var el, iterable)
+         put(el, PRESENT);
+      end;
+   End;
+
+   Macro remove(element) : Bool
+      return (this.remove(element) == PRESENT);
+   End;
+
+   Macro newIterator()
+      return TreeMapKeyIterator(this);
+   End;
+
+   Macro toArray() : TArray
+      return keysToArray();
+   End;
+End;
+
+var comp2 = CF_ObjectComparator(Arrays.of("name"));
+var comp = CF_ObjectComparator(Arrays.of("name" , "year"));
+
+Class TClass()
+   var name = "n" + Random(100);
+   var year = 1000 + Random(1000);
+
+   Macro CompareTo(o)
+      return comp.compare(this, o);
+   End;
+
+   Macro toString()
+      return name + " - " + year;
+   End;
+End;
+
+Macro testTreeSet()
+   var set = TreeSet(R2M(comp2, "compare"));
+   var i;
+   for(i, 1, 10000)
+      set.add(TClass);
+   end;
+   println(set.size);
+   var arr = set.toArray;
+   for(i, 0, arr.size-1)
+      println(arr[i]);
+   end;
+End;
+
+//testTreeSet;

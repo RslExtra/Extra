@@ -1,0 +1,65 @@
+/**
+   @package Collections
+   Файл включает в себя реализацию [LinkedHashSet] - коллекции уникальных элементов с сохранением порядка добавления.
+*/
+import "..\\Mac\\Extra\\Collections\\LinkedHashMap.mac";
+
+/**
+   Коллекции уникальных элементов с сохранением порядка добавления.
+*/
+Class (LinkedHashMap) LinkedHashSet(_InitialCapacity : Integer, _LoadFactor : Double)
+   InitLinkedHashMap(_InitialCapacity, _LoadFactor);
+   compareRef = @compareObjFromInner();
+
+   Macro setPrimitive()
+      compareRef = @comparePrimitive;
+      return this;
+   End;
+
+   Macro contains(el : Variant) : Bool
+      return containsKey(el);
+   End;
+
+   Macro add(el : Variant) : Bool
+      return (putVal(el, PRESENT, CalcHash(el)) == null);
+   End;
+
+   Macro remove(el : Variant) : Bool
+      return (removeEntry(el) == PRESENT);
+   End;
+
+   Macro newIterator()
+      return newKeyIterator();
+   End;
+
+   Macro toArray() : TArray
+      var resArr = TArray;
+      resArr[size-1] = null;
+      var itr = newIterator();
+      var i = 0;
+      while(itr.hasNext)
+         resArr[i] = itr.next;
+         i = i + 1;
+      end;
+      return resArr;
+   End;
+
+   Macro fromArray(arr : TArray)
+      var el;
+      for(el, arr)
+         this.add(el);
+      end;
+      return this;
+   End;
+
+   Macro sort(_compareFun)
+      if(Valtype(_compareFun)!=V_UNDEF)
+         compareRef = _compareFun;
+      end;
+      var arr = toArray();
+      QSort(arr, compareRef);
+      clear();
+      fromArray(arr);
+      return this;
+   End;
+End;

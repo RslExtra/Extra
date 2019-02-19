@@ -1,0 +1,319 @@
+/**
+   @package Collections
+   Файл включает в себя реализацию классов [LinkedHashMap] и [SortedLinkedHashMap].
+
+*/
+
+import "..\\Mac\\Extra\\Collections\\HashMap.mac";
+
+Private Class (BaseIterator) LinkedHashIterator (_map)
+   var map           = _map;
+   var nextEnt       = map.first;
+   var lastReturned  = null;
+   //var ind : Integer = 0; // текущая корзина
+
+   Macro hasNext() : Bool
+      return (nextEnt != null);
+   End;
+
+   Macro hasPrev() : Bool
+      if (lastReturned == null)
+         return false;
+      else
+         return (lastReturned.before != null);
+      end;
+   End;
+
+   Macro nextEntry()
+      if (nextEnt == null)
+         return null;
+      end;
+      lastReturned = nextEnt;
+      nextEnt = lastReturned.after;
+      return lastReturned;
+   End;
+
+   Macro previousEntry()
+      if (lastReturned == null)
+         return null;
+      end;
+      nextEnt = lastReturned;
+      lastReturned = lastReturned.before;
+      return lastReturned;
+   End;
+
+   Macro remove() : Variant
+      if (lastReturned == null)
+         return null;
+      end;
+      var retE = map.remove(lastReturned.key);
+      lastReturned = nextEnt;
+      nextEnt = lastReturned.after;
+      return retE;
+   End;
+
+   Macro getLastReturned()
+      return lastReturned;
+   End;
+
+   Macro clear()
+      nextEnt    = map.first;
+      lastReturned  = null;
+   End;
+End;
+
+//! Класс итератора ключей
+Private Class (LinkedHashIterator) KeyIterator(_map)
+   initLinkedHashIterator(_map);
+   Macro next () : Variant
+      return nextEntry().key;
+   End;
+End;
+
+//! Класс итератора значений
+Private Class (LinkedHashIterator) ValueIterator(_map)
+   initLinkedHashIterator(_map);
+   Macro next () : Variant
+      return nextEntry().value;
+   End;
+End;
+
+//! Класс итератора узлов
+Private Class (LinkedHashIterator) EntryIterator(_map)
+   initLinkedHashIterator(_map);
+   Macro next () : Variant
+      return nextEntry();
+   End;
+End;
+
+Class (HashMapEntry) LHMEntry(k : Variant, v : Variant, h : Integer)
+   initHashMapEntry(k, v, h);
+   var before;
+   var after;
+End;
+
+/**
+   Реализация коллекции пар ключ-значение с сохранением порядка добавления.
+*/
+Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double, _compareValRef)
+   initHashMap(_InitialCapacity, _LoadFactor, _compareValRef);
+   var first;
+   var last;
+   //var iter = newEntryIterator();
+
+   Private Macro linkNodeLast(ent)
+      var l = last;
+      last = ent;
+      if (l==null)
+         first = ent;
+      else
+         ent.before = l;
+         l.after = ent;
+      end;
+   End;
+
+   Private Macro newNode(key, value, hash)
+      var newEnt = LHMEntry(key, value, hash);
+      linkNodeLast(newEnt);
+      return newEnt;
+   End;
+
+   Private Macro afterNodeAccess(entry)
+   End;
+
+   Private Macro afterNodeInsertion(evict : Bool)
+   End;
+
+   Private Macro afterNodeRemoval(entry)
+      var b = entry.before;
+      var a = entry.after;
+      entry.before = null;
+      entry.after  = null;
+      if (b == null)
+         first = a;
+      else
+         b.after = a;
+      end;
+      if (a == null)
+         last = b;
+      else
+         a.before = b;
+      end;
+   End;
+
+   Macro containsValue(_value) : Bool
+      var ent = first;
+      var val;
+      while (ent != null)
+         val = ent.value;
+         if (equals(val, _value))
+            return true;
+         end;
+         ent = ent.after;
+      end;
+      return false;
+   End;
+
+   Macro newKeyIterator() : KeyIterator
+      return KeyIterator(this);
+   End;
+
+   Macro newValueIterator() : ValueIterator
+      return ValueIterator(this);
+   End;
+
+   Macro newEntryIterator() : EntryIterator
+      return EntryIterator(this);
+   End;
+
+   Macro newIterator() : EntryIterator
+      return EntryIterator(this);
+   End;
+
+   Macro values() : Iterable
+      var resArr : TArray = TArray();
+      resArr[size - 1] = null;
+      var curE = first;
+      var i = 0;
+      while (ValType(curE) != V_UNDEF)
+         resArr[i] = curE.value;
+         curE = curE.after;
+         i = i + 1;
+      end;
+      return ImmutableList.fromArray(resArr);
+   End;
+
+   Macro keys() : Iterable
+      var resArr : TArray = TArray();
+      resArr[size - 1] = null;
+      var curE = first;
+      var i = 0;
+      while (ValType(curE) != V_UNDEF)
+         resArr[i] = curE.key;
+         curE = curE.after;
+         i = i + 1;
+      end;
+      return ImmutableList.fromArray(resArr);
+   End;
+
+   Macro sortByEntry(_compareFun)
+      if (size <= 1) return; end;
+      var compareFun = _compareFun;
+      if (Valtype(compareFun)== V_UNDEF)
+         compareFun = compareRef;
+      end;
+      var es = toArray();
+      qsort(es, compareFun);
+      var i;
+
+      es[0].before = null;
+      es[0].after  = es[1];
+      first   = es[0];
+      for(i, 1, es.size - 2, 1)
+         es[i].before= es[i-1];
+         es[i].after = es[i+1];
+      end;
+      es[es.size-1].before = es[es.size-2];
+      es[es.size-1].after  = null;
+      last = es[es.size-1];
+   End;
+
+   Macro sortByKey(_keyComparator)
+      if (ValType(_keyComparator) != V_UNDEF)
+         keyComparator = _keyComparator;
+      end;
+      sortByEntry(@CF_comparePairsByKeyInner);
+   End;
+
+   Macro sortByValue(_valueComparator)
+   //debugbreak;
+      if (ValType(_valueComparator) != V_UNDEF)
+         valueComparator = _valueComparator;
+      end;
+      sortByEntry(@CF_comparePairsByValueInner);
+   End;
+
+   Macro clear()
+      first = null;
+      last = null;
+      this.clear();
+   End;
+
+End;
+
+/**
+   Реализация коллекции пар ключ-значение в отсортированном по ключам виде.
+   В большинстве случаев предпочтительней (по производительности) использовать [Collections.TreeMap]
+
+*/
+Class (LinkedHashMap) SortedLinkedHashMap(_capacity : Integer, _loadFactor : Double, _compareValueRef)
+   initLinkedHashMap(_capacity, _loadFactor);
+   var EIter = newEntryIterator();
+   //compareValueRef = @CF_CompareObjFromInner;
+
+   if (ValType(_compareValueRef) != V_UNDEF)
+      valueComparator  = _compareValueRef;
+   end;
+
+   Macro setPrimitive()
+      valueComparator = @CF_ComparePrimitive;
+   End;
+
+   Macro linkAfter(newEnt, ent)
+      if (ent.After == null)
+         last = newEnt;
+      else
+         ent.after.before = newEnt;
+         newEnt.after = ent.after;
+      end;
+      newEnt.before = ent;
+      ent.after = newEnt;
+   End;
+
+   Macro compareEntry(e1,e2) : Integer
+      return compare(e1.value, e2.value);
+   End;
+
+   Private Macro findPlace(newEnt)
+      if (last == null)
+         last  = newEnt;
+         first = newEnt;
+         return;
+      end;
+      var curE = last;
+      while (curE != null)
+         if (ExecMacro2(valueComparator, newEnt.value, curE.value)>=0)
+            linkAfter(newEnt, curE);
+            return;
+         end;
+         curE = curE.Before;
+      end;
+      first.before = newEnt;
+      newEnt.after = first;
+      first = newEnt;
+   End;
+
+   Private Macro newNode(_key, _value, _hash)
+      var newEnt = LHMEntry(_key, _value, _hash);
+      findPlace(newEnt);
+      return newEnt;
+   End;
+End;
+
+Macro StringLinkedHashMap(_InitialCapacity : Integer, _LoadFactor : Double)
+   return LinkedHashMap(_InitialCapacity, _LoadFactor).setKeyType(V_STRING);
+End;
+
+Class (LinkedHashMap) IntLinkedHashMap(_InitialCapacity : Integer, _LoadFactor : Double)
+   initLinkedHashMap (_InitialCapacity,_LoadFactor);
+   Macro CalcHash(key : Integer) : Integer
+      return key;
+   End;
+End;
+
+Class (SortedLinkedHashMap) IntSortedLinkedHashMap(_capacity : Integer, _loadFactor : Double, _compRef)
+   initSortedLinkedHashMap(_capacity, _loadFactor,_compRef);
+   Macro CalcHash(key : Integer) : Integer
+      return key;
+   End;
+End;
