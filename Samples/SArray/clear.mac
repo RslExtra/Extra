@@ -1,6 +1,7 @@
 import "../mac/extra/utils/SArray.mac";
 //<
 var arr = SArray(1, 2, 3);
-arr.reverse();
-arr.toScreen();  // [3, 2, 1]
+arr.toScreen();      // [1, 2, 3]
+arr.clear();
+arr.toScreen();      // []
 //>

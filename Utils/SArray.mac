@@ -5,8 +5,8 @@
 
    Преимущества:
    - Имеется возможность заполнять массив при инициализации
-   - Имеются дополнительные методы позволяющие легко манипулировать содержимым
-   - Имеются методы-цепочки (помеченны тегом 'chain') и методы-билдеры (помечены тегом 'builder')
+   - Имеются дополнительные методы, позволяющие легко манипулировать содержимым
+   - Имеются методы-цепочки (помеченны тегом 'chain') и методы-билдеры (помечены тегом 'builder'), позволяющие выстраивать цепочки вызовов методов без сохранения промежуточного результата.
    - Переопределен метод [SArray.sort sort()], улучшая производительность и изменяющий вид функции-компаратора на более чистый.
 
    @version 0.91
@@ -55,7 +55,8 @@ Private Macro CF_ComparePrimitive(el1, el2) : Integer
 End;
 
 /**
-   Класс итератора массива.
+   Класс итератора массива. Для получения итератора необходимо вызвать метод [SArray.newIterator()].
+   @sample [samples.sArray.Iterator]
 */
 Private Class ArrayIterator(_arr : @TArray)
    var arr = _arr;
@@ -166,6 +167,8 @@ Class (TArray) SArray()
 
    /**
       Добавляет в исходный массив множество элементов.
+      @sample [samples.sArray.addAll]
+
       @oparam varargs
    */
    Macro addAll()
@@ -178,6 +181,8 @@ Class (TArray) SArray()
 
    /**
       Добавляет элементы массива 'arr' в конец массива. Возвращает текущий экземпляр класса.
+      @sample [samples.sArray.addArray]
+
       @tag builder
    */
    Macro addArray(arr) : SArray
@@ -218,6 +223,7 @@ Class (TArray) SArray()
 
    /**
       Удаляет и возвращает элемент под индексом 'ind', "схлопывая дырку" в массиве.
+      @sample [samples.sArray.remove]
    */
    Macro remove(ind) : Variant
       var r = value(ind);
@@ -243,6 +249,7 @@ Class (TArray) SArray()
 
    /**
       Удаляет и возвращает последний элемент массива, бросает ошибку если массив пустой.
+      @sample [samples.sArray.pop]
    */
    Macro pop() : Variant
       if (size == 0) RunError("No such element"); end;
@@ -253,6 +260,7 @@ Class (TArray) SArray()
 
    /**
       Удаляет и возвращает последний элемент массива, возвращает `null` если массив пустой.
+      @sample [samples.sArray.poll]
    */
    Macro poll() : Variant
       if (size == 0) return; end;
@@ -263,6 +271,7 @@ Class (TArray) SArray()
 
    /**
       Возвращает последний элемент массива (не удаляя) или `null`, если массив пустой.
+      @sample [samples.sArray.peek]
    */
    Macro peek() : Variant
       if (size == 0) return; end;
@@ -321,7 +330,7 @@ Class (TArray) SArray()
 
       @sample [samples.sArray.concat]
 
-      @chain
+      @tag chain
    */
    Macro concat(arr) : SArray
       var newArr = SArray();
@@ -418,8 +427,8 @@ Class (TArray) SArray()
 
    /**
       Очищает и возвращает текущий массив.
-
-      @builder
+      @sample [samples.sArray.clear]
+      @tag builder
    */
    Macro clear() : SArray
       size = 0;
@@ -434,6 +443,8 @@ Class (TArray) SArray()
 
       @sample [samples.sArray.filter]
 
+      Пример с предопределенными функциями
+      @sample [samples.sArray.filter2]
       @tag chain
    */
    Macro filter(predicFunc) : SArray
@@ -483,8 +494,10 @@ Class (TArray) SArray()
       'identity' - начальное значение.
 
       Пример:
-
       @sample [samples.sArray.reduce]
+
+      Пример с предопределенными функциями:
+      @sample [samples.sArray.reduce2]
 
       @param identity начальное значение
       @param accumulator  функция-редюсер
@@ -605,7 +618,8 @@ Class (TArray) SArray()
 
    /**
       Возвращает новый массив [SArray] уникальных элементов исходного массива в порядке возрастания согласно функции-компаратору 'compfunc'. Если 'compfunc' не задана или равняется `null`, сравнение будет проводиться по ссылке для объектов и по значению для примитивов через `> , < , ==`.
-      В среднем работает быстрее чем [distinct].
+      В среднем работает быстрее чем [SArray.distinct distinct].
+      @sample [samples.sArray.distinctSort]
       @tag chain
    */
    Macro distinctSort(compfunc) : SArray
@@ -687,6 +701,30 @@ Class (TArray) SArray()
    */
    Macro toStream()
 
+   End;
+
+   Macro hash() : Integer
+
+   End;
+
+   Macro compareTo(othArr) : Integer
+
+   End;
+
+   Macro equals(othArr) : Bool
+      if (IsEqClass("TARRAY", othArr) == false) return false; end;
+      if (this == othArr) return true; end;
+      if (size != othArr.size) return false; end;
+      for (var i, 0, size - 1, 1)
+         var v1 = value(i);
+         var v2 = othArr[i];
+         if (ValType(v1) == ValType(v2))
+            if (v1 != v2) return false; end;
+         else
+            return false;
+         end;
+      end;
+      return true;
    End;
 
    Macro createEnum()

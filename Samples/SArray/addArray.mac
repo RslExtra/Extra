@@ -1,0 +1,7 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+var arr = SArray(1, 2, 3);
+var arr2 = SArray(10, 20, 30);
+arr.addArray(arr2);
+arr.toScreen();     // [1, 2, 3, 10, 20, 30]
+//>

@@ -7,6 +7,5 @@ End;
 
 var arr = SArray(1, 2, 3);
 arr.forEach(@println);  // [1, 2, 3]
-
 arr.forEach(@sqAnPr);   // [1, 4, 9]
 //>

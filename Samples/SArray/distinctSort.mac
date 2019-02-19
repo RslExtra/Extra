@@ -1,0 +1,6 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+import bankinter;
+var arr = SArray(5, 3, 4, 1, 2, 5, 3);
+var dist = arr.distinctSort();
+dist.toScreen();  // [1, 2, 3, 4, 5]

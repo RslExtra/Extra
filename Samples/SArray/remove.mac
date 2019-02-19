@@ -1,0 +1,7 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+var arr = SArray(1, 2, 3, 4, 5);
+var r = arr.remove(2);   // Удаляем элемент под индексом 2
+println(r);              // 3
+arr.toScreen();          // [1, 2, 4, 5]
+//>

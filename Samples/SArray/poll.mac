@@ -1,0 +1,11 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+var arr = SArray(1, 2, 3, 4);
+var r = arr.poll();
+println(r);         // 4
+arr.toScreen();     // [1, 2, 3]
+arr.clear();        // Очистим массив
+r = arr.poll();
+println(r);         // Undefined
+arr.toScreen();     // []
+//>

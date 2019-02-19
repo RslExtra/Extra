@@ -1,9 +1,14 @@
-
 /**
-   Объект класса [PredicateFunctions].
+   @package Utils
+   Предопределенные генераторы функций.
+   - Predicates - генерирует функции-предикаты.
+   - Accums - генерирует функции аккуммуляторы.
 */
-var Predicates = GenObject("PredicateFunctions");
-var Accums     = GenObject("AccumulatorFunctions");
+/** Объект класса [PredicateFunctions] */
+const Predicates = GenObject("PredicateFunctions");
+/** Объект класса [AccumulatorFunctions] */
+const Accums     = GenObject("AccumulatorFunctions");
+
 /* Хранит ссылку на объект с методом, чтобы тот не собрался GC до завершения программы. */
 private var tmpObjects = TArray();
 
@@ -146,7 +151,7 @@ Private Class (FunctionalFactory) PredicateFunctions()
    /**
       Позволяет установить функцию для поля объекта, а не самого объекта.
    */
-   Macro byprop(prName)
+   Macro byprop(prName : String)
       return GenObject("PredicProperClass", prName);
    End;
 
@@ -161,7 +166,7 @@ Private Class (FunctionalFactory) PredicateFunctions()
    End;
 
    /** Возвращает функцию предикат, которая возвращает `true` если аргумент того же класса или класса-наследника с именем 'clName'.*/
-   Macro ClassEquals(clName)
+   Macro ClassEquals(clName : String)
       return getFuncClass(clName);
    End;
 
@@ -171,29 +176,29 @@ Private Class (FunctionalFactory) PredicateFunctions()
    End;
 
    /** Возвращает функцию предикат, которая возвращает `true` если аргумент равен 'val'.*/
-   Macro EQ(val)
+   Macro EQ(val : Variant)
       return getFuncClass(val);
    End;
 
    /**Возвращает функцию предикат, которая возвращает `true` если аргумент не равен 'val'. */
-   Macro NOTEQ(val)
+   Macro NotEQ(val : Variant)
       return getFuncClass(val);
    End;
 
    /** Возвращает функцию предикат, которая возвращает `true` если аргумент меньше 'val'.*/
-   Macro LT(val)
+   Macro LT(val : Variant)
       return getFuncClass(val);
    End;
    /** Возвращает функцию предикат, которая возвращает `true` если аргумент меньше или равен 'val'.*/
-   Macro LE(val)
+   Macro LE(val : Variant)
       return getFuncClass(val);
    End;
    /** Возвращает функцию предикат, которая возвращает `true` если аргумент больше 'val'.*/
-   Macro GT(val)
+   Macro GT(val : Variant)
       return getFuncClass(val);
    End;
    /** Возвращает функцию предикат, которая возвращает `true` если аргумент больше или равен 'val'.*/
-   Macro GE(val)
+   Macro GE(val : Variant)
       return getFuncClass(val);
    End;
 End;
@@ -216,7 +221,7 @@ Private Class (FunctionalFactory) AccumulatorFunctions()
    /**
       Позволяет установить функцию для поля объекта, а не самого объекта.
    */
-   Macro byprop(prName)
+   Macro byprop(prName : String)
       return GenObject("AccumProperClass", prName);
    End;
 

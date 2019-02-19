@@ -2,7 +2,6 @@ import "../mac/extra/utils/SArray.mac";
 //<
 import bankinter;   // Не забываем импортировать либу с реализованным QSort()
 
-debugbreak;
 var arr = SArray(4, 2, 1, 5, 4);
 arr.sort();
 arr.toScreen();  // [1, 2, 4, 4, 5]

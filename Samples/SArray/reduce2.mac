@@ -1,0 +1,18 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+import "../mac/extra/utils/Functions.mac";     // Импортируем генераторы
+
+var arr = SArray(1, 2, 3, 4);
+var res = arr.reduce(0, Accums.sum);
+var mn = arr.reduce(null, Accums.min);         // Минимальное значение
+var mx = arr.reduce(null, Accums.max);         // Максимальное
+var minInd = arr.reduce(null, Accums.minInd);  // Индекс миниального
+var maxInd = arr.reduce(null, Accums.maxInd);  // Индекс максимального
+
+println(res);       //10
+println(mn);        // 1Ц
+println(mx);        // 4
+println(minInd);    // 0
+println(maxInd);    // 3
+
+//>

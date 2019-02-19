@@ -1,0 +1,7 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+var arr = SArray(1, 2, 3, 4);
+var r = arr.peek();
+println(r);         // 4
+arr.toScreen();     // [1, 2, 3, 4]
+//>

@@ -1,7 +1,8 @@
 import "../mac/extra/utils/SArray.mac";
 //<
-   var arr = SArray();
-   arr.add(1);        // [1]
-   arr.add("two");    // [1, "two"]
-   arr.add("new", 1)  // [1, "new", "two"]
+var arr = SArray();
+arr.add(1);         // [1]
+arr.add("two");     // [1, "two"]
+arr.add("new", 1);  // [1, "new", "two"]
+arr.toScreen();     // [1, "new", "two"]
 //>

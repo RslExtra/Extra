@@ -1,0 +1,10 @@
+import "../mac/extra/utils/SArray.mac";
+//<
+var arr = SArray(1, 2, 3, 4, 5);  // Инициализируем массив
+var itr = arr.newIterator();      // Получаем итератор
+while(itr.hasnext())              // Пока итератор может что-то вернуть
+  var el = itr.next();           // Получаем следующий элемент итератора
+  println(el);                   // Выводим на экран
+end;
+
+//>
