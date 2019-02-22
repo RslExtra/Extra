@@ -1,6 +1,6 @@
 import "..\\mac\\extra\\RUnit\\RUnit.Mac";
 import "..\\mac\\extra\\Collections\\Collections.Mac";
-SHOW_ONLY_FAILED_UNIT_FUN = true;
+//SHOW_ONLY_FAILED_UNIT_FUN = true;
 // Тестовый класс для объектных коллекций
 Private Class (Any) Account(_acc : String, _summ : Integer)
    var acc = _acc;
@@ -36,7 +36,7 @@ Macro otherCompFun2(a1,a2)
    return CF_ComparePrimitive(a1.summ, a2.summ);
 end;
 
-Class (UnitTest) TestArrayList()
+Class (TestCase) TestArrayList()
    var list;
    var objList;
 
@@ -269,7 +269,7 @@ Class (TestArrayList) TestLinkedList()
    End;
 End;
 
-Class (UnitTest) TestSortedLinkedList()
+Class (TestCase) TestSortedLinkedList()
    var list;
    var objList;
 
@@ -317,7 +317,7 @@ Class (UnitTest) TestSortedLinkedList()
 End;
 
 
-Class (UnitTest) TestHashMap()
+Class (TestCase) TestHashMap()
    var map;
    var objMap;
 
@@ -416,7 +416,7 @@ Class (TestHashMap) TestTreeMap()
    End;
 End;
 
-Class (UnitTest) TestArrayMap()
+Class (TestCase) TestArrayMap()
    var map;
    Macro beforeTest()
       map = ArrayMap();
@@ -459,7 +459,7 @@ Class (UnitTest) TestArrayMap()
    End;
 End;
 
-Class (UnitTest) TestLinkedHashMap()
+Class (TestCase) TestLinkedHashMap()
    var map;
 
    Macro beforeTest()
@@ -544,7 +544,7 @@ Class (UnitTest) TestLinkedHashMap()
    */
 End;
 
-Class (UnitTest) TestObjectHashMap()
+Class (TestCase) TestObjectHashMap()
 
 
 End;

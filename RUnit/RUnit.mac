@@ -1,33 +1,95 @@
-import rcw;
-import "..\\mac\\extra\\RUnit\\RUnitFlag.Mac";
+/**
+   @Package RUnit
+   @Title   Юнит-тестирование
+   Библиотека для легкого тестирования ваших классов, макросов и модулей. Использует рефлексию, поэтому для создания тестов, необходимо следовать  простым шагам:
+   - Создаём отдельный макрофайл.
+   - Импортируем библиотеку `import "..\\mac\\extra\\RUnit\\RUnit.Mac";`
+   - Если тестируется исполняемый модуль, то в тексте него после иннициализации глобных переменных и до начала исполнения необходимо добавить строку
+     `if (ExecMacro2("UnitTestMarker") != null) return; end;`, что завершит выполнение модуля, при его импорте.
+   - Импортируем тестируемый модуль
+   - При необходимости настраиваем поведение RUnit, через объект [RUnitTest].
 
+   - Создаем тестовый кейс как класс, расширяющий 'TestCase'.
+   - Тестовые методы называем начиная со слова `test_`
+   - Все остальные вспомогательные методы и поля класса называем иначе.
+   - В конце файла создаем классы
+   - При сборке мусора, т.е следующей строкой после объявления класса начнется выполнение тестов.
+*/
+
+import rcw;
+
+/**
+   Объект класса [RUnitProperties] для настройки поведения тестов.
+*/
 var RUnitTest = GenObject("RUnitProperties");
 
 Private var AllTestResult = GenObject("AllTestsResult");
 
-
-Private Class RUnitProperties()
-   var RUN_UNIT_TEST                = true;           // Запускать тест
-   var SHOW_ONLY_FAILED_UNIT_TEST   = false;          // Выводить на экран только провалившиеся тесты
-   var SHOW_ONLY_FAILED_UNIT_FUN    = false;          // Выводить на экран только провалившиеся методы
-   var SHOW_ONLY_FAILED_UNIT_ASSERT = true;           // Выводить на экран только провалившиеся ассерты
-
-   var WRITE_TO_LOG                 = false;          // Писать в текстовый лог
-   var LOG_ONLY_FAILED_UNIT_TEST    = false;          // Писать в лог только провалившиеся тесты
-   var LOG_ONLY_FAILED_UNIT_FUN     = false;          // Писать в лог только провалившиеся методы
-   var LOG_ONLY_FAILED_UNIT_ASSERT  = true;           // Писать в лог только провалившиеся ассерты
-
-   var LOGGER_INSTANCE              = null;           // Экземпляр логгера
-
-   var UNIT_TEST_METHOD_PREFIX = "TEST_";             // Префикс тестовых методов
+Private Class ModuleMarker()
+   Macro Destructor()
+      debugbreak;
+      var a = getCallStack;
+      println(1);
+   End;
 End;
 
+private Macro getTimeDiffMillis(t1, t2) : Integer
+   var strTime = String((t2 - t1) : m);
+   var h = Int(SubStr(strTime, 1, 2));
+   var m = Int(SubStr(strTime, 4, 2));
+   var s = Int(SubStr(strTime, 7, 2));
+   var ms = Int(SubStr(strTime, 10, 2));
+   return ((((h*60) + m) * 60) + s) * 1000 + ms;
+end;
+
+Private Class RUnitProperties()
+   /** Флаг запуска теста. При установка значения `false`, тесты запускаться не будут. */
+   var RUN_UNIT_TEST               : Bool = true;           // Запускать тест
+
+   /** Флаг вывода успешнопройденных тестовых кейсов. По умолчанию `true` */
+   var SHOW_SUCCEED_CASE       : Bool = true;
+
+   /** Флаг вывода успешнопройденных тестовых функций. По умолчанию `true` */
+   var SHOW_SUCCEED_FUN        : Bool = true;
+
+   /** Флаг вывода успешнопройденных ассертов. По умолчанию `false` */
+   var SHOW_SUCCEED_ASSERT     : Bool = false;
+
+   /** Флаг вывода времени исполнения кейса */
+   var SHOW_CASE_EXECUTION_TIME     : Bool = true;
+
+   /** Флаг вывода времени исполнения тестового метода */
+   var SHOW_FUN_EXECUTION_TIME      : Bool = true;
+   /** Флаг записи в логгер. По умолчанию `false` при установке этого флага в `true`, так же необходимо установить экземпляр логгера в поле
+   [RUnitProperties.LOGGER_INSTANCE LOGGER_INSTANCE] */
+   var WRITE_TO_LOG                : Bool = false;          // Писать в текстовый лог
+
+   /** Флаг записи в лог успешнопройденных тестовых кейсов. По умолчанию `true` */
+   var LOG_SUCCEED_CASE       : Bool = true;
+
+   /** Флаг записи в лог успешнопройденных тестовых функций. По умолчанию `true` */
+   var LOG_SUCCEED_FUN        : Bool = true;
+
+   /** Флаг записи в лог успешнопройденных ассертов. По умолчанию `false` */
+   var LOG_SUCCEED_ASSERT     : Bool = false;
+
+   /** Флаг записи в лог времени исполнения */
+   var LOG_EXECUTION_TIME     : Bool = true;
+   /** Экземпляр класса логера, логер должен иметь методы 'i()' для записи успешно пройденных тестов, и 'e()' для проваленных. Можно воспользоваться одним из логеров [LogR.SingleLogger] или [LogR.Logger] */
+   var LOGGER_INSTANCE                    = null;           // Экземпляр логгера
+
+   /** Установка префикса для тестовых методов. По умолчанию 'TEST_'.*/
+   var METHOD_PREFIX : String = "TEST_";             // Префикс тестовых методов
+End;
+
+/**
+   Генерирует массив [TArray] из переданных параметров.
+   @oparam varargs параметры инициализации массива.
+*/
 Macro Arr_()
    var arr = TArray();
-   var count = Parmcount();
-   var i = 0;
-   var p;
-   while(i < count)
+   var p, i = 0;
+   while(i < Parmcount)
       getParm(i, p);
       arr[i] = p;
       i = i + 1;
@@ -35,135 +97,129 @@ Macro Arr_()
    return arr;
 End;
 
-Macro toLogI(msg)
+Private Macro toLogI(msg)
    RUnitTest.LOGGER_INSTANCE.i(msg);
 End;
 
-Macro toLogE(msg)
+Private Macro toLogE(msg)
    RUnitTest.LOGGER_INSTANCE.e(msg);
 End;
 
-Private Class AssertResult(_assertString : String)
-
-   var assertString = _assertString;
-   var isOk;
-   var message = "";
+Private Class AssertResult(_definition : String)
+   var definition = _definition;
+   var passed : Bool = true;
+   var msg = "";
    var num = 0;
 
    Macro toScreen()
-      if(RUnitTest.SHOW_ONLY_FAILED_UNIT_ASSERT and isOk) return; end;
+      if (not(RUnitTest.SHOW_SUCCEED_ASSERT) and passed) return; end;
       var st = "ok  ";
-      if(not(isOk))
+      if (not(passed))
          st = "fail";
       end;
-      println("      " + String(num:2:0) + " : " + st + " : " + " - "+ assertString + " - " + message);
+      println("      " + String(num:2:0) + " : " + st + " : " + " - "+ definition + " - " + msg);
    End;
 
    Macro toLog()
-      if(RUnitTest.LOG_ONLY_FAILED_UNIT_ASSERT and isOk) return; end;
-      if(not(isOk))
-         toLogE("fail - " + assertString + " - " + message);
+      if (RUnitTest.LOG_SUCCEED_ASSERT and passed) return; end;
+      if (not(passed))
+         toLogE("fail - " + definition + " - " + msg);
       else
-         toLogI("ok   - " + assertString + " - " + message);
+         toLogI("ok   - " + definition + " - " + msg);
       end;
    End;
 End;
 
-Private Class FunResult(_name)
-   var name = _name;
-   var messages = TArray();
-   var ok   : Integer = 0;
-   var fail : Integer = 0;
-   var isOk = true;
+Private Class FunResult(_funcname)
+   var funcname       : String  = _funcname;
+   var passed         : Bool    = true;
+   var pass_asserts   : Integer = 0;
+   var fail_asserts   : Integer = 0;
+   var execTimeMillis : Integer = 0;
+   var fail_flag      : Bool    = false;
+   var fail_msg       : String  = "";
+
    var assertResults = TArray();
-
-   Macro addLine(line : String)
-      messages[messages.size] = line;
-   End;
-
-   Macro addOk()
-      ok = ok + 1;
-   End;
-
-   Macro addFail()
-      fail = fail + 1;
-      isOk = false;
-   End;
 
    Macro addAssertResult(assRes : AssertResult)
       assertResults[assertResults.size] = assRes;
-      if(assRes.isOk)
-         ok = ok  + 1;
+      if (assRes.passed)
+         pass_asserts = pass_asserts  + 1;
       else
-         fail = fail + 1;
-         isOk = false;
+         fail_asserts = fail_asserts + 1;
+         passed = false;
       end;
    End;
 
    Macro toScreen()
-      if (RUnitTest.SHOW_ONLY_FAILED_UNIT_FUN and isOk) return; end;
+      if (not(RUnitTest.SHOW_SUCCEED_FUN) and passed) return; end;
 
       var st = "[OK]";
-      if(not(isOk))
+      if (not(passed))
          st = "[FAIL]";
       end;
-      var stats = "   Asserts run:" + (ok + fail) + ", failed:" + fail;
-      print("   "); print(name:20:0); print(st:8:0); println(stats);
-
-      var assRes;
-      for(assRes, assertResults)
+      var stats = "   Asserts run:" + (pass_asserts + fail_asserts) + ", failed:" + fail_asserts;
+      print("   "); print(funcname:20:0); print(st:8:0); println(stats);
+      if (RUnitTest.SHOW_FUN_EXECUTION_TIME)
+         println("   " + "(" + execTimeMillis + " ms)");
+      end;
+      for(var assRes, assertResults)
          assRes.toScreen();
       end;
       println("");
    End;
 
    Macro toLog()
-      if (RUnitTest.LOG_ONLY_FAILED_UNIT_FUN and isOk) return; end;
-      var stats = "   Asserts run:" + (ok + fail) + ", failed:" + fail;
-      if(not(isOk))
-         toLogE(String(name:20:0) + "[FAIL]  " + stats);
+      if (RUnitTest.LOG_SUCCEED_FUN and passed) return; end;
+      var stats = "   Asserts run:" + (pass_asserts + fail_asserts) + ", failed:" + fail_asserts;
+      if (not(passed))
+         toLogE(String(funcname:20:0) + "[FAIL]  " + stats);
       else
-         toLogI(String(name:20:0) + "[OK]    " + stats);
+         toLogI(String(funcname:20:0) + "[OK]    " + stats);
       end;
-      var assRes;
-      for(assRes, assertResults)
+
+      for(var assRes, assertResults)
          assRes.toLog();
       end;
    End;
 End;
 
-Private Class UnitResult(_name)
-   var name = _name;
+Private Class CaseResult(_casename : String)
+   var casename       : String  = _casename;
+   var passed         : Bool    = true;
+   var pass_funs      : Integer = 0;
+   var fail_funs      : Integer = 0;
+   var execTimeMillis : Integer = 0;
    var funResults = TArray();
-   var ok = 0;
-   var fail = 0;
-   var isOk = true;
 
    Macro addFunResult(_funResult : FunResult)
       funResults[funResults.size] = _funResult;
-      if(_funResult.isOk)
-         ok = ok + 1;
+      if(_funResult.passed)
+         pass_funs = pass_funs + 1;
       else
-         fail = fail + 1;
-         isOk = false;
+         fail_funs = fail_funs + 1;
+         passed = false;
       end;
    End;
 
    Macro toScreen()
-      if(funResults.size == 0) return; end;
-      if(RUnitTest.SHOW_ONLY_FAILED_UNIT_TEST and isOk) return; end;
+      if (funResults.size == 0) return; end;
+      if (not(RUnitTest.SHOW_SUCCEED_CASE) and passed) return; end;
 
       var st = "[OK]";
-      if(not(isOk))
+      if (not(passed))
          st = "[FAIL]";
       end;
-      var stats = "Tests method run: " + (ok + fail) + ", failed: " + fail;
+      var stats = "Tests method run: " + (pass_funs + fail_funs) + ", failed: " + fail_funs;
 
-      print(name:20:0); println(st:10:0);
+      print(casename:20:0); println(st:10:0);
       println(stats);
+      if (RUnitTest.SHOW_CASE_EXECUTION_TIME)
+         println("("+ execTimeMillis +" ms)")
+      end;
       println("");
 
-      for(var funRes, funResults)
+      for (var funRes, funResults)
          funRes.toScreen();
       end;
       println("-------------------------------------------------------------------");
@@ -172,12 +228,12 @@ Private Class UnitResult(_name)
 
    Macro toLog()
       if(funResults.size == 0) return; end;
-      if(RUnitTest.LOG_ONLY_FAILED_UNIT_TEST and isOk) return; end;
-      var stats = "Tests method run: " + (ok + fail) + ", failed: " + fail;
-      if(not(isOk))
-         toLogE(String(name:20:0) + "[FAIL]");
+      if(RUnitTest.LOG_SUCCEED_CASE and passed) return; end;
+      var stats = "Tests method run: " + (pass_funs + fail_funs) + ", failed: " + fail_funs;
+      if(not(passed))
+         toLogE(String(casename:20:0) + "[FAIL]");
       else
-         toLogI(String(name:20:0) + "[OK]");
+         toLogI(String(casename:20:0) + "[OK]");
       end;
       toLogI(stats);
       for(var funRes, funResults)
@@ -187,19 +243,19 @@ Private Class UnitResult(_name)
 End;
 
 Private Class AllTestsResult()
-   var testResults = TArray();
-   var isOk = true;
-   var ok = 0;
-   var fail = 0;
+   var passed = true;
+   var pass_case = 0;
+   var fail_case = 0;
    var printed = false;
+   var testResults = TArray();
 
-   Macro addTestResult(testResult : UnitResult)
+   Macro addTestResult(testResult : caseResult)
       testResults[testResults.size] = testResult;
-      if(testResult.isOk)
-         ok = ok + 1;
+      if(testResult.passed)
+         pass_case = pass_case + 1;
       else
-         fail = fail + 1;
-         isOk = false;
+         fail_case = fail_case + 1;
+         passed = false;
       end;
    End;
 
@@ -208,10 +264,10 @@ Private Class AllTestsResult()
 
       Println("=========================== START TESTS ===========================");
       var st = "[OK]";
-      if(not(isOk))
+      if(not(passed))
          st = "[FAILED]"
       end;
-      println(st + " Tests successful complete: " + ok + "/" + (ok+fail));
+      println(st + " Testcases successful complete: " + pass_case + "/" + (pass_case+fail_case));
       println("");
       for(var testRes, testResults)
          testRes.toScreen();
@@ -224,11 +280,11 @@ Private Class AllTestsResult()
 
       toLogI("START UNIT TESTS");
       var st;;
-      if(not(isOk))
+      if(not(passed))
          st = "[FAILED]";
-         toLogE("[FAILED] " + "Tests successful complete: "  + ok + "/" + (ok+fail));
+         toLogE("[FAILED] " + "Testcases successful complete: "  + pass_case + "/" + (pass_case+fail_case));
       else
-         toLogI("[OK    ] " + "Tests successful complete: "  + ok + "/" + (ok+fail));
+         toLogI("[OK    ] " + "Testcases successful complete: "  + pass_case + "/" + (pass_case+fail_case));
       end;
       for(var testRes, testResults)
          testRes.toLog();
@@ -238,7 +294,7 @@ Private Class AllTestsResult()
    End;
 
    Macro Destructor()
-      if(not(printed))
+      if (not(printed))
          printTestResults();
          logTestResults();
          printed = true;
@@ -263,7 +319,7 @@ Private Class AssertClass(_val1, _val2)
    End;
 
    Macro setResult(res : Bool)
-      result.isOk = res;
+      result.passed = res;
    End;
 
    Macro getResult() : Bool
@@ -271,7 +327,7 @@ Private Class AssertClass(_val1, _val2)
    End;
 
    Macro setFaultCause(cause : String)
-      result.message = cause;
+      result.msg = cause;
    End;
 
 End;
@@ -413,38 +469,52 @@ End;
 
 
 
-Private Class UnitFun(_parent, _name : String)
-   var parent = _parent;
-   var name = _name;
-   var expectedErrCode;
-   var result = FunResult(_name);
-   var curAssNum = 0;
-   Macro runTest()
+Private Class UnitFun(_testCase, _funcname : String)
+   var case = _testCase;
+   var funcname = _funcname;
+   var expErrCode;
+   var result    = FunResult(_funcname);
+   private var curAssNum = 0;
+
+   Macro setExecTime(millis : Integer)
+      result.execTimeMillis = millis;
+   End;
+
+   Macro runTestFun()
       var curTest = 0;
       var t0 = time();
-      var res = GenRun(parent, name);
-      var t1 = time();
-      var restime = String((t1 - t0) : m) + " ms";
+      var res = GenRun(case, funcname);
+      setExecTime(getTimeDiffMillis(t0, time));
 
       OnError(err) // При ошибке внутри функции
-         var errAss = AssertErrorClass(expectedErrCode, err);
+         var errAss = AssertErrorClass(expErrCode, err);
          this.addAssert(errAss);
    End;
 
    Macro addAssert(ass)
+      if (result.fail_flag) return; end;
       curAssNum = curAssNum + 1;
       ass.setNum(curAssNum);
       ass.RunAssert();
       result.addAssertResult(ass.result);
    End;
 
+   Macro fail(msg : String)
+      result.fail_flag = true;
+      result.fail_msg  = msg;
+   End;
 End;
 
-Class UnitTest(_name)
-   var name : String;
+/**
+
+*/
+Class TestCase(_name)
+   var name       : String;
    var testFuns   : TArray;
    var curTestFun : UnitFun;
-   var testOK : Bool;
+
+   var complete   : Bool;
+
    var result;
 
    if(ValType(_name) == V_STRING)
@@ -491,50 +561,63 @@ Class UnitTest(_name)
       curTestFun.addAssert(assertArraysClass(arr1, arr2));
    End;
 
+   Macro fail(msg : String)
+      curTestFun.fail(msg);
+   End;
+
    Macro catchError(_code)
       var code = _code;
-      if(valType(code)!=V_INTEGER)
+      if(valType(code) != V_INTEGER)
          code = -1;           // Catch all errors
       end;
-      curTestFun.expectedErrCode = code;
+      curTestFun.expErrCode = code;
+   End;
+
+   Private Macro __AddTestFun(funName)
+      testFuns[testFuns.size] = UnitFun(this, funName);
+   End;
+
+   Private Macro __ParseMethods()
+      for(var mn, GetObjMethods(this))
+         if(SubStr(mn,1,5) == StrUpr(RUnitTest.METHOD_PREFIX))
+            __AddTestFun(mn);
+         end;
+      end;
    End;
 
    Macro startTests()
       testFuns = TArray();
-      var allMeth = GetObjMethods(this);
-      var met;
-      for(met, allMeth)
-         if(SubStr(met,1,5) == RUnitTest.UNIT_TEST_METHOD_PREFIX)
-            testFuns[testFuns.size] = UnitFun(this, met);
-         end;
-      end;
+      __ParseMethods();
 
       for(curTestFun, testFuns)
          beforeTest();
-         curTestFun.runTest();
+         curTestFun.runTestFun();
          afterTest();
          result.addFunResult(curTestFun.result);
       end;
    End;
 
-   Macro RunTest()
+   Macro RunCase()
       if(ValType(name) == V_UNDEF)
          name = GenClassName(this);
       end;
-      result = UnitResult(name);
+      result = CaseResult(name);
+      var t0 = time();
       beforeClass();
       startTests();
       afterClass();
+      result.execTimeMillis = getTimeDiffMillis(t0, time);
       AllTestResult.addTestResult(result);
    End;
 
    Macro Destructor()
-      if((ValType(testOK) == V_UNDEF) and RUnitTest.RUN_UNIT_TEST)
-         RunTest();
+      if((ValType(complete) == V_UNDEF) and RUnitTest.RUN_UNIT_TEST)
+         RunCase();
+         complete = true;
       end;
    End;
 End;
 
 Macro UnitTestMarker()
-   return 1;
+   return ModuleMarker();
 End;

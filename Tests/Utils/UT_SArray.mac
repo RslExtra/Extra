@@ -4,7 +4,9 @@ import "../mac/extra/utils/functions.mac";
 import "../mac/extra/utils/CompareFunc.mac";
 import bankinter;
 import rcw;
-RUnitTest.SHOW_ONLY_FAILED_UNIT_FUN = false;
+
+
+//RUnitTest.SHOW_SUCCEED_FUN = false;
 
 // Тестовый класс для объектных коллекций
 Private Class Account(_acc : String, _summ : Integer)
@@ -67,7 +69,7 @@ private Macro reduceFunc(acc, el)
 End;
 
 
-Class (UnitTest) TestSArray()
+Class (TestCase) TestSArray()
    var arr;
 
    Macro beforeTest()
@@ -89,6 +91,14 @@ Class (UnitTest) TestSArray()
       arr.add(18, 1);
       assertEquals(3, arr.size);
       assertArrays(arr_(2, 18, 1), arr);
+   End;
+
+   Macro test_bigAdd()
+      var i;
+      for(i, 1, 100000)
+         arr.push(i);
+      end;
+      assertEquals(10000, arr.size);
    End;
 
    Macro test_get()
@@ -174,7 +184,7 @@ Class (UnitTest) TestSArray()
       assertArrays(arr_(1, 2, 3, -4, 0), arr.distinct(@equalAbs));
 
       arr = SArray(2, 1, 1, 2, 3, 3, 3, 3, 3);
-      debugbreak;
+
       var a = arr.distinctSort();
       assertArrays(arr_(1,2,3), a);
    End;
@@ -296,6 +306,31 @@ Class (UnitTest) TestSArray()
    End;
 End;
 
+Macro ev()
+   while(TestEvent != 27)
+      var ev = TestEvent();
+
+      if (ev == 27)
+         break;
+      elif (ev == 0)
+         ;
+      else
+         message(ev);
+      end;
+   end;
+End;
+
+Macro er()
+   addEvent(331);
+   addEvent(32);
+   addEvent(13);
+   var a = RUnitTest.show;
+   /*
+   OnError(err)
+      addEvent(32);
+      msgBox(err);*/
+end;
+//er;
 TestSArray;
 
 /*
