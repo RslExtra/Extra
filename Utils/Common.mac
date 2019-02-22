@@ -69,7 +69,6 @@ Macro isStreamLoaded() : Bool
 End;
 
 Class Interface()
-
    Macro getMethods() : TArray
       return GetObjMethods(this);
    End;
@@ -93,13 +92,3 @@ Macro defVal(codType, ob)
       setparm(1, 0);
    end;
 end;
-//tests
-
-/*
-println(getFs(5));
-println(getfs(null));
-println(getfs("abc"));
-println(getfs(0.00));
-println(getFs(0));
-println(getFs($5.12))
-*/

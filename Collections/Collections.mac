@@ -28,3 +28,4 @@ import "..\\Mac\\Extra\\Collections\\LinkedHashMap.mac";
 import "..\\Mac\\Extra\\Collections\\LinkedHashSet.mac";
 import "..\\Mac\\Extra\\Collections\\TreeMap.mac";
 import "..\\Mac\\Extra\\Collections\\TreeSet.mac";
+import "..\\Mac\\Extra\\Collections\\ArrayMap.mac";

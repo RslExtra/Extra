@@ -1,0 +1,146 @@
+/**
+   @package Collections
+
+   Файл включает в себя реализацию интерфейса 'map' через два массива.
+   В среднем медленнее чем [Collections.HashMap Hashmap], однако занимает меньше места в памяти.
+   Также в качесвте ключей могут выступать только примитивные типы. Отлично подходит для небольшого количества элементов (до 100) и редких операциях удаления, вставки.
+*/
+
+import "..\\Mac\\Extra\\Collections\\Iterable.mac";
+
+Private Macro binarySearchMap(arr : TArray, el : Variant) : Integer
+   var high = arr.size;
+   var low = 0;
+   var mid = 0;
+   var x;
+   var i = -1;
+   while(low < high)
+      mid = (low + high) / 2;
+      x = arr[mid];
+      if (el == x)
+         return mid;
+      elif (el < x)
+         high = mid;
+         i = -mid-1;
+      else
+         low = mid + 1;
+         i = -low-1;
+      end;
+   end;
+   return i;
+End;
+
+Class (Iterable) ArrayMap()
+   var size = 0;
+   var keys = SArray();
+   var values = SArray();
+
+   Macro isEmpty() : Bool
+      return (size==0);
+   End;
+
+   Macro put(key, value) : Variant
+      var i = binarySearchMap(keys, key);
+      var oldVal;
+      if (i >= 0)
+         oldVal = values[i];
+         values[i] = value;
+      else
+         i = -i - 1;
+         keys.add(key, i);
+         values.add(value, i);
+         size = size + 1;
+      end;
+      return oldVal;
+   End;
+
+   Macro get(key) : Variant
+      var i = binarySearchMap(keys, key);
+      if (i >= 0)
+         return values[i];
+      end;
+   End;
+
+   Macro remove(key) : Variant
+      var i = binarySearchMap(keys, key);
+      if (i < 0) return; end;
+      var remVal = values.remove(i);
+      keys.remove(i);
+      size = size - 1;
+      return remVal;
+   End;
+
+   Macro containsKey(key) : Bool
+      var i = binarySearchMap(keys, key);
+      return (i >= 0);
+   End;
+
+   Macro containsValue(val, equalFunc)
+      return values.contains(val, equalfunc);
+   End;
+
+   Macro clear()
+      keys.clear();
+      values.clear();
+      size = 0;
+   end;
+
+   Macro append()
+
+   End;
+
+
+
+   Macro newIterator()
+      return ExecMacro2("ArrayMapEntryIterator", this);
+   End;
+
+   Macro newKeyIterator()
+      return ExecMacro2("ArrayMapKeyIterator", this);
+   End;
+
+   Macro newValueIterator()
+      return ExecMacro2("ArrayMapValueIterator", this);
+   End;
+
+
+
+End;
+
+Private Class ArrayMapIterator(_arrayMap : @ArrayMap)
+   var map = _arrayMap;
+   var lastReturned = null;
+   var nextIndex : Integer = 0;
+
+   Macro hasNext()
+      return (nextIndex != map.size);
+   End;
+
+   Macro hasPrev()
+      return (nextIndex != 0)
+   End;
+
+   Macro next() : Pair
+      lastReturned = Pair(map.keys[nextIndex], map.values[nextIndex]);
+      nextIndex = nextIndex + 1;
+      return lastReturned;
+   End;
+
+   Macro prev() : Pair
+      nextIndex = nextIndex - 1;
+      lastReturned = Pair(map.keys[nextIndex], map.values[nextIndex]);
+      return lastReturned;
+   End;
+End;
+
+Private Macro ArrayMapEntryIterator(map : @ArrayMap)
+   return ArrayMapIterator(@map);
+End;
+
+Private Macro ArrayMapKeyIterator(map)
+   return map.keys.newIterator();
+End;
+
+Private Macro ArrayMapValueIterator(map)
+   return map.values.newIterator();
+End;

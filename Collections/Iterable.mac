@@ -8,7 +8,7 @@
 
 import "..\\Mac\\Extra\\Utils\\Common.mac";         // ifNull
 import "..\\Mac\\Extra\\Utils\\StringUtil.mac";  // JoinToString
-import "..\\Mac\\Extra\\Lambda\\SArray.mac";
+import "..\\Mac\\Extra\\Utils\\SArray.mac";
 import "..\\Mac\\Extra\\Utils\\CompareFunc.mac";
 import "..\\Mac\\Extra\\Utils\\SortingFunc.mac";
 import "..\\Mac\\Extra\\Utils\\Exceptions.mac";
@@ -58,7 +58,7 @@ Class Any()
       return 0;
    End;
 
-   Macro hash()
+   Macro hash() : Integer
       var h = 0;
       for(var i, 0, GenNumProps(this) - 1, 1)
          var p = this[i];
@@ -218,14 +218,14 @@ Class Iterable()
    Macro filter(_func) : Iterable
       var func = getFunOrLambda(_func);
       var result = newInstance();
-      if(isPrimitive)
+      if (isPrimitive)
          result.setPrimitive();
       end;
       var el;
       var itr = newIterator();
-      while(itr.hasNext)
+      while (itr.hasNext)
          el = itr.next;
-         if(ExecMacro2(func, el))
+         if (ExecMacro2(func, el))
             result.append(el);
          end;
       end;
@@ -237,12 +237,12 @@ Class Iterable()
    Macro map(_func) : Iterable
       var func = getFunOrLambda(_func);
       var result = newInstance();
-      if(isPrimitive)
+      if (isPrimitive)
          result.setPrimitive();
       end;
       var el, outEl;
       var itr = newIterator();
-      while(itr.hasNext)
+      while (itr.hasNext)
          el = itr.next;
          outEl = ExecMacro2(func, el);
          result.append(outEl);
@@ -254,7 +254,7 @@ Class Iterable()
    Macro sum() : Numeric
       var sum = 0;
       var itr = newIterator();
-      while(itr.hasnext())
+      while (itr.hasnext())
          sum = sum + itr.next();
       end;
       return sum;
@@ -266,7 +266,7 @@ Class Iterable()
       var sum : Numeric = 0;
       var itr = newIterator();
       var v,p;
-      while(itr.hasnext())
+      while (itr.hasnext())
          v = itr.next();
          p = GenGetProp(v, _propName);
          sum = sum + p;
@@ -281,7 +281,7 @@ Class Iterable()
       var sum : Numeric = 0;
       var itr = newIterator();
       var p;
-      while(itr.hasnext())
+      while (itr.hasnext())
          p = ExecMacro2(func, itr.next());
          sum = sum + p;
       end;
@@ -462,7 +462,7 @@ Class (Iterable) BaseList()
       var p;
       var i = 1;
       var count = ParmCount();
-      while(i < count)
+      while (i < count)
          GetParm(i, p);
          arr[i-1] = p;
          i = i + 1;
@@ -474,20 +474,20 @@ Class (Iterable) BaseList()
    // Для отображения полного списка в строке использовать метод toStr() : String, toScreen(), toScreen2() - для вывода а экран
    Macro toString(_showAll : Bool) : String
       var showAll = false;
-      if(ValType(_showAll)!=V_UNDEF)
+      if (ValType(_showAll)!=V_UNDEF)
          showAll = _showAll;
       end;
       var i = 0;
       var s : String = "";
       var inItr = newIterator();
       s = s + "[ ";
-      while(inItr.hasnext())
+      while (inItr.hasnext())
          s = s + inItr.next();
          i = i + 1;
-         if(inItr.hasNext())
+         if (inItr.hasNext())
             s = s +" ,";
          end;
-         if(not(showAll) and (i>=SHOW_NUM))
+         if (not(showAll) and (i>=SHOW_NUM))
             break;
          end;
       end;
@@ -547,7 +547,7 @@ Class (BaseIterator) ListIterator(ilist : BaseList, ind : Integer)
    End;
 
    Macro previous() : Variant
-      if(not(hasPrev))
+      if (not(hasPrev))
          return;
       end;
       nextIndex = nextIndex - 1;
@@ -557,7 +557,7 @@ Class (BaseIterator) ListIterator(ilist : BaseList, ind : Integer)
    End;
 
    Macro toPos(ind : Integer)
-      if((ind<0) or (ind>list.size-1)) return; end;
+      if ((ind<0) or (ind>list.size-1)) return; end;
       curIndex = ind;
       nextIndex = ind + 1;
    End;
@@ -573,7 +573,7 @@ Class (BaseList) ImmutableList()
 
    /** Возвращает элемент списка под индексом 'ind' */
    Macro get(ind) : Variant
-      if((ind <0) or (ind>=size))
+      if ((ind <0) or (ind>=size))
          return null;
       end;
       return items[ind];
@@ -581,13 +581,13 @@ Class (BaseList) ImmutableList()
 
    /** Возвращает первый элемент списка или `null` если список пуст.*/
    Macro getFirst() : Variant
-      if(size == 0) return null; end;
+      if (size == 0) return null; end;
       return items[0];
    End;
 
    /** Возвращает последний элемент списка или `null` если список пуст.*/
    Macro getLast() : Variant
-      if(size == 0) return null; end;
+      if (size == 0) return null; end;
       return items[size - 1];
    End;
 

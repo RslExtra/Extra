@@ -1,0 +1,65 @@
+import "..\\Mac\\Extra\\Collections\\Collections.mac";
+
+// TArray get = 43s!!
+var t0;
+var t1;
+var arrKeys = SArray;
+var arrValues = SArray;
+
+Macro startTimer()
+    t0 = time;
+End;
+
+Macro stopTimer()
+    t1 = time;
+end;
+
+Macro timeResult() : String
+    return String((t1-t0):m);
+End;
+
+Macro generateKeysAndValues(n)
+   for(var i, 1, n)
+      arrKeys.push("key_" + i);
+      arrValues.push("value_" + i);
+   end;
+End;
+
+Macro testPut(map, n)
+   startTimer();
+   for (var i, 0, n-1)
+      map.put(arrKeys[i], arrValues[i]);
+   end;
+   stopTimer();
+   println("testPut " + n + GenClassName(map) + " - " + timeResult);
+End;
+
+Macro testGet(map, n)
+   startTimer();
+   for (var i, 0, n-1)
+      map.get(arrKeys[i]);
+   end;
+   stopTimer();
+   println("testGet " + GenClassName(map) + " " + n  + " - " + timeResult);
+End;
+
+generateKeysAndValues(100000);
+
+Macro testCase(map)
+   testPut(map, 100);
+   testPut(map, 1000);
+   testPut(map, 10000);
+   testGet(map, 10000);
+   println();
+End;
+
+var map;
+map = StringHashMap();
+debugbreak;
+testCase(map);
+
+map = TreeMap().setKeyPrimitive();
+testCase(map);
+
+map = ArrayMap();
+testCase(map);

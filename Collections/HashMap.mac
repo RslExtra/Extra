@@ -35,7 +35,7 @@ Private Class (BaseIterator) HashIterator(_map)
    var map           = _map;
    var nxt           = null;
    var lastReturned  = null;
-   var busk : Integer = 0; // текущая корзина
+   private var busk : Integer = 0; // текущая корзина
 
    if (map.size > 0)
       while (busk < map.table.size)   // ищем первую ненулевую корзину

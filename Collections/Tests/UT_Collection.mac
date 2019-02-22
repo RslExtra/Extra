@@ -414,7 +414,49 @@ Class (TestHashMap) TestTreeMap()
       map.setKeyPrimitive();
       objMap = TreeMap();
    End;
+End;
 
+Class (UnitTest) TestArrayMap()
+   var map;
+   Macro beforeTest()
+      map = ArrayMap();
+   End;
+
+   Macro test_put_get()
+      map.put("key1", 1);
+      assertEquals(map.size, 1);
+     // assertTrue(map.containsValue(1));
+      assertEquals(map.get("key1"), 1);
+      assertNull(map.get("SomeKey"));
+
+      map.put("key2", 2);
+      assertEquals(map.size, 2);
+
+      var r = map.put("key1", 111);
+      assertEquals(r , 1);
+      assertEquals(map.get("key1"),111);
+      assertEquals(map.size, 2);
+
+      map.clear();
+      assertEquals(0, map.size);
+      assertTrue(map.isEmpty);
+
+      var i;
+      for(i, 1, 10000)
+         map.put("key" + i, "val" + i);
+      end;
+
+      assertEquals(map.size, 10000);
+      var finded = 0;
+      var v;
+      for(i, 1, 10000)
+         v = map.get("key" + i);
+         if(ValType(v) != V_UNDEF)
+            finded = finded + 1;;
+         end;
+      end;
+      assertEquals(finded, 10000);
+   End;
 End;
 
 Class (UnitTest) TestLinkedHashMap()
@@ -507,12 +549,13 @@ Class (UnitTest) TestObjectHashMap()
 
 End;
 
+
 TestArrayList;
 TestLinkedList;
 TestSortedLinkedList;
 TestHashMap;
 TestTreeMap;
-
+TestArrayMap;
 
 //TestLinkedHashMap;
 //TestHashSet;
