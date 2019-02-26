@@ -78,7 +78,8 @@ Class (ImmutableList) ArrayList()
       items[capacity-1] = null;
    end;
 
-   /** Добавляет указанный элемент `v` на позицию `ind`. Если  `ind` не указан, добавляет элемент в конец списка.
+   /**
+      Добавляет указанный элемент `v` на позицию `ind`. Если  `ind` не указан, добавляет элемент в конец списка.
       @sample [samples.Collections.ArrayList.add]
    */
    Macro add(v, ind) : Bool

@@ -170,6 +170,15 @@ Class Iterable()
    Macro clear()
    End;
 
+   /** Возвращает `true`, если коллекция пуста, иначе возвращает `false`.*/
+   Macro isEmpty() : Bool
+   End;
+
+   /**
+      Возвращает массив типа [Utils.SArray SArray] состоящий из элементов исходной коллекции.
+   */
+   Macro toArray() : SArray
+   End;
 
    /** Дефалтное добавление (для chain - функций) */
    Macro append(baseCollectionElement)
@@ -376,6 +385,232 @@ Class Iterable()
    End;
 
    compareRef = @CF_compareObjFromInner;
+End;
+
+/**
+   Базовый интерфейс для списков.
+
+   @see [Collection.ArrayList]
+   @see [Collection.LinkedList]
+*/
+Class (Iterable) ListInterface()
+
+   /**
+      Добавляет 'element' в список на позицию 'ind'. Если 'ind' не указан или равен `null`, добавляет элемент в конец списка.
+   */
+   Macro add(element : Variant, ind : Integer)
+   End;
+
+   /**
+      Добавляет 'element' в начало списка.
+   */
+   Macro addFirst(element : Variant)
+   End;
+
+   /**
+      Добавляет 'element' в конец списка.
+   */
+   Macro addLast(element : Variant)
+   End;
+
+   /**
+      Добавляет все элементы 'enumerable' в конец списка.
+   */
+   Macro addAll(enumerable)
+   End;
+
+   /**
+      Возвращает элемент под индексом 'ind'.
+   */
+   Macro get(ind : Integer) : Variant
+   End;
+
+   /**
+      Возвращает первый элемент списка.
+   */
+   Macro getFirst() : Variant
+   End;
+
+   /**
+      Возвращает последний элемент списка.
+   */
+   Macro getLast() : Variant
+   End;
+
+   /**
+      Устанавливает новое значение 'newValue' элементу под индексом 'ind' и возвращает заменяемое значение.
+   */
+   Macro set(newValue : Variant, ind : Integer) : Variant
+   End;
+
+   /**
+      Удаляет и возвращает значение под индексом 'ind'.
+   */
+   Macro remove(ind : Integer) : Variant
+   End;
+
+   /**
+      Возвращает индекс первого элемента равного 'element' согласно функции 'equalFunc'. Если функция не указана сравнение происходит через '=='.
+   */
+   Macro indexOf(element, equalFunc)
+   End;
+
+   /**
+      Возвращает индекс последнего элемента равного 'element' согласно функции 'equalFunc'. Если функция не указана сравнение происходит через '=='.
+   */
+   Macro lastIndexOf(element, equalFunc)
+   End;
+
+   /**
+      Возвращает `true`, если коллекция содержит элемент равный 'element' согласно функции 'equalFunc'. Если функция не указана сравнение происходит через '=='.
+   */
+   Macro contains(element, equalFunc) : Bool
+   End;
+
+   /**
+      Сортирует исходный список согласно функции-компаратору 'compareFunc' и возвращает ссылку на него.
+   */
+   Macro sort(compareFunc) : ListInterface
+   End;
+
+   /**
+      Разворачивает исходный список и возращает ссылку на него.
+   */
+   Macro reverse() : ListInterface
+   End;
+
+   /**
+      Возвращает массив типа [Utils.SArray SArray] состоящий из элементов исходного списка.
+   */
+   Macro toArray() : SArray
+   End;
+End;
+
+/**
+   Базовый интерфейс для коллекций пар "ключ-значение".
+
+   @see [Collection.HashMap]
+   @see [Collection.TreeMap]
+   @see [Collection.ArrayMap]
+*/
+Class (Iterable) MapInterface()
+
+   /**
+      Помещает в коллекцию ключ 'key' и соответсвующее ему значение 'value', если такой ключ уже присутствует, значение меняется, а заменяемое значение возвращается.
+   */
+   Macro put(key, value : Variant) : Variant
+   End;
+
+   /**
+      Помещает в коллекцию все пары "ключ-значение" из 'map'.
+   */
+   Macro putMapEntries(map : MapInterface)
+   End;
+
+   /**
+      Возвращает значение соответствующее ключу 'key', если такого ключа не найдено возвращает `null`.
+   */
+   Macro get(key) : Variant
+   End;
+
+   /**
+      Заменяет значение соответствующее ключу 'key' на 'newValue' и возвращает `true`, если ключа не найдено возвращает `false`, при этом добавление нового элемента не происходит.
+   */
+   Macro replace(key, newValue : Variant) : Bool
+   End;
+
+   /**
+      Удаляет и коллекции пару с ключем 'key' и возвращает удаляемое значение.
+   */
+   Macro remove(key) : Variant
+   End;
+
+   /**
+      Возвращает `true`, если коллекция содержит пару с ключем 'key'.
+   */
+   Macro containsKey(key) : Bool
+   End;
+
+   /**
+      Возвращает `true`, если коллекция содержит пару со значением равным 'value' согласно функции 'equalFunc'. Если функция не указана сравнение происходит через '=='.
+   */
+   Macro containsValue(value, equalFunc) : Bool
+   End;
+
+   /**
+      Возвращает массив [Utils.SArray SArray] состоящий из ключей исходной коллекции.
+   */
+   Macro keys() : SArray
+   End;
+
+   /**
+      Возвращает массив [Utils.SArray SArray] состоящий из значений исходной коллекции.
+   */
+   Macro values() : SArray
+   End;
+
+   /**
+      Возвращает новый итератор пар.
+   */
+   Macro newEntryIterator()
+   End;
+
+   /**
+      Возвращает новый итератор ключей.
+   */
+   Macro newKeyIterator()
+   End;
+
+   /**
+      Возвращает новый итератор значений.
+   */
+   Macro newValueIterator()
+   End;
+
+   Macro newIterator()
+      return newEntryIterator();
+   End;
+End;
+
+/**
+   Базовый интерфейс для коллекций уникальных значений.
+
+   @see [Collection.HashSet]
+   @see [Collection.TreeSet]
+*/
+Class (Iterable) SetInterface()
+
+   /**
+      Добавляет 'element' в сэт и возвразает `true`, если элемент добавляется впервые.
+   */
+   Macro add(element) : Bool
+   End;
+
+   /**
+      Ищет и удаляет 'element', возвращает `true`, если элемент был найден и удален.
+   */
+   Macro remove(element) : Bool
+   End;
+
+   /**
+      Ищет и удаляет все элементы иходного массива которые содержаться в 'enumerable', который может являться списком или массивом.
+   */
+   Macro removeAll(enumerable) : Bool
+   End;
+
+   /**
+      Возвращает `true`, если коллекция содержит элемент равный 'element'.
+   */
+   Macro contains(element) : Bool
+   End;
+
+   /**
+      Возвращает `true`, если коллекция содержит все элементы из 'enumerable'.
+   */
+   Macro containsAll(enumerable) : Bool
+   End;
+
+
 End;
 
 /** Максимальное количество элементов выводимых на экран*/
