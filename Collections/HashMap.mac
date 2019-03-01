@@ -17,15 +17,15 @@ Class (Pair) HashMapEntry(k : Variant, v : Variant, _hash : Integer)
    var nxt;
 End;
 
-Private Macro calcObjHashFromInner(obj) : Integer
+Private Macro HashImpl(obj) : Integer
    return obj.hash();
 end;
 
 /**
    Функция расчета хэшкода для Integer.
 */
-Private Macro calcIntHash(key) : Integer
-   return key;
+Private Macro CalcIntHash(key) : Integer
+   return Abs(key);
 End;
 
 /**
@@ -117,12 +117,12 @@ End;
 /**
    Load Factor по умолчанию.
 */
-Const DEFAULT_LOAD_FACTOR : Double    = 0.1;
+Private Const DEFAULT_LOAD_FACTOR : Double    = 0.1;
 
 /**
    Вместимость хэш-таблицы по умолчанию.
 */
-Const DEFAULT_INIT_CAPACITY : Integer = 256;
+Private Const DEFAULT_INIT_CAPACITY : Integer = 256;
 
 /**
    Возвращает целое число ближайшее к 'cap', являющееся степенью 2.
@@ -161,26 +161,27 @@ End;
 
    @OParam _InitialCapacity  начальная вместимость таблицы, при null значение будет равно DEFAULT_INIT_CAPACITY = 256
    @OParam _LoadFactor       начальный фактор загрузки, при null значение будет равно DEFAULT_LOAD_FACTOR = 0.1
-   @OParam _compareValRef    ссылка на метод-компаратор для значений, при null - будет использоваться метод класса CompareTo(obj) : Integer
-   @OParam _compareKeyRef    ссылка на метод-компаратор для ключей,   при null - будеи использоваться процедура ComparePrimitive(p1,p2) : Integer
 
    Необходимо указать эти функции или (предпочтительней) реализовать в классе следующие методы:
    equals(obj) : Integer   - сравнение с объектами того же вида
    calcHash() : Integer    - вычисление хэша объекта
    При этом ОБЯЗАТЕЛЬНО выполнение условия: Если equals(obj) == true(объекты считаются равными) o1.calcHash == o2.calcHash (у равных объектов равны Хэши).
 */
-Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _compareValRef, _compareKeyRef)
-   /** Размер коллекции.*/
-   var size                   = 0;
+Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
+   size                 = 0;
+   keyEqualsFunc        = @CF_EqualsImpl;
+   keyComparator        = @CF_CompareToImpl;
+   valueEqualsFunc      = @CF_EqualsImpl;
+   valueComparator      = @CF_CompareToImpl;
+
+   var table              : TArray  = TArray();
    private var loadfactor : Double  = DEFAULT_LOAD_FACTOR;
    private var capacity   : Integer = DEFAULT_INIT_CAPACITY;
    private var curdepth   : Integer = 1;
    private var treshold   : Integer = 0;
-   var table              : TArray  = TArray();
-   private var hashfunc             = @CalcObjHashFromInner;
-   private var keyEqualFunc         = @CF_EqualsFromInner;
-   private var keyComparator        = @CF_CompareObjFromInner;
-   private var valueComparator      = @CF_ComparePrimitive;
+
+   private var keyHashFunc          = @HashImpl;
+
 
    /**
       Устанавливает тип ключа 'type' из языка RSL.
@@ -192,55 +193,79 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
    */
    Macro setKeyType(type : Integer)
       if (type == V_STRING)
-         hashfunc = @CalcStringHash;
-         keyEqualFunc = @CF_PrimitiveEquals;
+         keyHashFunc = @CalcStringHash;
+         keyEqualsFunc = @CF_EqualsPrimitive;
          keyComparator = @CF_ComparePrimitive;
       elif (type == V_INTEGER)
-         hashfunc = @calcIntHash;
-         keyEqualFunc = @CF_PrimitiveEquals;
+         keyHashFunc = @CalcIntHash;
+         keyEqualsFunc = @CF_EqualsPrimitive;
          keyComparator = @CF_ComparePrimitive;
       elif (type == V_GENOBJ)
-         hashfunc     = @CalcObjHashFromInner;
-         keyEqualFunc = @CF_EqualsFromInner;
-         keyComparator = @CF_CompareObjFromInner;
+         keyHashFunc  = @HashImpl;
+         keyEqualsFunc = @CF_EqualsImpl;
+         keyComparator = @CF_CompareToImpl;
       else
-         RunError("Данный тип не предусмотрен." + type);
+         RunError("Данный тип ключей не предусмотрен реализацией." + type);
       end;
       return this;
    End;
 
-   // setKeyType(V_STRING);
+   /**
+      Устанавливает тип значений 'type' из языка RSL.
+
+      Возможные варианты:
+      - V_STRING  - В качестве типа ключа выступает String.
+      - V_INTEGER - В качестве типа ключа выступает Integer. Существенно ускоряет работу таблицы при использовании целочисленных ключей.
+      - V_GENOBJ  - Для объектных значений. Пользовательский класс должен реализовать методы `macro compareTo(obj) : Integer` и `macro Equals(other) : Bool`. Как вариант можно унаследовать класс от [Iterable.Any]
+
+   */
+   Macro setValueType(type : Integer)
+      if (type <= 10)
+         valueComparator  = @CF_ComparePrimitive;
+         valueEqualsFunc  = @CF_EqualsPrimitive;
+      elif (type == V_GENOBJ)
+         valueComparator = @CF_CompareToImpl;
+         valueEqualsFunc = @CF_EqualsImpl;
+      else
+         RunError("Данный тип значений не предусмотрен реализацией." + type);
+      end;
+      return this;
+   End;
+
+   /**
+      Устанавливает ссылку на хэшфункцию 'kHashFun'.
+   */
+   Macro setKeyHashFunc(kHashFunc)
+      keyHashFunc = kHashFunc;
+      return this;
+   End;
+
    /**
       Устанавливает компаратор ключей '_keyComparator'.
    */
-   Macro setKeyComparator(_keyComparator)
-      keyComparator = _keyComparator;
-      return this;
-   End;
-   /**
-      Устанавливает ссылку на хэшфункцию '_hasfunc'.
-   */
-   Macro setHashfunc(_hashfunc)
-      hashfunc = _hashFunc;
+   Macro setKeyComparator(kComparator)
+      keyComparator = kComparator;
       return this;
    End;
 
-   Macro setKeyEquals(_equalFunc)
-      keyEqualFunc = _equalFunc;
+
+   Macro setKeyEqualsFunc(kEqualsFun)
+      keyEqualsFunc = kEqualsFun;
       return this;
    End;
    /**
-      Устанавливает компаратор значений '_valueComparator'.
+      Устанавливает компаратор значений 'vComparator'.
    */
-   Macro setValueComparator(_valueComparator)
-      valueComparator = _valueComparator;
+   Macro setValueComparator(vComparator)
+      valueComparator = vComparator;
       return this;
    End;
 
-   Macro setValuePrimitive()
-      valueComparator = @CF_ComparePrimitive;
+   Macro setValueEqualsFunc(vEqualsFun)
+      valueEqualsFunc = vEqualsFun;
       return this;
    End;
+
 
    Macro getInstance()
       return HashMap();
@@ -248,9 +273,11 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
 
    Macro newInstance()
       var ni = HashMap(capacity, loadfactor)
-               .setHashfunc(hashfunc)
+               .setKeyHashFunc(keyHashFunc)
                .setKeyComparator(keyComparator)
-               .setValueComparator(valueComparator);
+               .setKeyEqualsFunc(keyEqualsFunc)
+               .setValueComparator(valueComparator)
+               .setValueEqualsFunc(valueEqualsFunc);
       return ni;
    End;
 
@@ -259,7 +286,7 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
    End;
 
    Private Macro calcHash(key) : Integer
-      return ExecMacro2(hashfunc, key);
+      return ExecMacro2(keyHashFunc, key);
    End;
 
    Private Macro newNode(_key, _value, _hash)
@@ -283,7 +310,7 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
    End;
 
    Private Macro keyEquals(k1, k2) : Bool
-      return ExecMacro2(keyEqualFunc, k1, k2);
+      return ExecMacro2(keyEqualsFunc, k1, k2);
      // return (ExecMacro2(keyComparator, k1, k2) == 0);
    End;
 
@@ -346,7 +373,7 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
    End;
 
 
-   Macro putVal(key, value, _onlyIfAbsent : Bool, evict : Bool) : Variant
+   Private Macro putVal(key, value, _onlyIfAbsent : Bool, evict : Bool) : Variant
       if (ValType(key) == V_UNDEF) RunError("Illegal state exception"); end;
       var hash = calcHash(key);
       var busk = mod(hash, capacity);
@@ -393,7 +420,7 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
       return retVal;
    End;
 
-   Macro append(_pair) : Bool
+   Macro append(_pair : Pair) : Bool
       putVal(_pair.key, _pair.value);
       return true;
       OnError
@@ -554,10 +581,10 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
    End;
 
    /**
-      Возвращает массив 'TArray' пар.
+      Возвращает массив 'SArray' пар.
    */
-   Macro toArray() : TArray
-      var resArr : TArray = TArray();
+   Macro toArray() : SArray
+      var resArr = SArray();
       if (size > 0)
          resArr[size - 1] = null;
          var i = 0;
@@ -577,10 +604,17 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
    End;
 
    /**
-      Возвращает массив 'TArray' ключей.
+      Возвращает [ImmutableList] пар.
    */
-   Macro keysArray() : TArray
-      var resArr : TArray = TArray();
+   Macro entrySet() : SArray
+      return toArray();
+   End;
+
+   /**
+      Возвращает массив 'SArray' ключей.
+   */
+   Macro keys() : SArray
+      var resArr = SArray();
       if (size > 0)
          resArr[size - 1] = null;
          var i = 0;
@@ -600,10 +634,10 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
    End;
 
    /**
-      Возвращает массив 'TArray' значений.
+      Возвращает массив 'SArray' значений.
    */
-   Macro valuesArray() : TArray
-      var resArr : TArray = TArray();
+   Macro values() : SArray
+      var resArr = SArray();
       if (size > 0)
          resArr[size - 1] = null;
          var i = 0;
@@ -620,27 +654,6 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
          end;
       end;
       return resArr;
-   End;
-
-   /**
-      Возвращает [ImmutableList] пар.
-   */
-   Macro entrySet() : Iterable
-      return ImmutableList.fromArray(toArray());
-   End;
-
-   /**
-      Возвращает [ImmutableList] ключей.
-   */
-   Macro keys() : Iterable
-      return ImmutableList.fromArray(keysArray());
-   End;
-
-   /**
-      Возвращает [ImmutableList] значений.
-   */
-   Macro values() : Iterable
-      return ImmutableList.fromArray(valuesArray());
    End;
 
 
@@ -690,14 +703,6 @@ Class (Iterable) HashMap(_InitialCapacity : Integer, _LoadFactor : Double, _comp
 
    if ((ValType(_loadFactor) == V_DOUBLE) or (ValType(_loadFactor) == V_INTEGER))
       loadFactor = Double(_loadFactor);
-   end;
-
-   if (ValType(_compareValRef) != V_UNDEF)
-      valueComparator = _compareKeyRef;
-   end;
-
-   if (ValType(_compareKeyRef) != V_UNDEF)
-      keyComparator = _compareKeyRef;
    end;
 
    treshold = int(capacity * loadfactor);

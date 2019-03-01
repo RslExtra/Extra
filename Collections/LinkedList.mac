@@ -89,10 +89,10 @@ Class (BaseIterator) ListItr(LList, _ind)
    var nextNode               = null;
    var nextIndex  : Integer   = 0;
 
-   if(ValType(_ind)==V_UNDEF)
+   if (ValType(_ind)==V_UNDEF)
       _ind = 0;
    end;
-   if(_ind == LL.size)
+   if (_ind == LL.size)
       nextNode = null;
    else
       nextNode = LL.nodeByInd(_ind);
@@ -115,7 +115,7 @@ Class (BaseIterator) ListItr(LList, _ind)
    end;
 
    Macro refresh()
-      if(ValType(LastReturned) == V_UNDEF) return; end;
+      if (ValType(LastReturned) == V_UNDEF) return; end;
       nextNode = LastReturned.nxt;
    End;
 
@@ -128,7 +128,7 @@ Class (BaseIterator) ListItr(LList, _ind)
    End;
 
    Macro next() : Variant
-      if(not(hasNext)) return; end;
+      if (not(hasNext)) return; end;
       LastReturned = nextNode;
       nextNode = nextNode.nxt;
       nextIndex = nextIndex + 1;
@@ -136,9 +136,9 @@ Class (BaseIterator) ListItr(LList, _ind)
    End;
 
    Macro previous() : Variant
-      if(not(hasPrev)) return; end;
+      if (not(hasPrev)) return; end;
 
-      if(Valtype(nextNode)==V_UNDEF)
+      if (Valtype(nextNode)==V_UNDEF)
          nextNode = ll.last;
          LastReturned = nextNode;
       else
@@ -154,14 +154,14 @@ Class (BaseIterator) ListItr(LList, _ind)
    End;
 
    Macro get() : Variant
-      if(ValType(LastReturned)==V_UNDEF) return null; end;
+      if (ValType(LastReturned)==V_UNDEF) return null; end;
       return LastReturned.e;
    end;
 
    Macro addE(el : Variant) : Node
       var newNode;
       llSize = llSize + 1;
-      if(ValType(nextNode) == V_UNDEF)
+      if (ValType(nextNode) == V_UNDEF)
          newNode = LL.linkLast(el);
       else
          newNode = LL.linkBefore(el, nextNode);
@@ -180,15 +180,15 @@ Class (BaseIterator) ListItr(LList, _ind)
    End;
 
    Macro set(el : Variant)
-      if(Valtype(LastReturned) == V_UNDEF) return null; end;
+      if (Valtype(LastReturned) == V_UNDEF) return null; end;
       LastReturned.e = el;
    End;
 
    Macro remove()
-      if(ValType(LastReturned) == V_UNDEF) return null; end;
+      if (ValType(LastReturned) == V_UNDEF) return null; end;
       var lastNext = LastReturned.nxt;
       LL.unlink(LastReturned);
-      if(nextNode == LastReturned)
+      if (nextNode == LastReturned)
          nextNode = lastNext;
       else
          nextIndex = nextIndex -1;
@@ -224,41 +224,41 @@ Class (BaseIterator) ListItr(LList, _ind)
       var prN;
       var s = "{";
       var visArr = TArray();
-      if(ValType(curN) == V_UNDEF)
+      if (ValType(curN) == V_UNDEF)
          return s;
       end;
-      if(getNextIndex() > nvis)
+      if (getNextIndex() > nvis)
          visArr[visArr.size] = ".. ";
       end;
 
-      for(i,1,nvis)
+      for (i,1,nvis)
          prN = curN.prv;
          pr = pr + 1;
-         if(ValType(prN) == V_UNDEF)
+         if (ValType(prN) == V_UNDEF)
             pr = pr - 1;
             break;
          end;
          curN = prN;
       end;
-      for(i,1,pr,1)
+      for (i,1,pr,1)
          visArr[visArr.size] = String(curN);
          curN = curN.nxt;
       end;
       visArr[visArr.size] = "[" + String(curN) + "]";
       curN = curN.nxt;
-      for(i,1,nvis)
-         if(ValType(curN)!=V_UNDEF)
+      for (i,1,nvis)
+         if (ValType(curN)!=V_UNDEF)
             visArr[visArr.size] = String(curN);
             curN = curN.nxt;
          else
             break;
          end;
       end;
-      if(Valtype(curN) != V_UNDEF)
+      if (Valtype(curN) != V_UNDEF)
          visArr[visArr.size] = "..";
       end;
 
-      for(i,0,visArr.size-2)
+      for (i,0,visArr.size-2)
          s = s + visArr[i] + ";";
       end;
       s = s + visArr[visArr.size-1] + "}";
@@ -300,16 +300,21 @@ Private Const SORT_FRAGMENT_SIZE : Integer = 10000;  // Размер фрагмента для сор
 /**
    Классическая реализация двусвязного списка. Имеет методы для использования как стэк и очередь.
 */
-Class (BaseList) LinkedList()
-   initBaseList();
+Class (ListInterface) LinkedList()
    size = 0;
+   comparator = @CF_CompareToImpl;
+   equalsfunc = @CF_EqualsImpl;
    var first: Node;
    var last : Node;
-   //var iter : ListItr = ListItr(this);
-   compareRef = @CF_CompareObjFromInner;
 
-   Macro checkPosInd(ind : Integer) : Bool
-      if(ValType(ind) == V_UNDEF) return false; end;
+   Macro setPrimitive()
+      comparator = @CF_ComparePrimitive;
+      equalsfunc = @CF_EqualsPrimitive;
+      return this;
+   End;
+
+   Private Macro checkPosInd(ind : Integer) : Bool
+      if (ValType(ind) == V_UNDEF) return false; end;
       return ((ind>=0) and (ind<size))
    End;
 
@@ -320,14 +325,14 @@ Class (BaseList) LinkedList()
       if (ind <= (size/2))
          x = first;
          i = 0;
-         while(i < ind)
+         while (i < ind)
             x = x.nxt;
             i = i + 1;
          end;
       else
          x = last;
          i = size - 1;
-         while(i > ind)
+         while (i > ind)
             x = x.prv;
             i = i - 1;
          end;
@@ -339,7 +344,7 @@ Class (BaseList) LinkedList()
       var l : Node= last;
       var newNode = Node(l, el, null);
       last = newNode;
-      if(ValType(l) == V_UNDEF)
+      if (ValType(l) == V_UNDEF)
          first = newNode;
       else
          l.nxt = newNode;
@@ -352,7 +357,7 @@ Class (BaseList) LinkedList()
       var f : Node = first;
       var newNode = Node(null, el, f);
       first = newNode;
-      if(ValType(f) == V_UNDEF)
+      if (ValType(f) == V_UNDEF)
          last = newNode;
       else
          f.prv = newNode;
@@ -365,7 +370,7 @@ Class (BaseList) LinkedList()
       var pred : Node = nd.prv;
       var newNode : Node = Node(pred, el, nd);
       nd.prv = newNode;
-      if(ValType(pred) == V_UNDEF)
+      if (ValType(pred) == V_UNDEF)
          first = newNode;
       else
          pred.nxt = newNode
@@ -378,7 +383,7 @@ Class (BaseList) LinkedList()
       var after : Node = nd.nxt;
       var newNode: Node = Node(nd, el, after);
       nd.nxt = newNode;
-      if(ValType(after) == V_UNDEF)
+      if (ValType(after) == V_UNDEF)
          last = newNode;
       else
          after.prv = newNode;
@@ -391,14 +396,14 @@ Class (BaseList) LinkedList()
       var el = x.e;
       var n : Node = x.nxt;
       var p : Node = x.prv;
-      if(ValType(p) == V_UNDEF)
+      if (ValType(p) == V_UNDEF)
          first = n;
       else
          p.nxt = n;
          x.prv = null;
       end;
 
-      if(ValType(n) == V_UNDEF)
+      if (ValType(n) == V_UNDEF)
          last = p;
       else
          n.prv = p;
@@ -415,7 +420,7 @@ Class (BaseList) LinkedList()
       f.e = null;
       f.nxt = null;
       first = n;
-      if(ValType(n) == V_UNDEF)
+      if (ValType(n) == V_UNDEF)
          last = null;
       else
          n.prv = null;
@@ -430,7 +435,7 @@ Class (BaseList) LinkedList()
       l.e = null;
       l.prv = null;
       last = p;
-      if(ValType(p) == V_UNDEF)
+      if (ValType(p) == V_UNDEF)
          first = null;
       else
          p.nxt = null;
@@ -448,13 +453,13 @@ Class (BaseList) LinkedList()
    End;
 
    Macro addE(el : Variant, ind : Integer) : Node
-      if(ValType(ind) == V_UNDEF)
+      if (ValType(ind) == V_UNDEF)
          return linkLast(el);
       end;
-      if(Not(checkPosInd(ind)))
+      if (Not(checkPosInd(ind)))
          return null;
       end;
-      if(ind == (size-1))
+      if (ind == (size-1))
          return linkLast(el);
       else
          return linkBefore(el,nodeByInd(ind));
@@ -474,20 +479,20 @@ Class (BaseList) LinkedList()
    End;
 
    Macro getE(ind : Integer) : Node
-      if(checkPosInd(ind))
+      if (checkPosInd(ind))
          return nodeByInd(ind);
       end;
    End;
 
    Macro get(ind : Integer) : Variant
       var n = getE(ind);
-      if(ValType(n) != V_UNDEF)
+      if (ValType(n) != V_UNDEF)
          return n.e;
       end;
    End;
 
    Macro set(ind : Integer, el : Variant) : Variant
-      if(not(checkPosInd(ind))) return null; end;
+      if (not(checkPosInd(ind))) return null; end;
       var x : Node = nodeByInd(ind);
       var oldVal = x.e;
       x.e = el;
@@ -496,53 +501,56 @@ Class (BaseList) LinkedList()
 
    Macro getFirst() : Variant
       var f = first;
-      if(ValType(f) == V_UNDEF) return null; end;
+      if (ValType(f) == V_UNDEF) return null; end;
       return f.e;
    End;
 
    Macro getLast() : Variant
       var l = last;
-      if(ValType(l) == V_UNDEF) return null; end;
+      if (ValType(l) == V_UNDEF) return null; end;
       return l.e;
    End;
 
    Macro removeFirst() : Variant
       var f = first;
-      if(ValType(f) == V_UNDEF) return null; end;
+      if (ValType(f) == V_UNDEF) return null; end;
       return unlinkFirst(f);
    End;
 
    Macro removeLast() : Variant
       var l = last;
-      if(ValType(l) == V_UNDEF) return null; end;
+      if (ValType(l) == V_UNDEF) return null; end;
       return unlinkLast(l);
    End;
 
    Macro removeNode(nd : Node) : Variant
-      if(ValType(nd) == V_UNDEF) return null; end;
+      if (ValType(nd) == V_UNDEF) return null; end;
       return unlink(nd);
    End;
 
    Macro remove(ind) : Variant
       var nd = getE(ind);
-      if(ValType(nd) == V_UNDEF) return null; end;
+      if (ValType(nd) == V_UNDEF) return null; end;
       return unlink(nd);
    End;
 
-   Macro indexOf(v : Variant) : Integer
+   Macro indexOf(v : Variant, equalsfun) : Integer
+      if (ValType(equalsfun) == V_UNDEF)
+         equalsfun = equalsfunc;
+      end;
       var ind = 0;
       var x = first;
-      if(ValType(v) == V_UNDEF)   // Если нужно найти Null
-         while(Valtype(x) != V_UNDEF)
-            if(Valtype(x.e) == V_UNDEF)
+      if (ValType(v) == V_UNDEF)   // Если нужно найти Null
+         while (Valtype(x) != V_UNDEF)
+            if (Valtype(x.e) == V_UNDEF)
                return ind;
             end;
             x = x.nxt;
             ind = ind + 1;
          end;
       else
-         while(ValType(x) != V_UNDEF)
-            if(isEquals(v, x.e))
+         while (ValType(x) != V_UNDEF)
+            if (ExecMacro2(equalsfun, v, x.e))
                return ind;
             end;
             x = x.nxt;
@@ -552,21 +560,24 @@ Class (BaseList) LinkedList()
       return -1;
    End;
 
-   Macro lastIndexOf(v : Variant) : Integer
+   Macro lastIndexOf(v : Variant, equalsfun) : Integer
+      if (ValType(equalsfun) == V_UNDEF)
+         equalsfun = equalsfunc;
+      end;
       var ind = size;
       var x = last;
-      if(ValType(v) == V_UNDEF)   // Если нужно найти Null
-         while(ValType(x)!=V_UNDEF)
+      if (ValType(v) == V_UNDEF)   // Если нужно найти Null
+         while (ValType(x)!=V_UNDEF)
             ind = ind - 1;
-            if(Valtype(x.e)==V_UNDEF)
+            if (Valtype(x.e)==V_UNDEF)
                return ind;
             end;
             x = x.prv;
          end;
       else
-         while(ValType(x) != V_UNDEF)
+         while (ValType(x) != V_UNDEF)
             ind = ind - 1;
-            if(isEquals(v, x.e))
+            if (ExecMacro2(equalsfun, v, x.e))
                return ind;
             end;
             x = x.prv;
@@ -575,21 +586,21 @@ Class (BaseList) LinkedList()
       return -1;
    End;
 
-   Macro contains(v : Variant) : Bool
-      return (indexOf(v)>=0);
+   Macro contains(v : Variant, equalsfun) : Bool
+      return (indexOf(v, equalsfun) >= 0);
    End;
 
 
    // Методы Stack --------------------------------
    Macro peek() : Variant
       var f = first;
-      if(ValType(f) == V_UNDEF) return null; end;
+      if (ValType(f) == V_UNDEF) return null; end;
       return f.e;
    End;
 
    Macro poll() : Variant
       var f = first;
-      if(ValType(f) == V_UNDEF) return null; end;
+      if (ValType(f) == V_UNDEF) return null; end;
       return unlinkFirst(f);
    End;
 
@@ -602,7 +613,7 @@ Class (BaseList) LinkedList()
    Macro clear()
       var x = first;
       var after;
-      while(ValType(x) != V_UNDEF)     // NotNull(x)
+      while (ValType(x) != V_UNDEF)     // NotNull(x)
          after = x.nxt;
          x.e = null;
          x.nxt = null;
@@ -618,7 +629,7 @@ Class (BaseList) LinkedList()
    Macro copy()
       var newList = LinkedList();
       var cur = first;
-      while(ValType(cur) != V_UNDEF)
+      while (ValType(cur) != V_UNDEF)
          newList.addLast(cur.e);
          cur = cur.nxt;
       end;
@@ -626,9 +637,9 @@ Class (BaseList) LinkedList()
    end;
 
    Macro reverse()
-      if(size<2) return this; end;
+      if (size<2) return this; end;
       var cur = first;
-      while(ValType(cur) != V_UNDEF)
+      while (ValType(cur) != V_UNDEF)
          var oldNext = cur.nxt;
          cur.nxt = cur.prv;
          cur.prv = oldNext;
@@ -657,21 +668,21 @@ Class (BaseList) LinkedList()
    End;
 
    Macro addAll(list : Iterable, ind : Integer)
-      if(ValType(list) == V_UNDEF) return this; end;
-      if(list.size == 0) return this; end;
+      if (ValType(list) == V_UNDEF) return this; end;
+      if (list.size == 0) return this; end;
       var itr = list.newIterator();
       if((ValType(ind) != V_INTEGER) or (ind == size))
-         while(itr.hasnext())
+         while (itr.hasnext())
             addLast(itr.next());
          end;
       else
-         if(not(checkPosInd(ind)))
+         if (not(checkPosInd(ind)))
             return this;
             // Or Error?
          end;
          var nd = nodeByInd(ind);
          nd = linkBefore(itr.next, nd);
-         while(itr.hasnext())
+         while (itr.hasnext())
             nd = linkAfter(itr.next(), nd);
          end;
       end;
@@ -679,21 +690,21 @@ Class (BaseList) LinkedList()
    End;
 
    Macro addArray(arr : TArray, ind : Integer)
-      if(ValType(arr) == V_UNDEF) return this; end;
-      if(arr.size == 0) return this; end;
+      if (ValType(arr) == V_UNDEF) return this; end;
+      if (arr.size == 0) return this; end;
       if((ValType(ind) != V_INTEGER) or (ind == size))
-         for(var el, arr)
+         for (var el, arr)
             addLast(el);
          end;
       else
-         if(not(checkPosInd(ind)))
+         if (not(checkPosInd(ind)))
             return this;
             // Or Error?
          end;
          var nd = nodeByInd(ind);
          nd = linkBefore(arr[0], nd);
          var i;
-         for(i, 1, arr.size-1, 1)
+         for (i, 1, arr.size-1, 1)
             nd = linkAfter(arr[i], nd)
          end;
       end;
@@ -709,7 +720,7 @@ Class (BaseList) LinkedList()
    Macro fromArray(arr : TArray)
       clear();
       var i = 0;
-      for(i, 0, arr.size - 1)
+      for (i, 0, arr.size - 1)
          addLast(arr[i]);
       end;
       return this;
@@ -720,28 +731,40 @@ Class (BaseList) LinkedList()
       resArr[size-1] = null;        // Предварительно расширяем массив
       var inItr = newIterator();
       var i = 0;
-      while(inItr.hasNext())
+      while (inItr.hasNext())
          resArr[i] = inItr.next();
          i = i + 1;
       end;
       return resArr;
    End;
 
-   Macro sort(_compareFun)
-      if(size <=1) return; end;
-      var compareFun = _compareFun;
-      if(ValType(compareFun) == V_UNDEF)
-         compareFun = compareRef;
+   Macro isSorted(compareFun) : Bool
+      if (size <= 1) return true; end;
+      if (ValType(compareFun) == V_UNDEF)
+         compareFun = comparator;
+      end;
+      var c = first;
+      var n = c.nxt;
+      while (n != null)
+         if (ExecMacro2(compareFun, c.e, n.e) > 0)
+            return false;
+         end;
+         c = n;
+         n = c.nxt;
+      end;
+      return true;
+   End;
+
+   Macro sort(compareFun)
+      if (size <=1) return; end;
+      if (ValType(compareFun) == V_UNDEF)
+         compareFun = comparator;
       end;
       var arr = toArray();
-      ExQSort(arr, comparefun);
+      ExQSort(arr, compareFun);
       clear();
       fromArray(arr);
       return this;
-      OnError(err)
-         if(err.code == 37)
-            RunError("Не верно определена функция-компаратор для sort()", err);
-         end;
    End;
 
    Macro Destructor()
@@ -752,25 +775,25 @@ End;
 /**
    Сортированный связный список (в каждый момент времени).
    Если порядок нужен лишь однажды, быстрее использовать LinkedList.sort()
-   @param  _compareRef - опционально ссылка на метод компаратор Compare(el1,el2) : Integer, для сравнения объектов)
+   @param  compareFun - опционально ссылка на метод компаратор Compare(el1,el2) : Integer, для сравнения объектов)
    Если не указан или null, то используется метод объекта  <objectClass>.CompareTo(ob : <objectClass>).
 */
-Class (Linkedlist) SortedLinkedList(_compareRef)
+Class (Linkedlist) SortedLinkedList(compareFun)
    InitLinkedList();
    Private var dItr = newDescIterator();
 
    Macro newInstance()
-      return SortedLinkedlist(compareRef);
+      return SortedLinkedlist(comparator);
    End;
 
  // Добавляет элемент и возвращает его Node, опционально в параметр ind возвращает позиция в списке
    Macro addE(el : Variant, ind : @Integer) : Node
       var prevEl;
       dItr.clear();
-      if(ValType(el)!= V_UNDEF)
+      if (ValType(el)!= V_UNDEF)
          while (ditr.hasnext())
             prevEl = ditr.next();
-            if(ExecMacro2(compareRef, el, prevEl) >= 0)
+            if (ExecMacro2(comparator, el, prevEl) >= 0)
                setparm(2,ditr.nextIndex+1);
                return linkAfter(el, ditr.getNode);
             end;
@@ -793,16 +816,16 @@ Class (Linkedlist) SortedLinkedList(_compareRef)
       return ind;
    End;
 
-   Macro setCompareFun(_compareFun)
-      compareRef = _compareFun;
-      if(isSorted == false)
-         sort(compareRef);
+   Macro setComparator(compareFun)
+      comparator = compareFun;
+      if (isSorted == false)
+         sort();
       end;
       return this;
    End;
 
-   if(ValType(_compareRef) != V_UNDEF)
-      setCompareFun(_compareRef);
+   if (ValType(compareFun) != V_UNDEF)
+      setComparator(compareFun);
    end;
 End;
 
@@ -816,22 +839,22 @@ End;
 //! [_compareFun] - опционально, ссылка на функцию компаратор. По умолчанию возмет ссылку из list
 //! [_reverse]    - опционально, порядок обхода list. По умолчанию - false - от меншьего индекса к большему
 Macro ToSortedLinkedList(list : @LinkedList, _compareFun, _reverse : Bool) : SortedLinkedlist
-   if(Not(IsEqClass("LinkedList", list)))
+   if (Not(IsEqClass("LinkedList", list)))
       return null;
    end;
    var sortedList = SortedLinkedList(_compareFun);
-   var compFun = ifNull(_compareFun, list.compareRef);
+   var compFun = ifNull(_compareFun, list.compareFun);
    var reverse = ifNull(_reverse, false);
    list.sort(compFun);
 
    var inItr;
-   if(reverse)
+   if (reverse)
       inItr = list.newDescIterator();
    else
       inItr = list.newIterator();
    end;
 
-   while(inItr.hasNext())
+   while (inItr.hasNext())
       sortedList.add(inItr.next());
    end;
    return sortedList;
@@ -845,7 +868,7 @@ Macro llistOf(varargs) : LinkedList
    var p;
    var i = 0;
    var count = Parmcount();
-   while(i < count)
+   while (i < count)
       getParm(i, p);
       ll.addLast(p);
       i = i + 1;
@@ -862,11 +885,11 @@ End;
 Macro llrange(_from : Integer, _to: Integer, _step: Integer) : LinkedList
    var resList = LinkedList().setPrimitive();
    var step = abs(ifNull(_step, 1));
-   if(_from > _to)
+   if (_from > _to)
       step = -step;
    end;
    var i;
-   for(i, _from, _to, step)
+   for (i, _from, _to, step)
       resList.addLast(i);
    end;
    return resList;

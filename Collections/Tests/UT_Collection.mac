@@ -1,6 +1,6 @@
 import "..\\mac\\extra\\RUnit\\RUnit.Mac";
 import "..\\mac\\extra\\Collections\\Collections.Mac";
-//SHOW_ONLY_FAILED_UNIT_FUN = true;
+RUnitTest.SHOW_SUCCEED_FUN = false;
 // Тестовый класс для объектных коллекций
 Private Class (Any) Account(_acc : String, _summ : Integer)
    var acc = _acc;
@@ -35,6 +35,10 @@ end;
 Macro otherCompFun2(a1,a2)
    return CF_ComparePrimitive(a1.summ, a2.summ);
 end;
+
+Macro otherEqualFun(a1,a2)
+   return (otherCompFun(a1,a2) == 0);
+End;
 
 Class (TestCase) TestArrayList()
    var list;
@@ -173,8 +177,8 @@ Class (TestCase) TestArrayList()
       i = objList.indexOf(Account("40817810000000000002", 202));
       assertEquals(-1, i);
 
-      objList.setCompareFun(@otherCompFun);
-      i = objList.indexOf(Account("40817810000000000002", 202));
+      // objList.setEqualFunc(@otherEqualFun);
+      i = objList.indexOf(Account("40817810000000000002", 202), @otherEqualFun);
       assertEquals(1, i);
 
    End;
@@ -215,10 +219,6 @@ Class (TestCase) TestArrayList()
       assertArrays(Arr_(10,20,30,40), list.toArray);
    End;
 
-   Macro test_Of()
-      list.of(101,102,103);
-      assertArrays(Arr_(101,102,103), list.toArray);
-   End;
 
    Macro test_Sort()
       list.clear();
@@ -274,7 +274,7 @@ Class (TestCase) TestSortedLinkedList()
    var objList;
 
    Macro beforeTest()
-      list = SortedLinkedlist().setPrimitive;
+      list = SortedLinkedlist().setPrimitive();
       objList = SortedLinkedlist();
    End;
 
@@ -301,6 +301,7 @@ Class (TestCase) TestSortedLinkedList()
 
       ind = objList.add(Account("40817810000000000002", 100));
       assertEquals(0, ind);
+
       ind = objList.add(Account("40817810000000000001", 300));
       assertEquals(0, ind);
       ind = objList.add(Account("40817810000000000001", 200));
@@ -308,7 +309,7 @@ Class (TestCase) TestSortedLinkedList()
       ind = objList.add(Account("42305840000000000001", 300));
       assertEquals(3, ind);
 
-      objList.setCompareFun(@otherCompFun2); //Пересортируем по сумме
+      objList.setComparator(@otherCompFun2); //Пересортируем по сумме
       assertEquals(100, objList.get(0).summ);
       assertEquals(200, objList.get(1).summ);
       assertEquals(300, objList.get(2).summ);
@@ -322,7 +323,7 @@ Class (TestCase) TestHashMap()
    var objMap;
 
    Macro beforeTest()
-      map = StringHashMap();
+      map = StringHashMap().setValueType(V_INTEGER);
       objMap = HashMap();
    End;
 
@@ -411,7 +412,8 @@ End;
 Class (TestHashMap) TestTreeMap()
    Macro beforeTest()
       map = TreeMap();
-      map.setKeyPrimitive();
+      map.setKeyType(V_STRING);
+      map.setValueType(V_INTEGER);
       objMap = TreeMap();
    End;
 End;
@@ -550,12 +552,14 @@ Class (TestCase) TestObjectHashMap()
 End;
 
 
-TestArrayList;
-TestLinkedList;
-TestSortedLinkedList;
-TestHashMap;
-TestTreeMap;
-TestArrayMap;
+// TestArrayList;
+// TestLinkedList;
+
+// TestSortedLinkedList;
+
+// TestHashMap;
+ TestTreeMap;
+// TestArrayMap;
 
 //TestLinkedHashMap;
 //TestHashSet;

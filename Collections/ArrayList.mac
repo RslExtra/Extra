@@ -12,7 +12,7 @@ import "..\\Mac\\Extra\\Collections\\Iterable.mac";
    @param _arrList : ArrayList Объект списка
    @oparam _ind = 0 Индекс стартового элемента
 */
-Private Class (ListIterator) ArrayListIterator(_arrList : BaseList, _ind : Integer)
+Private Class (ListIterator) ArrayListIterator(_arrList, _ind : Integer)
    InitListIterator(_arrList, _ind);
    // var list = _arrList;
    // var curIndex  : Integer = -1;
@@ -65,27 +65,34 @@ Private CONST INIT_CAPACITY = 128;
 @see [Collections.LinkedList Двусвязный список]
 @see [NativeIterator]
 */
-Class (ImmutableList) ArrayList()
+Class (ListInterface) ArrayList()
+   size = 0;
+   comparator  = @CF_CompareToImpl;
+   equalsfunc  = @CF_EqualsImpl;
+   var items = TArray();
    var capacity = INIT_CAPACITY;
-   size  = 0;
-   items = TArray();
+
    items[capacity - 1] = null; // Инициализируем null-ами
 
-   compareRef = @CF_CompareObjFromInner;
-
-   Macro resize()
+   Private Macro resize()
       capacity = capacity * 2;
       items[capacity-1] = null;
    end;
+
+   Macro setPrimitive()
+      comparator  = @CF_ComparePrimitive;
+      equalsfunc  = @CF_EqualsPrimitive;
+      return this;
+   End;
 
    /**
       Добавляет указанный элемент `v` на позицию `ind`. Если  `ind` не указан, добавляет элемент в конец списка.
       @sample [samples.Collections.ArrayList.add]
    */
    Macro add(v, ind) : Bool
-      if((ValType(ind) == V_UNDEF) or (ind == size))
+      if ((ValType(ind) == V_UNDEF) or (ind == size))
          items[size] = v;
-      elif((ind<0) or (ind>=size))
+      elif ((ind<0) or (ind>=size))
          return false;
          // or ERROR?
       else
@@ -110,8 +117,25 @@ Class (ImmutableList) ArrayList()
       return add(v);
    End;
 
+   Macro get(ind) : Variant
+      if ((ind <0) or (ind>=size))
+         return null;
+      end;
+      return items[ind];
+   End;
+
+   Macro getFirst() : Variant
+      if (size == 0) return null; end;
+      return items[0];
+   End;
+
+   Macro getLast() : Variant
+      if (size == 0) return null; end;
+      return items[size - 1];
+   End;
+
    Macro set(ind : Integer , v : Variant) : Variant
-      if((ValType(ind) == V_UNDEF) or (ind<0) or (ind >= size))
+      if ((ValType(ind) == V_UNDEF) or (ind<0) or (ind >= size))
          return null;
       end;
       var oldVal = items[ind];
@@ -181,17 +205,24 @@ Class (ImmutableList) ArrayList()
       return this;
    End;
 
-   Macro indexOf(v : Variant) : Integer
+   Macro isEquals(o1, o2) : Bool
+      return ExecMacro2(equalsfunc, o1, o2);
+   End;
+
+   Macro indexOf(v : Variant, equalsfun) : Integer
+      if (ValType(equalsfun) == V_UNDEF)
+         equalsfun = equalsfunc;
+      end;
       var i;
-      if(ValType(v) == V_UNDEF)
+      if (ValType(v) == V_UNDEF)
          for (i, 0, size-1, 1)
-            if(ValType(items[i]) == V_UNDEF)
+            if (ValType(items[i]) == V_UNDEF)
                return i;
             end;
          end;
       else
          for (i, 0, size-1, 1)
-            if(isEquals(v, items[i]))
+            if (ExecMacro2(equalsfun, v, items[i]))
                return i;
             end;
          end;
@@ -199,17 +230,20 @@ Class (ImmutableList) ArrayList()
       return -1;
    End;
 
-   Macro lastIndexOf(v : Variant) : Integer
+   Macro lastIndexOf(v : Variant, equalsfun) : Integer
+      if (ValType(equalsfun) == V_UNDEF)
+         equalsfun = equalsfunc;
+      end;
       var i;
-      if(ValType(v) == V_UNDEF)
-         for(i, size - 1, 0, -1)
-            if(ValType(items[i]) == V_UNDEF)
+      if (ValType(v) == V_UNDEF)
+         for (i, size - 1, 0, -1)
+            if (ValType(items[i]) == V_UNDEF)
                return i;
             end;
          end;
       else
-         for(i, size-1, 0, -1)
-            if(isEquals(v, items[i]))
+         for (i, size-1, 0, -1)
+            if (ExecMacro2(equalsfun, v, items[i]))
                return i;
             end;
          end;
@@ -218,13 +252,14 @@ Class (ImmutableList) ArrayList()
    End;
 
    Macro contains(v : Variant) : Bool
-      return (indexOf(v)>=0);
+      return (indexOf(v) >= 0);
    End;
 
+
    /** Бинарный поиск по списку элемента `el`. Возвращает индекс найденного элемента или -1.*/
-   Macro binarySearch(el, comp) : Integer
-      if(ValType(comp) != V_UNDEF)
-         compareRef = comp;
+   Macro binarySearch(el, compareFun) : Integer
+      if(ValType(compareFun) != V_UNDEF)
+         compareFun = comparator;
       end;
       var low = 0;
       var high = size;
@@ -233,7 +268,7 @@ Class (ImmutableList) ArrayList()
       while(low < high)
          mid = (low + high) / 2;
          x = items[mid];
-         var resCompare = ExecMacro2(compareRef, el, x);
+         var resCompare = ExecMacro2(compareFun, el, x);
          if(resCompare == 0)
             i = mid;
             break;
@@ -258,8 +293,7 @@ Class (ImmutableList) ArrayList()
 
    Macro copy()
       var newList = ArrayList();
-      var i;
-      for(i, 0, size-1, 1)
+      for(var i, 0, size-1, 1)
          newList.add(items[i]);
       end;
       return newList;
@@ -308,20 +342,18 @@ Class (ImmutableList) ArrayList()
       return this;
    End;
 
-   Macro toArray() : TArray
-      var retArr = TArray;
+   Macro toArray() : SArray
+      var retArr = SArray();
       retArr[size - 1] = null;
-      var i;
-      for(i, 0, size - 1, 1)
+      for (var i, 0, size - 1, 1)
          retArr[i] = items[i];
       end;
       return retArr;
    End;
 
-   Macro sort(_compareFun)
-      var compareFun = compareRef;
-      if(Valtype(_compareFun)!=V_UNDEF)
-         compareFun = _compareFun;
+   Macro sort(compareFun)
+      if (ValType(compareFun) == V_UNDEF)
+         compareFun = comparator;
       end;
       var arr = toArray();
       ExQSort(arr, compareFun);
@@ -332,6 +364,19 @@ Class (ImmutableList) ArrayList()
          if(err.code == 37)
             RunError("Не верно определена функция-компаратор для sort()", err);
          end;
+   End;
+
+
+   Macro isSorted(compareFun) : Bool
+      if (ValType(compareFun) == V_UNDEF)
+         compareFun = comparator;
+      end;
+      for (var i, 1, size-1, 1)
+         if (ExecMacro2(compareFun, items[i-1], items[i]) > 0)
+            return false;
+         end;
+      end;
+      return true;
    End;
 
    Macro newIterator()

@@ -103,16 +103,16 @@ End;
    println(val);                  // value is 50;
 ```
 */
-Class (Iterable) TreeMap(_keyComparator)
-   var size = 0;
+Class (MapInterface) TreeMap(_keyComparator)
+   size = 0;
    /** Корневой элемент дерева.*/
    var root = null;
    //var comparator = ifNull(_comparator, @CF_CompareByKeyPrimitive);\
 
-   /** Компаратор ключей */
-   private var keyComparator = ifNull(_keyComparator, @CF_CompareObjFromInner);
-   /** Компаратор значений */
-   private var valueComparator = null;
+   keyEqualsFunc        = @CF_EqualsImpl;
+   keyComparator        = @CF_CompareToImpl;
+   valueEqualsFunc      = @CF_EqualsImpl;
+   valueComparator      = @CF_CompareToImpl;
 
    Macro setComparator(_comparator) : TreeMap
       // comparator = _comparator;
@@ -135,13 +135,6 @@ Class (Iterable) TreeMap(_keyComparator)
       return this;
    End;
 
-   /**
-      Возвращает текущий экземпляр с установленным компаратором для примитивных типов.
-   */
-   Macro setKeyPrimitive()
-      keyComparator = @CF_ComparePrimitive;
-      return this;
-   End;
 
    /**
       Устанавливает тип ключа 'type' из языка RSL и возвращает текущий экземпляр.
@@ -159,7 +152,29 @@ Class (Iterable) TreeMap(_keyComparator)
       elif (type == V_GENOBJ)
          keyComparator = @CF_CompareObjFromInner;
       else
-         RunError("Данный тип не предусмотрен." + type);
+         RunError("Данный тип ключа не предусмотрен." + type);
+      end;
+      return this;
+   End;
+
+   /**
+      Устанавливает тип значений 'type' из языка RSL.
+
+      Возможные варианты:
+      - V_STRING  - В качестве типа ключа выступает String.
+      - V_INTEGER - В качестве типа ключа выступает Integer. Существенно ускоряет работу таблицы при использовании целочисленных ключей.
+      - V_GENOBJ  - Для объектных значений. Пользовательский класс должен реализовать методы `macro compareTo(obj) : Integer` и `macro Equals(other) : Bool`. Как вариант можно унаследовать класс от [Iterable.Any]
+
+   */
+   Macro setValueType(type : Integer)
+      if (type <= 10)
+         valueComparator  = @CF_ComparePrimitive;
+         valueEqualsFunc  = @CF_EqualsPrimitive;
+      elif (type == V_GENOBJ)
+         valueComparator = @CF_CompareToImpl;
+         valueEqualsFunc = @CF_EqualsImpl;
+      else
+         RunError("Данный тип значений не предусмотрен реализацией." + type);
       end;
       return this;
    End;
@@ -280,9 +295,9 @@ Class (Iterable) TreeMap(_keyComparator)
    */
    Macro put(key, value : Variant) : Variant
       var t = root;
-      var newNode = TreeEntry(key, value, null);
+      var newEntry = TreeEntry(key, value, null);
       if (t == null)
-         root = newNode;
+         root = newEntry;
          size = 1;
          return null;
       end;
@@ -302,17 +317,17 @@ Class (Iterable) TreeMap(_keyComparator)
          end;
       end;
       if (cmp < 0)
-         par.left = newNode;
+         par.left = newEntry;
       else
-         par.right = newNode;
+         par.right = newEntry;
       end;
-      newNode.parent = par;
-      fixAfterInsertion(newNode);
+      newEntry.parent = par;
+      fixAfterInsertion(newEntry);
       size = size + 1;
       return null;
    End;
 
-   Macro getNode(key)
+   Macro getEntry(key)
       var n = root;
       while (n != null)
          var cmp = ExecMacro2(keyComparator, key, n.key);
@@ -327,7 +342,7 @@ Class (Iterable) TreeMap(_keyComparator)
    End;
 
    Macro get(key) : Variant
-      var nd = getNode(key);
+      var nd = getEntry(key);
       if (nd != null) return nd.value; end;
    End;
 
@@ -374,7 +389,7 @@ Class (Iterable) TreeMap(_keyComparator)
    End;
 
    Macro set(key, value)
-      var nd = getNode(key);
+      var nd = getEntry(key);
       if (nd != null)
          var oldValue = nd.value;
          nd.value = value;
@@ -383,15 +398,21 @@ Class (Iterable) TreeMap(_keyComparator)
    End;
 
    Macro containsKey(key) : Bool
-
+      return (getEntry(key) != null);
    End;
 
-   Macro containsValue(value) : Bool
-
-   End;
-
-   Macro isEmpty() : Bool
-
+   Macro containsValue(value, vEqualsFun) : Bool
+      if (ValType(vEqualsFun) == V_UNDEF)
+         vEqualsFun = valueEqualsFunc;
+      end;
+      var itr = GenRun(this, "newValueIterator");
+      while (itr.hasNext())
+         var el = itr.next;
+         if (ExecMacro2(vEqualsFun, value, el))
+            return true;
+         end;
+      end;
+      return false;
    End;
 
    Private Macro fixAfterDeletion(nd : TreeEntry)
@@ -456,7 +477,7 @@ Class (Iterable) TreeMap(_keyComparator)
       nd.color = true;
    End;
 
-   Macro deleteNode(nd : TreeEntry)
+   Macro deleteEntry(nd : TreeEntry)
       size = size - 1;
 
       if ((nd.left != null) and (nd.right != null))
@@ -507,10 +528,10 @@ Class (Iterable) TreeMap(_keyComparator)
    End;
 
    Macro remove(key)
-      var nd = getNode(key);
+      var nd = getEntry(key);
       if (nd != null)
          var oldValue = nd.value;
-         deleteNode(nd);
+         deleteEntry(nd);
          return oldValue;
       end;
    End;
@@ -540,8 +561,8 @@ Class (Iterable) TreeMap(_keyComparator)
       return TreeMapValueIterator(this);
    End;
 
-   Macro toArray() : TArray
-      var resArr = TArray();
+   Macro toArray() : SArray
+      var resArr = SArray();
       if (size > 0)
          resArr[size-1] = null;
          var itr = newEntryIterator();
@@ -555,7 +576,7 @@ Class (Iterable) TreeMap(_keyComparator)
    End;
 
    Macro keys()
-      var resArr = TArray();
+      var resArr = SArray();
       if (size > 0)
          resArr[size-1] = null;
          var itr = newKeyIterator();
@@ -569,7 +590,7 @@ Class (Iterable) TreeMap(_keyComparator)
    End;
 
    Macro values()
-      var resArr = TArray();
+      var resArr = SArray();
       if (size > 0)
          resArr[size-1] = null;
          var itr = newValueIterator();
@@ -586,31 +607,6 @@ Class (Iterable) TreeMap(_keyComparator)
 
    End;
 
-   Macro keysToArray() : TArray
-      if (size == 0) return TArray(); end;
-      var resArr = TArray();
-      resArr[size-1] = null;
-      var itr = newKeyIterator;
-      var i = 0;
-      while(itr.hasNext())
-         resArr[i] = itr.next();
-         i = i + 1;
-      end;
-      return resArr;
-   End;
-
-   Macro valuesToArray() : TArray
-      if (size == 0) return TArray(); end;
-      var resArr = TArray();
-      resArr[size-1] = null;
-      var itr = newValueIterator();
-      var i = 0;
-      while(itr.hasNext())
-         resArr[i] = itr.next();
-         i = i + 1;
-      end;
-      return resArr;
-   End;
 End;
 
 /*

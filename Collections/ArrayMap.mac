@@ -30,68 +30,101 @@ Private Macro binarySearchMap(arr : TArray, el : Variant) : Integer
    return i;
 End;
 
-Class (Iterable) ArrayMap()
-   var size = 0;
-   var keys = SArray();
-   var values = SArray();
+Class (MapInterface) ArrayMap()
+   size = 0;
+   var keysArr = SArray();
+   var valuesArr = SArray();
 
-   Macro isEmpty() : Bool
-      return (size==0);
+   Macro setKeyType(type : Integer)
+      if (type == V_STRING)
+         ;
+      elif (type == V_INTEGER)
+         ;
+      elif (type == V_GENOBJ)
+         RunError("Объектный тип ключей не допустим.");
+      else
+         RunError("Данный тип ключей не предусмотрен реализацией." + type);
+      end;
+      return this;
+   End;
+
+   Macro setValueType(type : Integer)
+      if (type <= 10)
+         valueComparator  = @CF_ComparePrimitive;
+         valueEqualsFunc  = @CF_EqualsPrimitive;
+      elif (type == V_GENOBJ)
+         valueComparator = @CF_CompareToImpl;
+         valueEqualsFunc = @CF_EqualsImpl;
+      else
+         RunError("Данный тип значений не предусмотрен реализацией." + type);
+      end;
+      return this;
    End;
 
    Macro put(key, value) : Variant
-      var i = binarySearchMap(keys, key);
+      var i = binarySearchMap(keysArr, key);
       var oldVal;
       if (i >= 0)
-         oldVal = values[i];
-         values[i] = value;
+         oldVal = valuesArr[i];
+         valuesArr[i] = value;
       else
          i = -i - 1;
-         keys.add(key, i);
-         values.add(value, i);
+         keysArr.add(key, i);
+         valuesArr.add(value, i);
          size = size + 1;
       end;
       return oldVal;
    End;
 
    Macro get(key) : Variant
-      var i = binarySearchMap(keys, key);
+      var i = binarySearchMap(keysArr, key);
       if (i >= 0)
-         return values[i];
+         return valuesArr[i];
       end;
    End;
 
    Macro remove(key) : Variant
-      var i = binarySearchMap(keys, key);
+      var i = binarySearchMap(keysArr, key);
       if (i < 0) return; end;
-      var remVal = values.remove(i);
-      keys.remove(i);
+      var remVal = valuesArr.remove(i);
+      keysArr.remove(i);
       size = size - 1;
       return remVal;
    End;
 
    Macro containsKey(key) : Bool
-      var i = binarySearchMap(keys, key);
+      var i = binarySearchMap(keysArr, key);
       return (i >= 0);
    End;
 
-   Macro containsValue(val, equalFunc)
-      return values.contains(val, equalfunc);
+   Macro containsValue(val, vEqualsFun)
+      if (ValType(vEqualsFun) == V_UNDEF)
+         vEqualsFun = valueEqualsFunc;
+      end;
+      return valuesArr.contains(val, vEqualsFun);
    End;
 
    Macro clear()
-      keys.clear();
-      values.clear();
+      keysArr.clear();
+      valuesArr.clear();
       size = 0;
    end;
 
-   Macro append()
-
+   Macro append(p : Pair)
+      return put(p.key, p.value);
    End;
 
-
+   Macro putMapEntries(map : MapInterface)
+      for (var p, map)
+         put(p.key, p.value);
+      end;
+   End;
 
    Macro newIterator()
+      return ExecMacro2("ArrayMapEntryIterator", this);
+   End;
+
+   Macro newEntryIterator()
       return ExecMacro2("ArrayMapEntryIterator", this);
    End;
 
@@ -102,8 +135,6 @@ Class (Iterable) ArrayMap()
    Macro newValueIterator()
       return ExecMacro2("ArrayMapValueIterator", this);
    End;
-
-
 
 End;
 
@@ -121,14 +152,14 @@ Private Class ArrayMapIterator(_arrayMap : @ArrayMap)
    End;
 
    Macro next() : Pair
-      lastReturned = Pair(map.keys[nextIndex], map.values[nextIndex]);
+      lastReturned = Pair(map.keysArr[nextIndex], map.valuesArr[nextIndex]);
       nextIndex = nextIndex + 1;
       return lastReturned;
    End;
 
    Macro prev() : Pair
       nextIndex = nextIndex - 1;
-      lastReturned = Pair(map.keys[nextIndex], map.values[nextIndex]);
+      lastReturned = Pair(map.keysArr[nextIndex], map.valuesArr[nextIndex]);
       return lastReturned;
    End;
 End;
@@ -138,9 +169,9 @@ Private Macro ArrayMapEntryIterator(map : @ArrayMap)
 End;
 
 Private Macro ArrayMapKeyIterator(map)
-   return map.keys.newIterator();
+   return map.keysArr.newIterator();
 End;
 
 Private Macro ArrayMapValueIterator(map)
-   return map.values.newIterator();
+   return map.valuesArr.newIterator();
 End;

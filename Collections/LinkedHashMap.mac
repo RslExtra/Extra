@@ -95,8 +95,8 @@ End;
 /**
    Реализация коллекции пар ключ-значение с сохранением порядка добавления.
 */
-Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double, _compareValRef)
-   initHashMap(_InitialCapacity, _LoadFactor, _compareValRef);
+Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
+   initHashMap(_InitialCapacity, _LoadFactor);
    var first;
    var last;
    //var iter = newEntryIterator();
@@ -170,8 +170,8 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double, 
       return EntryIterator(this);
    End;
 
-   Macro values() : Iterable
-      var resArr : TArray = TArray();
+   Macro values() : SArray
+      var resArr : SArray = SArray();
       resArr[size - 1] = null;
       var curE = first;
       var i = 0;
@@ -180,11 +180,11 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double, 
          curE = curE.after;
          i = i + 1;
       end;
-      return ImmutableList.fromArray(resArr);
+      return resArr;
    End;
 
-   Macro keys() : Iterable
-      var resArr : TArray = TArray();
+   Macro keys() : SArray
+      var resArr : SArray = SArray();
       resArr[size - 1] = null;
       var curE = first;
       var i = 0;
@@ -193,44 +193,32 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double, 
          curE = curE.after;
          i = i + 1;
       end;
-      return ImmutableList.fromArray(resArr);
+      return resArr;
    End;
 
-   Macro sortByEntry(_compareFun)
+   Macro sortByKey(keyCompareFunc)
       if (size <= 1) return; end;
-      var compareFun = _compareFun;
-      if (Valtype(compareFun)== V_UNDEF)
-         compareFun = compareRef;
+      if (ValType(keyCompareFunc) == V_UNDEF)
+         keyCompareFunc = keyComparator;
       end;
+      var entryCompareFunc = CF_PairsComparator(keyCompareFunc).getFunc();
       var es = toArray();
-      qsort(es, compareFun);
-      var i;
-
+      qsort(es, entryCompareFunc);
       es[0].before = null;
       es[0].after  = es[1];
       first   = es[0];
-      for(i, 1, es.size - 2, 1)
+      for(var i, 1, es.size - 2, 1)
          es[i].before= es[i-1];
          es[i].after = es[i+1];
       end;
       es[es.size-1].before = es[es.size-2];
       es[es.size-1].after  = null;
       last = es[es.size-1];
+      return this;
    End;
 
-   Macro sortByKey(_keyComparator)
-      if (ValType(_keyComparator) != V_UNDEF)
-         keyComparator = _keyComparator;
-      end;
-      sortByEntry(@CF_comparePairsByKeyInner);
-   End;
-
-   Macro sortByValue(_valueComparator)
-   //debugbreak;
-      if (ValType(_valueComparator) != V_UNDEF)
-         valueComparator = _valueComparator;
-      end;
-      sortByEntry(@CF_comparePairsByValueInner);
+   Macro sort(keyCompareFunc)
+      return sortByKey(keyCompareFunc);
    End;
 
    Macro clear()

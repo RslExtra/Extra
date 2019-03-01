@@ -1,39 +1,71 @@
 /**
    @package Collections
-   –†–µ–∞–ª–∏–∑–∞—Ü–∏—è –æ—Ç—Å–æ—Ä—Ç–∏—Ä–æ–≤–∞–Ω–Ω–æ–π –∫–æ–ª–ª–µ–∫—Ü–∏–∏ —É–Ω–∏–∫–∞–ª—å–Ω—ã—Ö –∑–Ω–∞—á–µ–Ω–∏–π.
+   ê•†´®ß†Ê®Ô Æ‚·Æ‡‚®‡Æ¢†≠≠Æ© ™Æ´´•™Ê®® „≠®™†´Ï≠ÎÂ ß≠†Á•≠®©.
 */
 
 import "..\\Mac\\Extra\\Collections\\TreeMap.mac";
 
 
-Class (TreeMap) TreeSet(_keyComparator)
-   initTreeMap(_keyComparator);
+Class (SetInterface) TreeSet(_keyComparator)
+   size = 0;
+   private var inmap = TreeMap(_keyComparator);
 
    Macro setPrimitive() : TreeSet
-      keyComparator = @CF_ComparePrimitive;
+      inmap.setKeyType(V_STRING);
       return this;
    End;
 
    Macro add(element : Variant) : Bool
-      return (put(element, PRESENT) != PRESENT);
+      if (inmap.put(element, PRESENT) != PRESENT)
+         size = size + 1;
+         return true;
+      end;
+      return false;
    End;
 
    Macro addAll(iterable) : Bool
+      var r = true;
       for(var el, iterable)
-         put(el, PRESENT);
+         r = (r and inmap.put(el));
       end;
+      return r;
    End;
 
    Macro remove(element) : Bool
-      return (this.remove(element) == PRESENT);
+      if (inmap.remove(element) == PRESENT)
+         size = size - 1;
+         return true;
+      end;
+      return false;
+   End;
+
+   Macro removeAll(enumerable) : Bool
+      var r = true;
+      for (var el, enumerable)
+         r = (r and remove(el));
+      end;
+      return r;
+   End;
+
+   Macro contains(element) : Bool
+      return (inmap.get(element) == PRESENT);
+   End;
+
+   Macro containsAll(enumerable) : Bool
+      for (var el, enumerable)
+         if (contains(el) == false)
+            return false;
+         end;
+      end;
+      return true;
    End;
 
    Macro newIterator()
-      return TreeMapKeyIterator(this);
+      return inmap.newKeyIterator();
    End;
 
    Macro toArray() : TArray
-      return keysToArray();
+      return inmap.keys();
    End;
 End;
 
@@ -66,4 +98,4 @@ Macro testTreeSet()
    end;
 End;
 
-//testTreeSet;
+testTreeSet;

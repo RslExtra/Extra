@@ -1,0 +1,73 @@
+/**
+   @Package Utils
+
+   Вспомогательные класс и функции для реализации ООП паттернов.
+*/
+import "..\\Mac\\Extra\\Utils\\CompareFunc.mac";
+import rcw;
+/**
+   Функция расчета хэшкода String.
+*/
+Macro CalcStringHash(key : String) : Integer
+   var h = 7;
+   for (var i, 1, StrLen(key), 1)
+      h = h * 31 + CodeFor(SubStr(key, i, 1));
+   end;
+   return abs(h);
+End;
+
+/**
+   Вспомогательный класс с реализованными методами [hash], [equals], [toString] и определенным, но не реализованным [compareTo]. Облегчает использование пользовательсих классов в пакете [Collections].
+*/
+Class Any()
+   /**
+      Возвращает результат сравнения текущего объекта с другим объектом как Integer. Необходимо переопределять в классе-наследнике.
+   */
+   Macro compareTo(obj) : Integer
+      return 0;
+   End;
+
+   /**
+      Возвращает хэш объекта. В расчете складываются хэши всех примитивных полей приведенных к String. Переопределять при необходимости.
+   */
+   Macro hash() : Integer
+      var h = 0;
+      for(var i, 0, GenNumProps(this) - 1, 1)
+         var p = this[i];
+         if ((ValType(p) != V_UNDEF) and (ValType(p) <= V_TIME))
+            h = h + CalcStringHash(String(p));
+         end;
+      end;
+      return abs(h);
+   End;
+
+   /**
+      Возвращает результат сравнения с объектом 'obj'.
+   */
+   Macro equals(obj) : Bool
+      if (ValType(obj) == V_UNDEF)
+         return false;
+      elif (this == obj)
+         return true;
+      elif (this.hash() != obj.hash())
+         return false;
+      end;
+      return CF_objectEquals(this, obj);
+   End;
+
+   /**
+      Возвращает строковое представление текущего объекта как перечисление его свойств и их значений.
+   */
+   Macro toString() : String
+      var res = GenClassName(this) + " [";
+      var propnames = GetObjProps(this, true);
+      for (var i, 0, propnames.size - 1, 1)
+         res = res + propnames[i] + " : " + String(this[i]);
+         if (i != propnames.size-1)
+            res = res + ", ";
+         end;
+      end;
+      res = res + "]";
+      return res;
+   End;
+End;
