@@ -82,7 +82,7 @@ Private Class Node(p: @Node, el: Variant, n : @Node)
 End;
 
 //Класс Итератор принимает лист, и начальный индекс откуда начнем бежать
-Class (BaseIterator) ListItr(LList, _ind)
+Class (IteratorInterface) ListItr(LList, _ind)
    var LL : Object = LList;
    var llsize = LL.size;
    var LastReturned           = null;
@@ -101,7 +101,7 @@ Class (BaseIterator) ListItr(LList, _ind)
    //-------------------------------------------
 
    Macro getLastReturned()
-      return LastReturned;
+      return LastReturned.e;
    End;
 
    Macro getNextIndex()
@@ -218,6 +218,7 @@ Class (BaseIterator) ListItr(LList, _ind)
 
 
    Macro toString() : String
+   /*
       var i;
       var pr = 0;
       var curN = getLastReturned();
@@ -263,6 +264,7 @@ Class (BaseIterator) ListItr(LList, _ind)
       end;
       s = s + visArr[visArr.size-1] + "}";
       return s;
+      */
    End;
 
    Macro Destructor()
@@ -765,6 +767,23 @@ Class (ListInterface) LinkedList()
       clear();
       fromArray(arr);
       return this;
+   End;
+
+   /**
+      Возвращает новый объект типа [SortedLinkedList] состоящий из элементов исходного списка в порядке согласно функции-компаратору 'compareFun'.
+   */
+   Macro toSortedList(compareFun)
+      if (ValType(compareFun) == V_UNDEF)
+         compareFun = comparator;
+      end;
+      var copyList = copy();
+      copyList.sort(compareFun);
+      var resultList = GenObject("SortedLinkedlist", compareFun);
+      var ditr = newDescIterator();
+      while (ditr.hasNext)
+         resultList.add(ditr.next);
+      end;
+      return resultList;
    End;
 
    Macro Destructor()

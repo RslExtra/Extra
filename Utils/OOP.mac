@@ -5,8 +5,9 @@
 */
 import "..\\Mac\\Extra\\Utils\\CompareFunc.mac";
 import rcw;
+
 /**
-   Функция расчета хэшкода String.
+   Функция расчета хэшкода типа 'V_STRING'.
 */
 Macro CalcStringHash(key : String) : Integer
    var h = 7;
@@ -17,13 +18,161 @@ Macro CalcStringHash(key : String) : Integer
 End;
 
 /**
+   Функция расчета хэшкода типа 'V_MOENY' , 'V_DOUBLE' или 'V_NUMERIC'.
+*/
+Macro CalcNumericHash(nm) : Integer
+   return abs(int(nm * 10000));
+End;
+
+/**
+   Функция расчета хэшкода типа 'V_DATE'.
+*/
+Macro CalcDateHash(dt : Date) : Integer
+   return CalcStringHash(String(dt));
+End;
+
+/**
+   Функция расчета хэшкода типа 'V_TIME'.
+*/
+Macro CalcTimeHash(tm : Time) : Integer
+   return CalcStringHash(String(tm));
+End;
+
+/**
+   Функция расчета хэшкода объекта пользовательского класса.
+*/
+Macro CalcObjectHash(obj : Object)
+   var h = ExecMacro2(R2M(obj, "hash"));
+   if (ValType(h) == V_UNDEF)
+      return 0;
+   end;
+   return h;
+End;
+
+/**
+   Функция расчета хэшкода произвольного объекта RSL.
+*/
+Macro CalcHashCode(val : Variant) : Integer
+   var type = ValType(val);
+   if (type == V_UNDEF)
+      return 0;
+   elif (type == V_STRING)
+      return CalcStringHash(val);
+   elif (type == V_INTEGER)
+      return abs(val);
+   elif (type == V_DATE)
+      return CalcDateHash(val);
+   elif (type == V_TIME)
+      return CalcTimeHash(val);
+   elif ((type == V_MONEY) or (type == V_DOUBLE) or (type == V_DOUBLEL) or (type == V_NUMERIC))
+      return CalcNumericHash(val);
+   elif (type == V_GENOBJ)
+      if (isEqClass("TARRAY", val))
+         return ExecMacro2("calcArrayHash");
+      else
+         return calcObjectHash(val);
+      end;
+   else
+      return 0;
+   end;
+End;
+
+/**
+   Функция расчета хэшкода массива [TArray].
+*/
+Macro calcArrayHash(arr) : Integer
+   var h = 1;
+   for(var el, arr)
+      h = h*17 + CalcHashCode(el);
+   end;
+   return abs(h);
+End;
+/**
+   Универсальная функция проверки на равенство двух переменных языка RSL 'o1' и 'o2'.
+
+   Функция работает по следующему принципу:
+   - Если аргументы разных типов вернет `false`,
+   - Если одного примитивного типа, пернет результат сравнения через `==`.
+   - Для объектных аргументов, попробует вызвать метод `equals(obj) : Bool`, а затем если не будет найден 'compareTo'. Если ни один из методов не определен бросит ошибку.
+   - Если аргументы равны `null`, вернет `false`
+   - Если аргументы типа [TArray] или наследного класса, вернет результат функции [TArrayEquals].
+
+*/
+Macro AnyTypeEquals(o1: Variant, o2: Variant) : Bool
+   var t1 = ValType(o1);
+   var t2 = ValType(o2);
+   if (t1 != t2) return false; end;
+   if (t1 <= 10)                    // Примитивы
+      return (o1 == o2);
+   elif (t1 == V_GENOBJ)            // Объекты
+      if (isEqClass("TArray", o1))
+         return ExecMacro2("TArrayEquals", o1, o2);
+      end;
+      var rEq = ExecMacro2(R2M(o1,"equals"), o2);
+      if (ValType(req) == V_BOOL) return req; end;
+      var rCmp = ExecMacro2(R2M(o1,"compareTo"), o2);
+      if (ValType(rCmp) == V_INTEGER)
+         return (rCmp == 0);
+      end;
+      RunError("\nДля класса " + GenClassName(o1) + " не определена функция Equals(otherObj) : Bool");
+   end;
+   return (o1 == o2);
+End;
+
+/**
+   Функция эквивалентности двух массивов [TArray]. Последовательно вызывает для каждой пары элементов массивов [AnyTypeEquals].
+   Если в результате сравнеия хоть одна пара не эквивалентна, вернет `false`.
+*/
+Macro TArrayEquals(arr1, arr2) : Bool
+   if (arr1.size != arr2.size) return false; end;
+   for(var i, 0, arr1.size - 1, 1)
+      if (AnyTypeEquals(arr1[i], arr2[i]) == false)
+         return false;
+      end;
+   end;
+   return true;
+End;
+
+/**
+   Универсальная функция-компаратор для двух переменных RSL 'o1' и 'o2'. Для двух примитивов одного типа проведет сравнение через `> < ==`, если примитивы будут разного типа бросит ошибку. Для объектных типов попробует выполнить метод `compareTo(obj) : Integer`, если такой метод не будет определен в классе, бросит ошибку. Если один из аргументов равен `null` то метод 'CompareTo' вызовется у ненулевого объекта. Если оба элемента равны `null` вернет 0. Работает медленней чем собственные функции-компараторы, но на константное время, т.е. не усложняет алгоритм использующий эту функцию.
+*/
+Macro AnyTypeCompare(o1: Variant, o2: Variant) : Integer
+   var t1 = ValType(o1);
+   var t2 = ValType(o2);
+   var sign = 1;
+   if (t1 != t2)
+      if ((t1 == V_GENOBJ) and (t2 == V_UNDEF))
+      elif ((t1 == V_UNDEF) and (t2 == V_GENOBJ))
+         t1 = V_GENOBJ;
+         t2 = V_UNDEF;
+         o1 = o2;
+         o2 = null;
+         sign = -1;
+      else
+         RunError("\nРазные типы для сравнения. " + GenClassName(o1) + " и " + GenClassName(o2));
+      end;
+   end;
+   if (t1 <= 10)                    // Примитивы
+      return CF_ComparePrimitive(o1, o2);
+   elif (t1 == V_GENOBJ)            // Объекты
+      var rCmp = ExecMacro2(R2M(o1,"compareTo"), o2);
+      if (ValType(rCmp) == V_INTEGER)
+         return sign*rCmp;
+      end;
+      RunError("\nДля класса " + GenClassName(o1) + " не определена функция CompareTo(otherObj) : Integer");
+   end;
+   return CF_ComparePrimitive(o1, o2);
+End;
+
+/**
    Вспомогательный класс с реализованными методами [hash], [equals], [toString] и определенным, но не реализованным [compareTo]. Облегчает использование пользовательсих классов в пакете [Collections].
 */
 Class Any()
    /**
-      Возвращает результат сравнения текущего объекта с другим объектом как Integer. Необходимо переопределять в классе-наследнике.
+      Возвращает результат сравнения текущего объекта с другим объектом как Integer. Необходимо переопределять в классе-наследнике. При вызове не переопределенного метода будет брошена ошибка.
    */
    Macro compareTo(obj) : Integer
+      RunError("Необходимо переопределить метод CompareTo для класса " + GenClassName(this));
       return 0;
    End;
 
@@ -49,8 +198,6 @@ Class Any()
          return false;
       elif (this == obj)
          return true;
-      elif (this.hash() != obj.hash())
-         return false;
       end;
       return CF_objectEquals(this, obj);
    End;

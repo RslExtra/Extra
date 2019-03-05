@@ -31,7 +31,7 @@ End;
 /**
    Класс итератора HashMap.
 */
-Private Class (BaseIterator) HashIterator(_map)
+Private Class (IteratorInterface) HashIterator(_map)
    var map           = _map;
    var nxt           = null;
    var lastReturned  = null;

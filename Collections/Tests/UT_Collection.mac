@@ -128,13 +128,13 @@ Class (TestCase) TestArrayList()
       assertEquals(2, r);
       assertArrays(Arr_(1), list.toArray);
 
-      r = list.remove(0);
-      assertEquals(1, r);
+      r = list.removeAll(Arr_(0));
+      assertFalse(r);
+      assertEquals(1, list.size);
+      r = list.removeAll(Arr_(2, 1, 0));
+      assertTrue(r);
       assertEquals(0, list.size);
 
-      r = list.remove(1);
-      assertNull(r);
-      assertEquals(0, list.size);
    End;
 
    Macro test_set()
@@ -208,18 +208,6 @@ Class (TestCase) TestArrayList()
       assertArrays(Arr_(10,20,30,40), list.toArray);
    End;
 
-   Macro test_addArray()
-      var addArr = Arr_(10,20,30,40);
-      list.addArray(addArr, 2);
-      assertArrays(Arr_(0, 1, 10, 20, 30, 40, 2, 3), list.toArray);
-      list.addArray(addArr);
-      assertArrays(Arr_(0, 1, 10, 20, 30, 40, 2, 3, 10, 20, 30, 40), list.toArray);
-      list.clear();
-      list.addArray(addArr, 0);
-      assertArrays(Arr_(10,20,30,40), list.toArray);
-   End;
-
-
    Macro test_Sort()
       list.clear();
       var i;
@@ -242,6 +230,38 @@ Class (TestCase) TestArrayList()
       objList.sort();
       assertEquals(1001, objList.size);
       assertTrue(objList.isSorted);
+   End;
+
+   Macro test_MultiTypes()
+      var lst = ArrayList();
+      var res;
+      lst.addItems(1, "some", 3, null);
+      res = lst.contains(1);
+      assertTrue(res);
+      res = lst.contains("some");
+      assertTrue(res);
+      res = lst.contains(2);
+      assertFalse(res);
+      res = lst.indexOf("some1");
+      assertEquals(-1, res);
+      res = lst.indexOf(null);
+      assertEquals(3, res);
+   End;
+
+   Macro test_binarySearch()
+      list.clear();
+      list.addItems(1, 2, 3, 4, 7, 10);
+      var r;
+      r = list.binarySearch(0);
+      assertEquals(-1, r);
+      r = list.binarySearch(2);
+      assertEquals(1, r);
+      r = list.binarySearch(5);
+      assertEquals(-5, r);
+      r = list.binarySearch(8);
+      assertEquals(-6, r);
+      r = list.binarySearch(9);
+      assertEquals(-6, r);
    End;
 
 End;
@@ -551,14 +571,14 @@ Class (TestCase) TestObjectHashMap()
 
 End;
 
+//
+TestArrayList;
+//TestLinkedList;
 
-// TestArrayList;
-// TestLinkedList;
-
-// TestSortedLinkedList;
+//TestSortedLinkedList;
 
 // TestHashMap;
- TestTreeMap;
+// TestTreeMap;
 // TestArrayMap;
 
 //TestLinkedHashMap;

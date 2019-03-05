@@ -6,7 +6,7 @@
 
 import "..\\Mac\\Extra\\Collections\\HashMap.mac";
 
-Private Class (BaseIterator) LinkedHashIterator (_map)
+Private Class (IteratorInterface) LinkedHashIterator (_map)
    var map           = _map;
    var nextEnt       = map.first;
    var lastReturned  = null;

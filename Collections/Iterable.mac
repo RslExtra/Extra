@@ -54,7 +54,7 @@ Const NVIS = 2;  //
    Интерфейс базового итератора для всех коллекций,
    методы обязательны для переопределения
 */
-Class BaseIterator()
+Class IteratorInterface()
    /** Возвращает следующий элемент коллекции или `null` если находится в конце списка*/
    Macro next() : Variant
    End;
@@ -80,9 +80,9 @@ Class BaseIterator()
 End;
 
 /**
-   Обертка для [BaseIterator]. Позволяет перебирать элементы коллекций (наследников [Iterable]) нативным `for(e, iterable)`;
+   Обертка для [IteratorInterface]. Позволяет перебирать элементы коллекций (наследников [Iterable]) нативным `for(e, iterable)`;
 */
-Class NativeIterator(_itr : BaseIterator)
+Class NativeIterator(_itr : IteratorInterface)
    var itr  = _itr;
 
    Macro next() : Bool
@@ -109,7 +109,7 @@ Class Iterable()
    /** Размер коллекции.*/
    var size;
 
-   /** Возвращает новый экземпляр текущего класса */
+   /** Возвращает новый экземпляр текущей коллекции */
    Macro newInstance()
    End;
 
@@ -132,23 +132,27 @@ Class Iterable()
    Macro append(baseCollectionElement)
    End;
 
+
    /** Возвращает новый итератор */
-   Macro newIterator() : BaseIterator
+   Macro newIterator() : IteratorInterface
    End;
 
-   /** Устанавливает флаг [isPrimitive] в `true`; Возвращает себя
-      @return this
+   /**
+      Возвращает копию исходной коллекции. Каждый базовый элемент передается 'copyFunction', которая возвращает копию элемента.Если 'copyFunction' не задана - объекты копируются по ссылке, примитивы по значению.
    */
-   Macro setPrimitive()
-      return this;
-   End;
-
-   /** Возвращает строку из элементов коллекции, разделенных '_delim', начинается с '_prefix' заканчивается '_postfix'*/
-   Macro join(_delim, _prefix, _postfix) : String
-      var delim   = ifNull(_delim, ", ");
-      var prefix  = ifNull(_prefix, "[");
-      var postfix = ifNull(_postfix,"]");
-      return joinToString(this, delim, prefix, postfix);
+   Macro copy(copyFunction) : Iterable
+      var newCl = newInstance();
+      var itr = newIterator;
+      if (ValType(copyFunction) == V_UNDEF)
+         while (itr.hasnext)
+            newCl.append(itr.next);
+         end;
+      else
+         while (itr.hasnext)
+            newCl.append(ExecMacro2(copyFunction, itr.next));
+         end;
+      end;
+      return newCl;
    End;
 
    // Chain - функции
@@ -291,6 +295,13 @@ Class Iterable()
       return this.min(func);
    End;
 
+   /** Возвращает строку из элементов коллекции, разделенных '_delim', начинается с '_prefix' заканчивается '_postfix'*/
+   Macro join(_delim, _prefix, _postfix) : String
+      var delim   = ifNull(_delim, ", ");
+      var prefix  = ifNull(_prefix, "[");
+      var postfix = ifNull(_postfix,"]");
+      return joinToString(this, delim, prefix, postfix);
+   End;
 
    Macro toStr() : String
       return join();
@@ -305,10 +316,20 @@ Class Iterable()
       joinToPrint(this,", ", "[", "]");
    End;
 
+   Private Macro baseEquals(otherIterable) : Bool
+      return true;
+   End;
+
+   Macro equals(otherIterable) : Bool
+      // Inherited implementation
+   End;
+
    // Метод для возможности перечисления нативным for(el, collection)
    Macro createEnum()
       return NativeIterator(newIterator());
    End;
+
+
 
 End;
 
@@ -320,9 +341,9 @@ End;
 */
 Class (Iterable) ListInterface()
 
-   /* Ссылка на функцию компаратор. */
+   /** Ссылка на функцию компаратор. */
    private var comparator ;
-   /* Ссылка на функцию equals. */
+   /** Ссылка на функцию проверки на равенство. */
    private var equalsfunc ;
 
    /**
@@ -331,11 +352,17 @@ Class (Iterable) ListInterface()
    Macro setPrimitive() : ListInterface
    End;
 
-   Macro setComparator(_comparator) : ListInterface
-      comparator = _comparator;
+   /**
+      Устанавливает функцию-компаратор 'comparefun' и возвращает текущий список.
+   */
+   Macro setComparator(comparefun) : ListInterface
+      comparator = comparefun;
       return this;
    End;
 
+   /**
+      Устанавливает функцию м 'equalsfun' и возвращает текущий список.
+   */
    Macro setEqualsFunc(equalsfun) : ListInterface
       equalsfunc = equalsfun;
       return this;
@@ -345,6 +372,13 @@ Class (Iterable) ListInterface()
    */
    Macro add(element : Variant, ind : Integer)
    End;
+
+   /**
+      Добавляет все аргументы в конец списка и возвращает текущий экземпляр.
+   */
+   Macro addItems(varargs )
+   End;
+
 
    /**
       Добавляет 'element' в начало списка.
@@ -361,7 +395,7 @@ Class (Iterable) ListInterface()
    /**
       Добавляет все элементы 'enumerable' в конец списка.
    */
-   Macro addAll(enumerable)
+   Macro addAll(enumerable, ind : Integer)
    End;
 
    /**
@@ -395,33 +429,62 @@ Class (Iterable) ListInterface()
    End;
 
    /**
-      Возвращает индекс первого элемента равного 'element' согласно функции 'equalFunc'. Если функция не указана сравнение происходит через '=='.
+      Удаляет и возвращает первый элемент.
    */
-   Macro indexOf(element, equalFunc)
+   Macro removeFirst() : Variant
    End;
 
    /**
-      Возвращает индекс последнего элемента равного 'element' согласно функции 'equalFunc'. Если функция не указана сравнение происходит через '=='.
+      Удаляет и возвращает последний элемент.
    */
-   Macro lastIndexOf(element, equalFunc)
+   Macro removeLast() : Variant
    End;
 
    /**
-      Возвращает `true`, если коллекция содержит элемент равный 'element' согласно функции 'equalFunc'. Если функция не указана сравнение происходит через '=='.
+      Удаляет все элементы из 'enumerable' и возвращает `true`, если был найден и удален хотябы один элемент.
    */
-   Macro contains(element, equalFunc) : Bool
+   Macro removeAll(enumerable, equalsFun) : Bool
    End;
 
    /**
-      Возвращает `true`, если коллекция отсортирована согласно функции-компаратору 'compareFunc'.
+      Возвращает индекс первого элемента равного 'element' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через функцию заданную по умолчанию для текущего спискаа.
    */
-   Macro isSorted(compareFunc) : Bool
+   Macro indexOf(element, equalsFun)
    End;
 
    /**
-      Сортирует исходный список согласно функции-компаратору 'compareFunc' и возвращает ссылку на него.
+      Возвращает индекс последнего элемента равного 'element' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через функцию заданную по умолчанию для текущего списка.
    */
-   Macro sort(compareFunc) : ListInterface
+   Macro lastIndexOf(element, equalsFun)
+   End;
+
+   /**
+      Возвращает `true`, если коллекция содержит элемент равный 'element' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через '=='.
+   */
+   Macro contains(element, equalsFun) : Bool
+   End;
+
+   /**
+      Возвращает `true`, если коллекция содержит все элементы из 'enumerable' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через '=='.
+   */
+   Macro containsAll(enumerable, equalsFun) : Bool
+      var res = true;
+      for(var el, enumerable)
+         res = (res and (contains(el, equalsFun)));
+      end;
+      return res;
+   End;
+
+   /**
+      Возвращает `true`, если коллекция отсортирована согласно функции-компаратору 'compareFun'.
+   */
+   Macro isSorted(compareFun) : Bool
+   End;
+
+   /**
+      Сортирует исходный список согласно функции-компаратору 'compareFun' и возвращает ссылку на него.
+   */
+   Macro sort(compareFun) : ListInterface
    End;
 
    /**
@@ -435,6 +498,14 @@ Class (Iterable) ListInterface()
    */
    Macro toArray() : SArray
    End;
+
+   Macro hash() : Integer
+      var h = 1;
+      for (var el, this)
+         h = h*17 + CalcHashCode(el);
+      end;
+      return h;
+   End;
 End;
 
 /**
@@ -446,10 +517,42 @@ End;
 */
 Class (Iterable) MapInterface()
 
-   private var keyEqualsFunc;
    private var keyComparator;
-   private var valueEqualsFunc;
+   private var keyEqualsFunc;
    private var valueComparator;
+   private var valueEqualsFunc;
+
+   /**
+      Устанавливает функцию-компаратор ключей 'kCompareFun' и возвращает текущую коллекцию.
+   */
+   Macro setKeyComparator(kCompareFun)
+      keyComparator = kCompareFun;
+      return this;
+   End;
+
+   /**
+      Устанавливает функцию проверки на равенство ключей 'kEqualsFun' и возвращает текущую коллекцию.
+   */
+   Macro setKeyEqualsFun(kEqualsFun)
+      keyEqualsFunc = kEqualsFun;
+      return this;
+   End;
+
+   /**
+      Устанавливает функцию-компаратор значений 'vCompareFun' и возвращает текущую коллекцию.
+   */
+   Macro setValueComparator(vCompareFun)
+      valueComparator = vCompareFun;
+      return this;
+   End;
+
+   /**
+      Устанавливает функцию проверки на равенство значений 'vEqualsFun' и возвращает текущую коллекцию.
+   */
+   Macro setValueEqualsFun(vEqualsFun)
+      valueEqualsFunc = vEqualsFun;
+      return this;
+   End;
 
    /**
       Устанавливает тип ключа 'type' из языка RSL.
@@ -500,9 +603,9 @@ Class (Iterable) MapInterface()
    End;
 
    /**
-      Возвращает `true`, если коллекция содержит пару со значением равным 'value' согласно функции 'equalFunc'. Если функция не указана сравнение происходит через '=='.
+      Возвращает `true`, если коллекция содержит пару со значением равным 'value' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через '=='.
    */
-   Macro containsValue(value, equalFunc) : Bool
+   Macro containsValue(value, equalsFun) : Bool
    End;
 
    /**
@@ -586,7 +689,7 @@ End;
    @param iList объект списка
    @oparam ind = 0 начальный индекс
 */
-Class (BaseIterator) ListIterator(ilist : ListInterface, ind : Integer)
+Class (IteratorInterface) ListIterator(ilist : ListInterface, ind : Integer)
    var list = ilist;
    var curIndex  : Integer = -1;
    var nextIndex : Integer = 0;
@@ -642,42 +745,3 @@ Class (BaseIterator) ListIterator(ilist : ListInterface, ind : Integer)
       nextIndex = ind + 1;
    End;
 End;
-
-
-/** Возвращает иммутабельный список [ImmutableList] из элементов 'varargs' */
-/*
-Macro listOf(varargs)
-   var arr = TArray();
-   var p;
-   var i = 0;
-   var count = Parmcount();
-   while(i < count)
-      getParm(i, p);
-      arr[i] = p;
-      i = i + 1;
-   end;
-   return ImmutableList.fromArray(arr);
-End;
-*/
-/**
-   Возвращает иммутабельный список [ImmutableList] элементов 'Integer'
-   начиная с 'from' заканчивая 'to' с шагом 'step'.
-   @param from начало диапозона
-   @param to   конец диапозона
-   @oparam step = 1 шаг
-*/
-/*
-Macro range(from : Integer, to: Integer, step: Integer) : ImmutableList
-   var arr = TArray();
-   var istep = ifNull(step, 1);
-   if(from>to)
-      istep = -istep;
-   end;
-   var i;
-   for(i,from,to,istep)
-      arr[arr.size] = i;
-   end;
-   return ImmutableList.fromArray(arr);
-End;
-
-*/

@@ -1,0 +1,149 @@
+import "..\\mac\\extra\\RUnit\\RUnit.Mac";
+import "..\\mac\\extra\\Utils\\OOP.Mac";
+import "..\\mac\\extra\\Utils\\SArray.Mac";
+
+
+private Class (Any) Clazz1(_p1, _p2)
+   var p1 = _p1;
+   var p2 = _p2;
+
+   Macro compareTo(obj) : Integer
+      if (obj == null) return 1; end;
+      if (p1 > obj.p1) return 1;
+      elif (p1 < obj.p1) return -1;
+      else return 0;
+      end;
+   End;
+End;
+
+private Class Clazz2(_p1)
+   var p1 = _p1;
+
+   Macro compareTo(obj)
+      if (obj == null) return 1; end;
+      if (p1 > obj.p1) return 1;
+      elif(p1 < obj.p1) return -1;
+      else return 0;
+      end;
+   End;
+
+   Macro equals(obj)
+      return (p1 == obj.p1);
+   end;
+End;
+
+Class (TestCase) TestEquals()
+   var a, b;
+
+   Macro eq()
+      return AnyTypeEquals(a,b);
+   end;
+
+   Macro Test_EqualsPrim()
+      assertTrue(eq);
+      b = 1;
+      assertFalse(eq);
+      a = "1";
+      assertFalse(eq);
+      a = 1;
+      assertTrue(eq);
+      a = Date(10, 12, 2012);
+      b = Date(10, 12, 2012);
+      assertTrue(eq);
+      b = Date(11, 12, 2012);
+      assertFalse(eq);
+   End;
+
+   Macro Test_EqualsObj()
+      a = Clazz1;
+      b = Clazz1;
+      assertTrue(eq);
+      a = Clazz1(1, 2);
+      assertFalse(eq);
+      a = Clazz2;
+      assertTrue(eq);
+   End;
+
+
+   Macro Test_EqualsArr()
+      a = TArray();
+      b = TArray();
+      assertTrue(eq);
+      a[0] = 1;
+      assertFalse(eq);
+      b[0] = 1;
+      assertTrue(eq);
+      a[1];
+      assertFalse(eq);
+      a[1] = Clazz1(1,1);
+      b[1] = Clazz2(1);
+      assertFalse(eq);
+      b[1] = Clazz1(1,1);
+      assertTrue(eq);
+   End;
+
+   Macro Test_EqualsArr2()
+      a = TArray();
+      b = SArray();
+      assertTrue(eq);
+      b.push(1);
+      assertFalse(eq);
+      a[0] = 1;
+      assertTrue(eq);
+   End;
+End;
+
+Class (TestCase) TestCompare()
+   var a, b;
+
+   Macro comp()
+      return (AnyTypeCompare(a,b));
+   End;
+
+   Macro test_prim()
+      a = 1; b = 2;
+      AssertTrue(comp<0);
+      AssertTrue(AnyTypeCompare(b,a)>0);
+      a = 2; b = 2;
+      AssertTrue(comp==0);
+      a = "A"; b = "b";
+      AssertTrue(comp<0);
+   End;
+
+   Macro test_obj()
+      a = Clazz1(1, 3);
+      b = null;
+      assertTrue(comp>0);
+      assertTrue(AnyTypeCompare(b,a) < 0);
+      b = Clazz2(2);
+      assertTrue(comp<0);
+      assertTrue(AnyTypeCompare(b,a) > 0);
+   End;
+End;
+
+
+Macro testTime()
+   var ts, te;
+   var arr1 = SArray;
+   var arr2 = SArray;
+   for(var i, 0, 3)
+      arr1.push(Random);
+      arr2.push(Random);
+   end;
+   ts = time();
+   for (i, 0, 1000000)
+      var a = Random;
+      var b = Random;
+      a == b;
+      //CF_ComparePrimitive(a, b);
+      //AnyTypeEquals(a, b);
+   end;
+
+   te = time();
+   println(String((te-ts):m))
+
+
+End;
+
+ TestCompare;
+ TestEquals;

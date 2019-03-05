@@ -37,13 +37,13 @@ Private Class (ListIterator) ArrayListIterator(_arrList, _ind : Integer)
 
    Macro set(el : Variant) : Variant
       var oldVal;
-      if(ValType(lastReturned) != V_UNDEF)
+      if (ValType(lastReturned) != V_UNDEF)
          return list.set(el, curIndex);
       end;
    End;
 
    Macro remove() : Variant   // Удаяем текущий элемент и никуда не идем
-      if(curIndex >=0)
+      if (curIndex >= 0)
          var rem = list.remove(curIndex);
          curIndex = -1;
          return rem;
@@ -51,7 +51,7 @@ Private Class (ListIterator) ArrayListIterator(_arrList, _ind : Integer)
    End;
 
    Macro toPos(ind : Integer)
-      if((ind<0) or (ind>list.size-1)) return; end;
+      if ((ind < 0) or (ind > list.size-1)) RunError("Index of bound"); end;
       curIndex = ind;
       nextIndex = ind + 1;
    End;
@@ -67,8 +67,8 @@ Private CONST INIT_CAPACITY = 128;
 */
 Class (ListInterface) ArrayList()
    size = 0;
-   comparator  = @CF_CompareToImpl;
-   equalsfunc  = @CF_EqualsImpl;
+   comparator  = @AnyTypeCompare;
+   equalsfunc  = @AnyTypeEquals;
    var items = TArray();
    var capacity = INIT_CAPACITY;
 
@@ -85,6 +85,12 @@ Class (ListInterface) ArrayList()
       return this;
    End;
 
+
+   Macro newInstance()
+      return ArrayList()
+            .setComparator(comparator);
+   End;
+
    /**
       Добавляет указанный элемент `v` на позицию `ind`. Если  `ind` не указан, добавляет элемент в конец списка.
       @sample [samples.Collections.ArrayList.add]
@@ -92,12 +98,11 @@ Class (ListInterface) ArrayList()
    Macro add(v, ind) : Bool
       if ((ValType(ind) == V_UNDEF) or (ind == size))
          items[size] = v;
-      elif ((ind<0) or (ind>=size))
+      elif ((ind < 0) or (ind >= size))
          return false;
-         // or ERROR?
+         RunError("Index of bound.");
       else
-         var i;
-         for(i, size - 1, ind, -1)
+         for(var i, size - 1, ind, -1)
             items[i + 1] = items[i];
          end;
          items[i] = v;
@@ -115,6 +120,14 @@ Class (ListInterface) ArrayList()
 
    Macro addLast(v : Variant) : Bool
       return add(v);
+   End;
+
+   Macro addItems()
+      var i, p;
+      for (i, 1, Parmcount-1, 1)
+         GetParm(i, p);
+         add(p);
+      end;
    End;
 
    Macro get(ind) : Variant
@@ -164,49 +177,27 @@ Class (ListInterface) ArrayList()
       return remove(size-1);
    End;
 
-   Macro addArray(arr : TArray, ind : Integer)
-      if(ValType(arr) == V_UNDEF)
-         return;
-      end;
-      var fromInd = ind;
+   Macro addAll(enumerable, ind : Integer)
+      if (ValType(enumerable) == V_UNDEF) return this; end;
+      if (enumerable.size == 0) return this; end;
       if(ValType(ind) != V_INTEGER)
-         fromInd = size;
+         ind = size;
       end;
-      var i = 0;
-      while(i < arr.size)
-         add(arr[i], fromInd);
-         fromInd = fromInd + 1;
-         i = i + 1;
-      end;
-   End;
-
-   Macro addAll(list : Iterable, ind : Integer)
-      if(ValType(list) == V_UNDEF) return; end;
-      if(list.size == 0) return; end;
-      var fromInd = ind;
-      if(ValType(ind) != V_INTEGER)
-         fromInd = size;
-      end;
-      var ofs = list.size;
-      while(capacity <= (size + ofs))     // Раздвигаем массив
+      var ofs = enumerable.size;
+      while (capacity <= (size + ofs))     // Раздвигаем массив
          resize();
       end;
       var i;
-      for(i, size-1, fromInd, -1)
+      for (i, size-1, ind, -1)
          items[i + ofs] = items[i];
       end;
-      i = fromInd;
-      var itr = list.newIterator();
-      while(itr.hasnext())
-         items[i] = itr.next;
+      i = ind;
+      for (var el, enumerable)
+         items[i] = el;
          i = i + 1;
       end;
-      size = size + list.size;
+      size = size + ofs;
       return this;
-   End;
-
-   Macro isEquals(o1, o2) : Bool
-      return ExecMacro2(equalsfunc, o1, o2);
    End;
 
    Macro indexOf(v : Variant, equalsfun) : Integer
@@ -251,31 +242,52 @@ Class (ListInterface) ArrayList()
       return -1;
    End;
 
-   Macro contains(v : Variant) : Bool
+   Macro contains(v : Variant, equalsfun) : Bool
       return (indexOf(v) >= 0);
    End;
 
+   Macro containsAll(enumerable, equalsfun) : Bool
+      var res = true;
+      for(var el, enumerable)
+         res = (res and (contains(el, equalsFun)));
+      end;
+      return res;
+   End;
 
-   /** Бинарный поиск по списку элемента `el`. Возвращает индекс найденного элемента или -1.*/
+   Macro removeAll(enumerable, equalsfun) : Bool
+      var removed = false;
+      for (var el, enumerable)
+         var ind = indexOf(el, equalsfun);
+         if (ind >= 0)
+            remove(ind);
+            removed = true;
+         end;
+      end;
+      return removed;
+   End;
+
+
+   /** Бинарный поиск по списку элемента `el`. Возвращает индекс найденного элемента или отрицательное значение равное подходящему индексу вставки умноженное на -1 и с вычетом 1.*/
    Macro binarySearch(el, compareFun) : Integer
-      if(ValType(compareFun) != V_UNDEF)
+      if(ValType(compareFun) == V_UNDEF)
          compareFun = comparator;
       end;
-      var low = 0;
       var high = size;
-      var mid, x;
+      var low = 0;
+      var mid = 0;
+      var x;
       var i = -1;
       while(low < high)
          mid = (low + high) / 2;
-         x = items[mid];
-         var resCompare = ExecMacro2(compareFun, el, x);
-         if(resCompare == 0)
-            i = mid;
-            break;
-         elif(resCompare < 0)
+         var resCom = ExecMacro2(compareFun, el, items[mid]);
+         if (resCom == 0)
+            return mid;
+         elif (resCom < 0)
             high = mid;
+            i = -mid-1;
          else
             low = mid + 1;
+            i = -low-1;
          end;
       end;
       return i;
@@ -291,8 +303,8 @@ Class (ListInterface) ArrayList()
       size = 0;
    End;
 
-   Macro copy()
-      var newList = ArrayList();
+   Macro copy() : ArrayList
+      var newList = newInstance();
       for(var i, 0, size-1, 1)
          newList.add(items[i]);
       end;
@@ -300,22 +312,14 @@ Class (ListInterface) ArrayList()
    End;
 
    Macro reverse()
-      var newItems = TArray();
-      newItems[items.size - 1] = null;
-      var i;
-      for(i, 0, size-1, 1)
-         newItems[i] = items[size - i - 1];
+      for(var i, 0, size/2-1, 1)
+         var t = items[i];
+         items[i] = items[size-i-1];
+         items[size-i-1] = t;
       end;
-      items = newItems;
+      return this;
    End;
 
-   Macro getInstance()
-      return ArrayList();
-   End;
-
-   Macro newInstance()
-      return ArrayList();
-   End;
 
    Macro fromList(list : Iterable)
       if(IsEqClass("ImmutableList", list))
@@ -356,10 +360,9 @@ Class (ListInterface) ArrayList()
          compareFun = comparator;
       end;
       var arr = toArray();
-      ExQSort(arr, compareFun);
+      QSort(arr, compareFun);
       clear();
-      fromArray(arr);
-      return this;
+      return addAll(arr);
       OnError(err)
          if(err.code == 37)
             RunError("Не верно определена функция-компаратор для sort()", err);
@@ -373,6 +376,19 @@ Class (ListInterface) ArrayList()
       end;
       for (var i, 1, size-1, 1)
          if (ExecMacro2(compareFun, items[i-1], items[i]) > 0)
+            return false;
+         end;
+      end;
+      return true;
+   End;
+
+   Macro equals(otherList) : Bool
+      if (this == otherList) return true; end;
+      if ((GenClassName(otherList) != GenClassName(this)) or (size != otherList.size ) or (hash != otherList.hash))
+         return false;
+      end;
+      for (var i, 0, size - 1, 1)
+         if (ExecMacro2(equalsfunc, items[i], otherList.items[i]) == false)
             return false;
          end;
       end;

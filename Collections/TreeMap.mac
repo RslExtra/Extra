@@ -27,7 +27,7 @@ End;
 /**
    Класс итератора [TreeMap]. Возвращает объект класса [TreeEntry].
 */
-Private Class (BaseIterator) TreeMapEntryIterator(treeMapInstance)
+Private Class (IteratorInterface) TreeMapEntryIterator(treeMapInstance)
    var inMap = treeMapInstance;
    var nxt = inMap.getFirstEntry();
    var lastReturned = null;
