@@ -17,7 +17,7 @@ Class Exception (detailMessage : String)
    end;
 
    Macro getText()
-      var text = GenClassName(this);
+      var text = "\n" + GenClassName(this);
       if (msg != "")
          text = text + "\n" + msg;
       end;
@@ -67,13 +67,60 @@ Class (Exception) ModuleNotImportedException(detailMessage : String)
 End;
 
 /**
+   Исключение, возникающее, если метод не допустим к вызову.
+*/
+Class (Exception) UnsupportedOperationException(detailMessage : String)
+   initException(detailMessage);
+End;
+
+private var ThrowMode = 0;
+
+/**
+   Задает поведение метода throw. Возможные варианты:
+   - '0' - будет вызвана стандартная RSL ошибка через RunError,
+   - '1' - на синий экран будет выведен StackTrace, а программа завершится.
+   - '2' - режим для Unit тестов, метод Throw вернет объект брошенного Exception, который можно будет перехватить
+*/
+Macro setThrowMode(modeInt : Integer)
+   if (ValType(modeInt) == V_UNDEF)
+      modeInt = 0;
+   elif ((modeInt > 2) or (modeInt < 0))
+      RunError("Не верный тип поведения Throw.")
+   end;
+   ThrowMode = modeInt;
+End;
+
+private var LastException = null;
+/**
+   Служебный метод для работы в режиме Unit тестирования. Устанавливает последнее брошенное исключение.
+*/
+Macro setLastException(exc)
+   LastException = exc;
+End;
+/**
+   Служебный метод для работы в режиме Unit тестирования. Возвращает и удаляет из хранилища последнее исключение.
+*/
+Macro getLastException()
+   var ret = LastException;
+   LastException = null;
+   return ret;
+End;
+/**
    Бросает исключение '_exception'. Вызывает функцию [RunError] передавая в качестве параметров текст исключения и объект исключения.
 */
 Macro Throw(_exception : Exception)
    if ( Valtype(_exception) == V_UNDEF)
       _exception = Exception();
    end;
-   RunError(_exception.getText, _exception);
+   if (ThrowMode == 0)
+      RunError(_exception.getText, _exception);
+   elif (ThrowMode == 1)
+      printStack();
+      exit(0);
+   elif (ThrowMode == 2)
+      setLastException(_exception);
+      return _exception;
+   end;
 End;
 
 Private Class CatchClass(_exception, _doFunc)

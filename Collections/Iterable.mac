@@ -36,7 +36,7 @@ Private Class EmptyObj()
    End;
 
    Macro hash()
-
+      return 0;
    End;
 
    Macro toString() : String
@@ -54,7 +54,8 @@ Const NVIS = 2;  //
    Интерфейс базового итератора для всех коллекций,
    методы обязательны для переопределения
 */
-Class IteratorInterface()
+Class IteratorInterface(collectionInstance)
+
    /** Возвращает следующий элемент коллекции или `null` если находится в конце списка*/
    Macro next() : Variant
    End;
@@ -70,12 +71,54 @@ Class IteratorInterface()
    Macro hasPrev() : Bool
    End;
 
-   /** Повторно возвращает последний уже отданный элемент*/
+   /** Повторно возвращает последний уже отданный элемент. */
    Macro getLastReturned() : Variant
    End;
 
-   /** Переводит указатель итератора в начало списка */
+   /** Переводит указатель итератора в начало списка. */
    Macro clear()
+   End;
+End;
+
+Class DescendingIterator(collectionInstance, ind : Integer)
+   private var inst = collectionInstance;
+   private var itr = null;
+
+   if (ValType(ind) == V_UNDEF)
+      ind = 0;
+   elif (ValType(ind) != V_INTEGER)
+      Throw(IllegalArgumentException());
+   elif ((ind < 0) or (ind > inst.size))
+      Throw(IndexOutOfBoundsException());
+   end;
+   itr = inst.newIterator(inst.size-ind);
+
+   Macro hasNext() : Bool
+      return itr.hasPrev();
+   End;
+
+   Macro next() : Variant
+      return itr.prev();
+   End;
+
+   Macro hasPrev() : Bool
+      return itr.hasNext();
+   End;
+
+   Macro prev() : Variant
+      return itr.next();
+   End;
+
+   Macro nextIndex() : Integer
+      return itr.nextIndex - 1;
+   End;
+
+   Macro clear()
+      itr.toPos(inst.size);
+   End;
+
+   Macro toString() : String
+      return ("<-" + itr.toString());
    End;
 End;
 
@@ -133,8 +176,8 @@ Class Iterable()
    End;
 
 
-   /** Возвращает новый итератор */
-   Macro newIterator() : IteratorInterface
+   /** Возвращает новый итератор начинающий с позиции 'ind'. Если 'ind' не задан или равен `null` итератор пойдет с начала коллекции. */
+   Macro newIterator(ind) : IteratorInterface
    End;
 
    /**
@@ -230,8 +273,7 @@ Class Iterable()
    /** Возвращает максимальное значение коллекции.
       oparam _func = @CF_ComparePrimitive ссылка на функцию компаратор.
    */
-   Macro max(_func) : Variant
-      var func = _func;
+   Macro max(func) : Variant
       if(ValType(func) == V_UNDEF)
          func = @CF_ComparePrimitive;
       end;
@@ -307,13 +349,14 @@ Class Iterable()
       return join();
    End;
 
-   /** Выводит коллекцию на экран с переносом строк*/
-   Macro toScreen()
-      joinToPrint(this, "\n","[\n", "\n]");
-   End;
    /** Выводит коллекцию на экран без переноса строк*/
-   Macro toScreen2()
+   Macro toScreen()
       joinToPrint(this,", ", "[", "]");
+   End;
+
+   /** Выводит коллекцию на экран с переносом строк*/
+   Macro toScreen2()
+      joinToPrint(this, "\n","[\n", "\n]");
    End;
 
    Private Macro baseEquals(otherIterable) : Bool
@@ -494,9 +537,20 @@ Class (Iterable) ListInterface()
    End;
 
    /**
+      Возвращает список состоящий из подмножества исходного, начиная с 'from' (включительно), заканчивая 'to' (исключительно).
+   */
+   Macro subList(from : Integer, to : Integer) : ListInterface
+   End;
+
+   /**
       Возвращает массив типа [Utils.SArray SArray] состоящий из элементов исходного списка.
    */
    Macro toArray() : SArray
+   End;
+
+   /** Возвращает новый убывающий итератор. */
+   Macro newDescIterator(ind) : DescendingIterator
+      return DescendingIterator(this, ind);
    End;
 
    Macro hash() : Integer
@@ -689,6 +743,7 @@ End;
    @param iList объект списка
    @oparam ind = 0 начальный индекс
 */
+/*
 Class (IteratorInterface) ListIterator(ilist : ListInterface, ind : Integer)
    var list = ilist;
    var curIndex  : Integer = -1;
@@ -729,7 +784,7 @@ Class (IteratorInterface) ListIterator(ilist : ListInterface, ind : Integer)
       return lastReturned;
    End;
 
-   Macro previous() : Variant
+   Macro prev() : Variant
       if (not(hasPrev))
          return;
       end;
@@ -745,3 +800,4 @@ Class (IteratorInterface) ListIterator(ilist : ListInterface, ind : Integer)
       nextIndex = ind + 1;
    End;
 End;
+*/

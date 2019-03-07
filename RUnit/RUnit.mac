@@ -33,13 +33,13 @@ Private Class ModuleMarker()
    End;
 End;
 
-private Macro getTimeDiffMillis(t1, t2) : Integer
+Macro getTimeDiffMillis(t1, t2) : Integer
    var strTime = String((t2 - t1) : m);
    var h = Int(SubStr(strTime, 1, 2));
    var m = Int(SubStr(strTime, 4, 2));
    var s = Int(SubStr(strTime, 7, 2));
    var ms = Int(SubStr(strTime, 10, 2));
-   return ((((h*60) + m) * 60) + s) * 1000 + ms;
+   return ((((h*60) + m) * 60) + s) * 100 + ms;
 end;
 
 Private Class RUnitProperties()
@@ -222,7 +222,7 @@ Private Class CaseResult(_casename : String)
       for (var funRes, funResults)
          funRes.toScreen();
       end;
-      println("-------------------------------------------------------------------");
+      println("--------------------------------------------------------------------------------");
 
    End;
 
@@ -262,7 +262,7 @@ Private Class AllTestsResult()
    Macro printTestResults()
       if(testResults.size == 0) return; end;
 
-      Println("=========================== START TESTS ===========================");
+      Println("================================= START TESTS ==================================");
       var st = "[OK]";
       if(not(passed))
          st = "[FAILED]"
@@ -272,6 +272,7 @@ Private Class AllTestsResult()
       for(var testRes, testResults)
          testRes.toScreen();
       end;
+      //Println("================================== END TESTS ==========+========================");
    End;
 
    Macro logTestResults()
@@ -467,6 +468,34 @@ Private Class (AssertClass) AssertErrorClass(_expCode, _err)
    End;
 End;
 
+Private Class (AssertClass) AssertExceptionClass(_val1, _val2)
+   initAssertClass(_val1, _val2);
+
+   Macro getException(val1, cand)
+      if (isEqClass("Exception", cand) == false)
+         var lastExc = ExecMacro2("GetLastException");
+         if (isEqClass("Exception", lastExc))
+            val2 = lastExc;
+         end;
+      end;
+   End;
+
+   Macro runAssert() : Bool
+      getException(val1, val2);
+      if (isEqClass("Exception", val1) == false)
+         setResult(false);
+         setFaultCause("Expected value is not [Exception] class type.");
+      elif (isEqClass("Exception", val2) == false)
+         setResult(false);
+         setFaultCause("Real value is not [Exception] class type.");
+      elif (isEqClass(GenClassName(val1), val2) == false)
+         setResult(false);
+         setFaultCause("AssertException expected Exception: " + GenClassName(val1) + ", but real: " + GenClassName(val2));
+      else
+         setResult(true);
+      end;
+   End;
+End;
 
 
 Private Class UnitFun(_testCase, _funcname : String)
@@ -557,6 +586,10 @@ Class TestCase(_name)
       curTestFun.addAssert(assertErrorClass(val1));
    End;
 
+   Macro assertException(val1, val2)
+      curTestFun.addAssert(AssertExceptionClass(val1,val2));
+   End;
+
    Macro assertArrays(arr1, arr2)
       curTestFun.addAssert(assertArraysClass(arr1, arr2));
    End;
@@ -620,4 +653,12 @@ End;
 
 Macro UnitTestMarker()
    return ModuleMarker();
+End;
+
+Macro UT_PrintResults()
+   AllTestResult.printTestResults();
+End;
+
+Macro UT_LogResults()
+   AllTestResult.logTestResults();
 End;

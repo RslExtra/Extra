@@ -12,15 +12,16 @@ Macro callObjectMethod(parm1, parm2)
    return CallR2M(tempSortFunc, parm1, parm2);
 End;
 
-// Обертка для функции Qsort из BankInter
-// В отличии от оригинала способна принимать в качестве компаратора не только ссылку на функцию,
-// но и ссылку на метод объекта
-Macro ExQSort(arr, func)
-   if(Valtype(func) == 20)    // Если ссылка на функцию
-      return ExecMacro2("QSort", arr, func);
-   elif(Valtype(func) == 25)  // Если ссылка на метод
-      tempSortFunc = func;
+/**
+   Обертка для функции Qsort из BankInter
+   В отличии от оригинала способна принимать в качестве компаратора не только ссылку на функцию,
+   но и ссылку на метод объекта
+*/
+Macro ExQSort(arr : TArray, compareFunc)
+   if(Valtype(compareFunc) == 20)    // Если ссылка на функцию
+      return ExecMacro2("QSort", arr, compareFunc);
+   elif(Valtype(compareFunc) == 25)  // Если ссылка на метод
+      tempSortFunc = compareFunc;
       return ExecMacro2("QSort", arr, @callObjectMethod);
    end;
 End;
-

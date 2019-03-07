@@ -50,6 +50,7 @@ Macro getPrivateMeth(obj, meth)
 
 End;
 
+
 var obj = myClass();
 
 debugbreak;
