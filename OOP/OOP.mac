@@ -9,7 +9,7 @@ import rcw;
 /**
    Функция расчета хэшкода типа 'V_STRING'.
 */
-Macro CalcStringHash(key : String) : Integer
+Macro StringHashCode(key : String) : Integer
    var h = 7;
    for (var i, 1, StrLen(key), 1)
       h = h * 31 + CodeFor(SubStr(key, i, 1));
@@ -18,59 +18,66 @@ Macro CalcStringHash(key : String) : Integer
 End;
 
 /**
-   Функция расчета хэшкода типа 'V_MOENY' , 'V_DOUBLE' или 'V_NUMERIC'.
+   Функция расчета хэшкода типа 'V_INTEGER'.
 */
-Macro CalcNumericHash(nm) : Integer
+Macro IntHashCode(i : Integer) : Integer
+   return abs(i);
+End;
+
+/**
+   Функция расчета хэшкода типа 'V_MONEY' , 'V_DOUBLE' или 'V_NUMERIC'.
+*/
+Macro NumericHashCode(nm) : Integer
    return abs(int(nm * 10000));
 End;
 
 /**
    Функция расчета хэшкода типа 'V_DATE'.
 */
-Macro CalcDateHash(dt : Date) : Integer
-   return CalcStringHash(String(dt));
+Macro DateHashCode(dt : Date) : Integer
+   return StringHashCode(String(dt));
 End;
 
 /**
    Функция расчета хэшкода типа 'V_TIME'.
 */
-Macro CalcTimeHash(tm : Time) : Integer
-   return CalcStringHash(String(tm));
+Macro TimeHashCode(tm : Time) : Integer
+   return StringHashCode(String(tm));
 End;
 
 /**
    Функция расчета хэшкода объекта пользовательского класса.
 */
-Macro CalcObjectHash(obj : Object)
+Macro ObjectHashCode(obj : Object)
    var h = ExecMacro2(R2M(obj, "hash"));
-   if (ValType(h) == V_UNDEF)
-      return 0;
+   if (ValType(h) == V_INTEGER)
+      return h;
    end;
-   return h;
+   RunError("\nДля класса " + GenClassName(obj) + " не определена функция hash() : Integer");
 End;
 
 /**
    Функция расчета хэшкода произвольного объекта RSL.
 */
-Macro CalcHashCode(val : Variant) : Integer
+Macro VariantHashCode(val : Variant) : Integer
    var type = ValType(val);
    if (type == V_UNDEF)
       return 0;
    elif (type == V_STRING)
-      return CalcStringHash(val);
+      return StringHashCode(val);
    elif (type == V_INTEGER)
       return abs(val);
    elif (type == V_DATE)
-      return CalcDateHash(val);
+      return DateHashCode(val);
    elif (type == V_TIME)
-      return CalcTimeHash(val);
+      return TimeHashCode(val);
    elif ((type == V_MONEY) or (type == V_DOUBLE) or (type == V_DOUBLEL) or (type == V_NUMERIC))
-      return CalcNumericHash(val);
+      return NumericHashCode(val);
    elif (type == V_GENOBJ)
       if (isEqClass("TARRAY", val))
-         return ExecMacro2("calcArrayHash");
+         return ExecMacro2("TArrayHashCode");
       else
-         return calcObjectHash(val);
+         return ObjectHashCode(val);
       end;
    else
       return 0;
@@ -80,10 +87,10 @@ End;
 /**
    Функция расчета хэшкода массива [TArray].
 */
-Macro calcArrayHash(arr) : Integer
+Macro TArrayHashCode(arr) : Integer
    var h = 1;
    for(var el, arr)
-      h = h*17 + CalcHashCode(el);
+      h = h*17 + VariantHashCode(el);
    end;
    return abs(h);
 End;
@@ -98,7 +105,7 @@ End;
    - Если аргументы типа [TArray] или наследного класса, вернет результат функции [TArrayEquals].
 
 */
-Macro AnyTypeEquals(o1: Variant, o2: Variant) : Bool
+Macro VariantEquals(o1: Variant, o2: Variant) : Bool
    var t1 = ValType(o1);
    var t2 = ValType(o2);
    if (t1 != t2) return false; end;
@@ -120,13 +127,13 @@ Macro AnyTypeEquals(o1: Variant, o2: Variant) : Bool
 End;
 
 /**
-   Функция эквивалентности двух массивов [TArray]. Последовательно вызывает для каждой пары элементов массивов [AnyTypeEquals].
+   Функция эквивалентности двух массивов [TArray]. Последовательно вызывает для каждой пары элементов массивов [VariantEquals].
    Если в результате сравнеия хоть одна пара не эквивалентна, вернет `false`.
 */
 Macro TArrayEquals(arr1, arr2) : Bool
    if (arr1.size != arr2.size) return false; end;
    for(var i, 0, arr1.size - 1, 1)
-      if (AnyTypeEquals(arr1[i], arr2[i]) == false)
+      if (VariantEquals(arr1[i], arr2[i]) == false)
          return false;
       end;
    end;
@@ -134,25 +141,19 @@ Macro TArrayEquals(arr1, arr2) : Bool
 End;
 
 /**
-   Универсальная функция-компаратор для двух переменных RSL 'o1' и 'o2'. Для двух примитивов одного типа проведет сравнение через `> < ==`, если примитивы будут разного типа бросит ошибку. Для объектных типов попробует выполнить метод `compareTo(obj) : Integer`, если такой метод не будет определен в классе, бросит ошибку. Если один из аргументов равен `null` то метод 'CompareTo' вызовется у ненулевого объекта. Если оба элемента равны `null` вернет 0. Работает медленней чем собственные функции-компараторы, но на константное время, т.е. не усложняет алгоритм использующий эту функцию.
+   Универсальная функция-компаратор для двух переменных RSL 'o1' и 'o2'. Для двух примитивов одного типа проведет сравнение через `> < ==`, если примитивы будут разного типа бросит ошибку. Для разных типов вернет результат сравнения числовых констант типов, т.е по возрастанию будут идти (Undefined, Integer, String и т.д ).Для объектных типов попробует выполнить метод `compareTo(obj) : Integer`, если такой метод не будет определен в классе, бросит ошибку. Если оба элемента равны `null` вернет 0. Работает медленней чем собственные функции-компараторы, но за константное время, т.е. не усложняет алгоритм использующий эту функцию.
 */
-Macro AnyTypeCompare(o1: Variant, o2: Variant) : Integer
+Macro VariantCompare(o1: Variant, o2: Variant) : Integer
    var t1 = ValType(o1);
    var t2 = ValType(o2);
    var sign = 1;
    if (t1 != t2)
-      if ((t1 == V_GENOBJ) and (t2 == V_UNDEF))
-      elif ((t1 == V_UNDEF) and (t2 == V_GENOBJ))
-         t1 = V_GENOBJ;
-         t2 = V_UNDEF;
-         o1 = o2;
-         o2 = null;
-         sign = -1;
-      else
-         RunError("\nРазные типы для сравнения. " + GenClassName(o1) + " и " + GenClassName(o2));
-      end;
+      return (t1-t2);
    end;
-   if (t1 <= 10)                    // Примитивы
+
+   if (t1 == V_UNDEF)
+      return 0;
+   elif (t1 <= V_TIME)                    // Примитивы
       return CF_ComparePrimitive(o1, o2);
    elif (t1 == V_GENOBJ)            // Объекты
       var rCmp = ExecMacro2(R2M(o1,"compareTo"), o2);
@@ -184,7 +185,7 @@ Class Any()
       for(var i, 0, GenNumProps(this) - 1, 1)
          var p = this[i];
          if ((ValType(p) != V_UNDEF) and (ValType(p) <= V_TIME))
-            h = h + CalcStringHash(String(p));
+            h = h + StringHashCode(String(p));
          end;
       end;
       return abs(h);

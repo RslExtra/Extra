@@ -1,0 +1,275 @@
+/**
+   @package Utils
+
+*/
+
+import "..\\mac\\extra\\utils\\SArray.mac";
+import "..\\mac\\extra\\utils\\ArrayUtil.mac";
+
+/**
+   Singleton instance класса [StringUtilClass].
+*/
+var StringUtils = GenObject("StringUtilClass");
+
+Private Macro ifNull(val : Variant, replace : Variant) : Variant
+   if(Valtype(val) == V_UNDEF)
+      return replace;
+   end;
+   return val;
+End;
+
+/**
+   Почти бесполезный класс для объединения строк. Предоставляет более удобный интерфейс, но не дает выигрыша в производительности.
+*/
+Class StringBuilder()
+   private var parts = TArray();
+   /**
+      Добавляет к результирующему набору строку 'str'  и возвращает текущий объект.
+   */
+   Macro append(str : String)
+      if(ValType(str) == V_UNDEF)
+         return this;
+      end;
+      parts[parts.size] = str;
+      return this;
+   End;
+
+   /**
+      Возвращает результирующую строку.
+   */
+   Macro toString() : String
+      var r = "";
+      for(var i, 0, parts.size - 1, 1)
+         r = r + parts[i];
+      end;
+      return r;
+   End;
+
+   /**
+      Выводит на экран результирующую строку.
+   */
+   Macro printLine()
+      println(toString());
+   End;
+
+   /**
+      Очищает текущий объект.
+   */
+   Macro clear()
+      parts.size = 0;
+   End;
+End;
+
+/**
+   Класс для объединения коллекций и массивов в строку с разделителем "_delim", префиксом "_prefix" и постфиксом "_posfix".
+   Если любой из параметров не задан или равен `null` - считается равным пустой строке.
+*/
+Class StringJoiner(_delim : String, _prefix : String, _posfix : String)
+   var sb = StringBuilder();
+   var delim   = ifNull(_delim, "");
+   var prefix  = ifNull(_prefix, "");
+   var posfix  = ifNull(_posfix, "");
+
+   Private Macro joinIterable(iter)
+      sb.clear();
+      sb.append(prefix);
+      if(iter.hasNext)
+         while(true)
+            sb.append(iter.next());
+            if(iter.hasNext() == false) break; end;
+            sb.append(delim);
+         end;
+      end;
+      sb.append(posfix);
+   End;
+
+   Private Macro joinArray(arr)
+      if(arr.size == 0)
+         return;
+      end;
+      var iter = Arrays.newIterator(arr);
+      joinIterable(iter);
+   End;
+
+   Private Macro joinSome(someIterable)
+      if(GenClassName(someIterable) == "TArray")
+         joinArray(someIterable);
+      elif(IsEqClass("Iterable", someIterable))
+         joinIterable(someIterable.newIterator());
+      else
+         return;
+      end;
+   End;
+
+   /**
+      Возвращает результирующую строку из элементов 'someIterable'.
+   */
+   Macro joinToString(someIterable) : String
+      joinSome(someIterable);
+      return sb.toString;
+   End;
+
+   /**
+      Выводит на экран результирующую строку из элементов 'someIterable'.
+   */
+   Macro joinToPrint(someIterable)
+      joinSome(someIterable);
+      sb.printLine();
+   End;
+End;
+
+/**
+   Класс строковых утилит, представлен инстансом [Strings].
+*/
+Private Class StringUtilClass()
+
+   /**
+      Возвращает последнюю позицию подстроки 'findStr' в строке 'srcStr' или 0, в случае отсутствия вхождений. Опционально можно задать параметр 'startPos' - позиция в строке с которой необходимо начинать поиск.
+   */
+   Macro IndexRev(srcStr : String, findStr : String, startPos:  Integer) : Integer
+      if((ValType(startPos) != V_INTEGER))
+         startPos = StrLen(srcStr);
+      end;
+      var findLen = StrLen(findStr);
+      if(findLen == 0) return 0; end;
+      for(var i, startPos - findLen + 1, 1, -1)
+         if(SubStr(srcStr, i, findLen) == findStr)
+            return i;
+         end;
+      end;
+      return 0;
+   End;
+
+   /**
+      Возвращает массив строк, после разделения исходной строки 'str' по 'delim'.
+   */
+   Macro Split(str : String, delim : String) : SArray
+      var res = SArray();
+      var dl  = StrLen(delim);
+      if (dl == 0)
+         StrSplit(str, res, 1);
+         return res;
+      end;
+      var stPos = 1, i = - 1;
+      var pos = Index(str, delim);
+      while (pos > 0)
+         i = i + 1;
+         res[i] = SubStr(str, stPos, pos - stPos);
+         stPos = pos + dl;
+         pos = Index(str, delim, stPos);
+      end;
+      i = i + 1;
+      res[i] = SubStr(str, stPos);
+      return res;
+   end;
+
+   /**
+      Возвращает равернутую строку 'str';
+   */
+   Macro reverse(str) : String
+      var r = "";
+      for (var i, StrLen(str), 1, -1)
+         r = r + SubStr(str, i, 1);
+      end;
+      return r;
+   End;
+
+   /**
+      Возвращает общий префикс строк 'str1' и 'str2'.
+   */
+   Macro commonPrefix(str1 : String, str2 : String) : String
+      var r = "";
+      for (var i, 1, min(StrLen(str1), StrLen(str2)), 1)
+         var s = SubStr(str1, i, 1);
+         if (s == SubStr(str2, i, 1))
+            r = r + s;
+         else
+            break;
+         end;
+      end;
+      return r;
+   End;
+
+   /**
+      Возвращает общий суффикс строк 'str1' и 'str2'.
+   */
+   Macro commonSuffix(str1 : String, str2 : String) : String
+      var r = "";
+      var l1 = StrLen(str1); var l2 = StrLen(str2);
+      for (var i, 0, min(l1,l2)-1, 1)
+         var s = SubStr(str1, l1-i, 1);
+         if (s == SubStr(str2, l2-i, 1))
+            r = s + r;
+         else
+            break;
+         end;
+      end;
+      return r;
+   End;
+
+   /**
+      Возвращает строку дополненную символами 'padChar' в начало исходной строки 'str' до размера 'minLength'.
+   */
+   Macro padStart(str : String, minLength : Integer, padChar : String) : String
+      var l = StrLen(str);
+      if (l > minLength)
+         return str;
+      end;
+      var r = str;
+      var s = SubStr(padChar, 1, 1);
+      for (var i, 1, minLength - l, 1)
+         r = s + r;
+      end;
+      return r;
+   End;
+
+   /**
+      Возвращает строку дополненную символами 'padChar' в конец исходной строки 'str' до размера 'minLength'.
+   */
+   Macro padEnd(str : String, minLength : Integer, padChar : String) : String
+      var l = StrLen(str);
+      if (l > minLength)
+         return str;
+      end;
+      var r = str;
+      var s = SubStr(padChar, 1, 1);
+      for (var i, 1, minLength - l, 1)
+         r = r + s;
+      end;
+      return r;
+   End;
+
+   /**
+      Возвращает строку  сконкатенированную 'count' раз исходной строки 'str'.
+   */
+   Macro repeat(str : String, count : Integer) : String
+      var r = "";
+      for (var i, 1, count, 1)
+         r = r + str;
+      end;
+      return r;
+   End;
+
+   /**
+      Возвращает `true` если 'str' равна `null` или пуста.
+   */
+   Macro isNullOrEmpty(str) : Bool
+      return ((ValType(str) == V_UNDEF) or (str == ""));
+   End;
+
+   /**
+      Возвращает `true` если 'str' равна `null` или не содержит значимых символов.
+   */
+   Macro isNullOrBlank(str) : Bool
+      return ((ValType(str) == V_UNDEF) or (trim(str) == ""));
+   End;
+
+   /**
+      Возвращает `true` если 'str' не равна `null` и не пуста.
+   */
+   Macro notNullOrEmpty(str) : Bool
+      return ((ValType(str) != V_UNDEF) and (str != ""));
+   End;
+End;
+
+

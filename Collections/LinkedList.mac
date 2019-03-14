@@ -236,8 +236,8 @@ Private Const SORT_FRAGMENT_SIZE : Integer = 10000;  // Размер фрагмента для сор
 */
 Class (ListInterface) LinkedList()
    size = 0;
-   comparator = @AnyTypeCompare;
-   equalsfunc = @AnyTypeEquals;
+   comparator = @VariantCompare;
+   equalsfunc = @VariantEquals;
    var first: Node;
    var last : Node;
 

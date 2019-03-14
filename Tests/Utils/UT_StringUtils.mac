@@ -1,0 +1,75 @@
+import "..\\mac\\extra\\RUnit\\RUnit.Mac";
+import "..\\mac\\extra\\Utils\\StringUtils.Mac";
+
+
+Class (TestCase) TestStringUtils()
+   var su = StringUtils;
+
+   Macro test_indexrev()
+      var str = "this is string";
+      var r = su.indexRev(str, "is");
+      AssertEquals(6, r);
+      r = su.indexRev(str, "is", 5);
+      AssertEquals(3, r);
+      r = su.indexRev(str, "fis");
+      AssertEquals(0, r);
+   End;
+
+   Macro test_Split()
+      var str = "this is string";
+      var arr = su.split(str, " ");
+      assertEquals("this", arr[0]);
+      assertEquals("is",arr[1]);
+      assertEquals("string",arr[2]);
+      str = "some::new::string:comes::";
+      arr = su.split(str, "::");
+      assertArrays(arr_("some", "new", "string:comes", ""), arr);
+   End;
+
+   Macro test_commonPrefix()
+      var s1, s2, r;
+      s1 = "good"; s2 = "goal";
+      r = su.commonPrefix(s1, s2);
+      AssertEquals("go", r);
+      s1 = "good"; s2 = "go";
+      r = su.commonPrefix(s1, s2);
+      AssertEquals("go", r);
+      s1 = "bad"; s2 = "new";
+      r = su.commonPrefix(s1, s2);
+      AssertEquals("", r);
+   End;
+
+   Macro test_CommonSuffix()
+      var s1, s2, r;
+      r = su.commonSuffix(s1, s2);
+      AssertEquals("", r);
+      s1 = "diablo"; s2 = "huyablo";
+      r = su.commonSuffix(s1, s2);
+      AssertEquals("ablo", r);
+   End;
+
+   Macro test_reverse()
+      var s = "god";
+      var r = su.reverse(s);
+      AssertEquals("dog", r);
+   End;
+
+   Macro test_padStart()
+      var s = "word";
+      var r = su.padStart(s, 6, ".");
+      AssertEquals("..word", r);
+      r = su.padStart(s, 3, ".");
+      AssertEquals("word", r);
+   End;
+
+   Macro test_padEnd()
+      var s = "word";
+      var r = su.padEnd(s, 6, ".");
+      AssertEquals("word..", r);
+      r = su.padEnd(s, 3, ">");
+      AssertEquals("word", r);
+   End;
+
+End;
+
+TestStringUtils();

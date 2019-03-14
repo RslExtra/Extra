@@ -8,7 +8,7 @@
 
 import "..\\Mac\\Extra\\Utils\\Common.mac";      // ifNull
 import "..\\Mac\\Extra\\OOP\\OOP.mac";           // Any
-import "..\\Mac\\Extra\\Utils\\StringUtil.mac";  // JoinToString
+import "..\\Mac\\Extra\\Utils\\StringUtils.mac";  // StringJoiner
 import "..\\Mac\\Extra\\Utils\\SArray.mac";
 import "..\\Mac\\Extra\\Utils\\CompareFunc.mac";
 import "..\\Mac\\Extra\\Utils\\SortingFunc.mac";
@@ -145,6 +145,8 @@ Class NativeIterator(_itr : IteratorInterface)
    End;
 End;
 
+private var StrJoiner   = StringJoiner(", ", "[", "]");
+private var StrJoinerML = StringJoiner("\n","[\n", "\n]");
 /**
    Базовый класс коллекций. Содержит описание интерфейса коллекций.
 */
@@ -342,7 +344,7 @@ Class Iterable()
       var delim   = ifNull(_delim, ", ");
       var prefix  = ifNull(_prefix, "[");
       var postfix = ifNull(_postfix,"]");
-      return joinToString(this, delim, prefix, postfix);
+      return StringJoiner(delim, prefix, postfix).joinToString(this);
    End;
 
    Macro toStr() : String
@@ -351,12 +353,12 @@ Class Iterable()
 
    /** Выводит коллекцию на экран без переноса строк*/
    Macro toScreen()
-      joinToPrint(this,", ", "[", "]");
+      StrJoiner.joinToPrint(this);
    End;
 
    /** Выводит коллекцию на экран с переносом строк*/
    Macro toScreen2()
-      joinToPrint(this, "\n","[\n", "\n]");
+      StrJoinerML.joinToPrint(this);
    End;
 
    Private Macro baseEquals(otherIterable) : Bool
@@ -556,7 +558,7 @@ Class (Iterable) ListInterface()
    Macro hash() : Integer
       var h = 1;
       for (var el, this)
-         h = h*17 + CalcHashCode(el);
+         h = h*17 + VariantHashCode(el);
       end;
       return h;
    End;

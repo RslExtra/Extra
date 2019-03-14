@@ -116,8 +116,8 @@ Private CONST INIT_CAPACITY = 128;
 */
 Class (ListInterface) ArrayList()
    size = 0;
-   comparator  = @AnyTypeCompare;
-   equalsfunc  = @AnyTypeEquals;
+   comparator  = @VariantCompare;
+   equalsfunc  = @VariantEquals;
    var items = TArray();
    var capacity = INIT_CAPACITY;
 

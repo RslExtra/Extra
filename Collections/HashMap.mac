@@ -169,10 +169,10 @@ End;
 */
 Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    size                 = 0;
-   keyEqualsFunc        = @CF_EqualsImpl;
-   keyComparator        = @CF_CompareToImpl;
-   valueEqualsFunc      = @CF_EqualsImpl;
-   valueComparator      = @CF_CompareToImpl;
+   keyEqualsFunc        = @VariantEquals;
+   keyComparator        = @VariantCompare;
+   valueEqualsFunc      = @VariantEquals;
+   valueComparator      = @VariantCompare;
 
    var table              : TArray  = TArray();
    private var loadfactor : Double  = DEFAULT_LOAD_FACTOR;
@@ -180,7 +180,7 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    private var curdepth   : Integer = 1;
    private var treshold   : Integer = 0;
 
-   private var keyHashFunc          = @HashImpl;
+   private var keyHashFunc          = @VariantHashCode;
 
 
    /**
@@ -193,15 +193,15 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    */
    Macro setKeyType(type : Integer)
       if (type == V_STRING)
-         keyHashFunc = @CalcStringHash;
+         keyHashFunc = @StringHashCode;
          keyEqualsFunc = @CF_EqualsPrimitive;
          keyComparator = @CF_ComparePrimitive;
       elif (type == V_INTEGER)
-         keyHashFunc = @CalcIntHash;
+         keyHashFunc = @IntHashCode;
          keyEqualsFunc = @CF_EqualsPrimitive;
          keyComparator = @CF_ComparePrimitive;
       elif (type == V_GENOBJ)
-         keyHashFunc  = @HashImpl;
+         keyHashFunc  = @ObjectHashCode;
          keyEqualsFunc = @CF_EqualsImpl;
          keyComparator = @CF_CompareToImpl;
       else

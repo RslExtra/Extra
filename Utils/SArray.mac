@@ -740,5 +740,3 @@ Class (TArray) SArray()
       return SAIterator(this);
    End;
 End;
-
-
