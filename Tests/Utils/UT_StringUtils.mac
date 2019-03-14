@@ -70,6 +70,22 @@ Class (TestCase) TestStringUtils()
       AssertEquals("word", r);
    End;
 
+   Macro test_padStartEnd()
+      var s = "word";
+      var r = su.padStartEnd(s, 9, ".");
+      AssertEquals("..word...", r);
+      r = su.padStartEnd(s, 3, ".");
+      AssertEquals("word", r);
+      r = su.padStartEnd(s, 8, ".");
+      AssertEquals("..word..", r);
+   End;
+
+   Macro test_fillBetween()
+      var s1 = "word";
+      var s2 = "shit";
+      var r = su.fillBetween(s1, s2, 10, "..");
+      AssertEquals("word..shit", r);
+   End;
 End;
 
 TestStringUtils();

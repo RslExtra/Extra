@@ -660,31 +660,11 @@ Class (ListInterface) LinkedList()
       return this;
    End;
 
-   Macro addItems()
+   Macro addItems() : Linkedlist
       var i, p;
       for (i, 1, Parmcount-1, 1)
          GetParm(i, p);
          linkLast(p);
-      end;
-   End;
-
-   Macro addArray(arr : TArray, ind : Integer)
-      if (ValType(arr) == V_UNDEF) return this; end;
-      if (arr.size == 0) return this; end;
-      if((ValType(ind) != V_INTEGER) or (ind == size))
-         for (var el, arr)
-            addLast(el);
-         end;
-      else
-         if (not(checkPosInd(ind)))
-            return Throw(IndexOutOfBoundsException);
-         end;
-         var nd = nodeByInd(ind);
-         nd = linkBefore(arr[0], nd);
-         var i;
-         for (i, 1, arr.size-1, 1)
-            nd = linkAfter(arr[i], nd)
-         end;
       end;
       return this;
    End;

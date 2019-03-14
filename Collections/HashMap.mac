@@ -78,9 +78,6 @@ Private Class (IteratorInterface) HashIterator(_map)
       return lastReturned;
    End;
 
-   Macro getNextIndex() : Integer
-
-   End;
 End;
 
 /**
@@ -88,6 +85,11 @@ End;
 */
 Private Class (HashIterator) ValueIterator(_map)
    initHashIterator(_map);
+
+   Macro getLastReturned()
+      return LastReturned.value;
+   End;
+
    Macro next() : Variant
       return nextEntry().value;
    End;
@@ -99,6 +101,11 @@ End;
 */
 Private Class (HashIterator) KeyIterator(_map)
    initHashIterator(_map);
+
+   Macro getLastReturned()
+      return LastReturned.key;
+   End;
+
    Macro next() : Variant
       return nextEntry().key;
    End;
@@ -165,7 +172,7 @@ End;
    Необходимо указать эти функции или (предпочтительней) реализовать в классе следующие методы:
    equals(obj) : Integer   - сравнение с объектами того же вида
    calcHash() : Integer    - вычисление хэша объекта
-   При этом ОБЯЗАТЕЛЬНО выполнение условия: Если equals(obj) == true(объекты считаются равными) o1.calcHash == o2.calcHash (у равных объектов равны Хэши).
+   При этом ОБЯЗАТЕЛЬНО выполнение условия: Если equals(obj) == true(объекты считаются равными) o1.hash() == o2.hash() (у равных объектов равны Хэши).
 */
 Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    size                 = 0;
@@ -420,17 +427,14 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
       return retVal;
    End;
 
-   Macro append(_pair : Pair) : Bool
+   Macro append(_pair)
       putVal(_pair.key, _pair.value);
-      return true;
-      OnError
-         return false;
    End;
 
    /**
       Помещает все элементы из 'map' в текущую хэштаблицу.ы
    */
-   Macro putMapEntries(map : HashMap)
+   Macro putMapEntries(map) : HashMap
       var iter = map.newEntryIterator();
       var curE;
       while (iter.hasnext())
@@ -604,14 +608,14 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    End;
 
    /**
-      Возвращает [ImmutableList] пар.
+      Возвращает массив [SArray] пар.
    */
    Macro entrySet() : SArray
       return toArray();
    End;
 
    /**
-      Возвращает массив 'SArray' ключей.
+      Возвращает массив [SArray] ключей.
    */
    Macro keys() : SArray
       var resArr = SArray();

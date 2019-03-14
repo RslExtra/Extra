@@ -17,7 +17,7 @@
 */
 
 import rcw;
-
+import "..\\Mac\\Extra\\Utils\\StringUtils.mac";
 /**
    Объект класса [RUnitProperties] для настройки поведения тестов.
 */
@@ -80,6 +80,8 @@ Private Class RUnitProperties()
 
    /** Установка префикса для тестовых методов. По умолчанию 'TEST_'.*/
    var METHOD_PREFIX : String = "TEST_";             // Префикс тестовых методов
+
+   var LINE_WIDTH : Integer = 80;
 End;
 
 /**
@@ -141,6 +143,10 @@ Private Class FunResult(_funcname)
 
    var assertResults = TArray();
 
+   Macro isPassed()
+      return (passed and (not(fail_flag)));
+   End;
+
    Macro addAssertResult(assRes : AssertResult)
       assertResults[assertResults.size] = assRes;
       if (assRes.passed)
@@ -155,7 +161,7 @@ Private Class FunResult(_funcname)
       if (not(RUnitTest.SHOW_SUCCEED_FUN) and passed) return; end;
 
       var st = "[OK]";
-      if (not(passed))
+      if (not(isPassed))
          st = "[FAIL]";
       end;
       var stats = "   Asserts run:" + (pass_asserts + fail_asserts) + ", failed:" + fail_asserts;
@@ -166,13 +172,16 @@ Private Class FunResult(_funcname)
       for(var assRes, assertResults)
          assRes.toScreen();
       end;
+      if (fail_flag)
+         println("   Test was failed because : " + fail_msg);
+      end;
       println("");
    End;
 
    Macro toLog()
       if (RUnitTest.LOG_SUCCEED_FUN and passed) return; end;
       var stats = "   Asserts run:" + (pass_asserts + fail_asserts) + ", failed:" + fail_asserts;
-      if (not(passed))
+      if (not(isPassed))
          toLogE(String(funcname:20:0) + "[FAIL]  " + stats);
       else
          toLogI(String(funcname:20:0) + "[OK]    " + stats);
@@ -531,6 +540,7 @@ Private Class UnitFun(_testCase, _funcname : String)
    Macro fail(msg : String)
       result.fail_flag = true;
       result.fail_msg  = msg;
+      result.passed = false;
    End;
 End;
 

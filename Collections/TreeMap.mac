@@ -109,31 +109,10 @@ Class (MapInterface) TreeMap(_keyComparator)
    var root = null;
    //var comparator = ifNull(_comparator, @CF_CompareByKeyPrimitive);\
 
-   keyEqualsFunc        = @CF_EqualsImpl;
-   keyComparator        = @CF_CompareToImpl;
-   valueEqualsFunc      = @CF_EqualsImpl;
-   valueComparator      = @CF_CompareToImpl;
-
-   Macro setComparator(_comparator) : TreeMap
-      // comparator = _comparator;
-      return this;
-   End;
-
-   /**
-      Для текущей коллекции задаёт компаратор для ключей `_keyComparator`.
-   */
-   Macro setKeyComparator(_keyComparator)
-      keyComparator = _keyComparator;
-      return this;
-   End;
-
-   /**
-      Для текущей коллекции задаёт компаратор для значений `_valueComparator`.
-   */
-   Macro setValueComparator(_valueComparator)
-      valueComparator = _valueComparator;
-      return this;
-   End;
+   keyEqualsFunc        = @VariantEquals;
+   keyComparator        = @VariantCompare;
+   valueEqualsFunc      = @VariantEquals;
+   valueComparator      = @VariantCompare;
 
 
    /**
@@ -327,6 +306,16 @@ Class (MapInterface) TreeMap(_keyComparator)
       return null;
    End;
 
+   Macro putMapEntries(map) : TreeMap
+      var iter = map.newEntryIterator();
+      var curE;
+      while (iter.hasnext())
+         curE = iter.next();
+         put(curE.key, curE.value);
+      end;
+      return this;
+   End;
+
    Macro getEntry(key)
       var n = root;
       while (n != null)
@@ -388,13 +377,13 @@ Class (MapInterface) TreeMap(_keyComparator)
       end;
    End;
 
-   Macro set(key, value)
+   Macro replace(key, value) : Bool
       var nd = getEntry(key);
       if (nd != null)
-         var oldValue = nd.value;
          nd.value = value;
-         return oldValue;
+         return true;
       end;
+      return false;
    End;
 
    Macro containsKey(key) : Bool
@@ -541,6 +530,10 @@ Class (MapInterface) TreeMap(_keyComparator)
       root = null;
    End;
 
+   Macro append(p)
+      put(p.key, p.value);
+   End;
+
 
    Macro newIterator()
       return TreeMapEntryIterator(this);
@@ -601,10 +594,6 @@ Class (MapInterface) TreeMap(_keyComparator)
          end;
       end;
       return resArr;
-   End;
-
-   Macro keySet()
-
    End;
 
 End;

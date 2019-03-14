@@ -209,6 +209,7 @@ Private Class StringUtilClass()
 
    /**
       Возвращает строку дополненную символами 'padChar' в начало исходной строки 'str' до размера 'minLength'.
+      Выровняет строку справа.
    */
    Macro padStart(str : String, minLength : Integer, padChar : String) : String
       var l = StrLen(str);
@@ -225,6 +226,7 @@ Private Class StringUtilClass()
 
    /**
       Возвращает строку дополненную символами 'padChar' в конец исходной строки 'str' до размера 'minLength'.
+      Выровняет строку слева.
    */
    Macro padEnd(str : String, minLength : Integer, padChar : String) : String
       var l = StrLen(str);
@@ -239,6 +241,39 @@ Private Class StringUtilClass()
       return r;
    End;
 
+   /**
+      Возвращает строку дополненную символами 'padChar' равномерно в конец и начало исходной строки 'str' до размера 'minLength'.
+      Выровняет строку по центру.
+   */
+   Macro padStartEnd(str : String, minLength : Integer, padChar : String) : String
+      var l = StrLen(str);
+      if (l > minLength)
+         return str;
+      end;
+      var sc = (minLength - l) / 2;
+      var r = padStart(str, l + sc, padChar);
+      r = padEnd(r, minLength, padChar);
+      return r;
+   End;
+
+   /**
+      Возвращает строку дополненную символами 'padChar' между строк 'str1' и 'str2' до размера 'minLength'.
+      Выровняет строку 'str1' слева, 'str2' справа, а промежуток заполнит 'padChar'.
+   */
+   Macro fillBetween(str1 : String, str2 : String, minLength : Integer, padChar : String) : String
+      var l1 = StrLen(str1);
+      var l2 = StrLen(str2);
+      if ((l1+l2) > minLength)
+         return (str1 + str2);
+      end;
+      var r = str1;
+      var s = SubStr(padChar, 1, 1);
+      for (var i, 1, minLength - (l1 + l2), 1)
+         r = r + s;
+      end;
+      r = r + str2;
+      return r;
+   End;
    /**
       Возвращает строку  сконкатенированную 'count' раз исходной строки 'str'.
    */

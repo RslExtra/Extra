@@ -32,6 +32,8 @@ End;
 
 Class (MapInterface) ArrayMap()
    size = 0;
+   valueComparator = @VariantCompare;
+   valueEqualsFunc = @VariantEquals;
    var keysArr = SArray();
    var valuesArr = SArray();
 
@@ -83,6 +85,15 @@ Class (MapInterface) ArrayMap()
       end;
    End;
 
+   Macro replace(key, value) : Bool
+      var i = binarySearchMap(keysArr, key);
+      if (i >= 0)
+         valuesArr[i] = value;
+         return true;
+      end;
+      return false;
+   End;
+
    Macro remove(key) : Variant
       var i = binarySearchMap(keysArr, key);
       if (i < 0) return; end;
@@ -97,11 +108,8 @@ Class (MapInterface) ArrayMap()
       return (i >= 0);
    End;
 
-   Macro containsValue(val, vEqualsFun)
-      if (ValType(vEqualsFun) == V_UNDEF)
-         vEqualsFun = valueEqualsFunc;
-      end;
-      return valuesArr.contains(val, vEqualsFun);
+   Macro containsValue(val)
+      return valuesArr.contains(val, valueEqualsFunc);
    End;
 
    Macro clear()
@@ -111,13 +119,22 @@ Class (MapInterface) ArrayMap()
    end;
 
    Macro append(p : Pair)
-      return put(p.key, p.value);
+      put(p.key, p.value);
    End;
 
-   Macro putMapEntries(map : MapInterface)
+   Macro putMapEntries(map) : ArrayMap
       for (var p, map)
          put(p.key, p.value);
       end;
+      return this;
+   End;
+
+   Macro keys() : SArray
+      return keysArr;
+   End;
+
+   Macro values() : SArray
+      return valuesArr;
    End;
 
    Macro newIterator()
@@ -138,10 +155,14 @@ Class (MapInterface) ArrayMap()
 
 End;
 
-Private Class ArrayMapIterator(_arrayMap : @ArrayMap)
+Private Class (IteratorInterface) ArrayMapIterator(_arrayMap : ArrayMap)
    var map = _arrayMap;
    var lastReturned = null;
    var nextIndex : Integer = 0;
+
+   Macro getLastReturned()
+      return lastReturned;
+   End;
 
    Macro hasNext()
       return (nextIndex != map.size);
@@ -164,8 +185,8 @@ Private Class ArrayMapIterator(_arrayMap : @ArrayMap)
    End;
 End;
 
-Private Macro ArrayMapEntryIterator(map : @ArrayMap)
-   return ArrayMapIterator(@map);
+Private Macro ArrayMapEntryIterator(map : ArrayMap)
+   return ArrayMapIterator(map);
 End;
 
 Private Macro ArrayMapKeyIterator(map)

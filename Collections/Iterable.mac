@@ -560,7 +560,7 @@ Class (Iterable) ListInterface()
       for (var el, this)
          h = h*17 + VariantHashCode(el);
       end;
-      return h;
+      return abs(h);
    End;
 End;
 

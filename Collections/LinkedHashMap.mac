@@ -125,6 +125,7 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
    End;
 
    Private Macro afterNodeRemoval(entry)
+      if (entry == null) return; end;
       var b = entry.before;
       var a = entry.after;
       entry.before = null;
@@ -234,14 +235,9 @@ End;
    В большинстве случаев предпочтительней (по производительности) использовать [Collections.TreeMap]
 
 */
-Class (LinkedHashMap) SortedLinkedHashMap(_capacity : Integer, _loadFactor : Double, _compareValueRef)
+Class (LinkedHashMap) SortedLinkedHashMap(_capacity : Integer, _loadFactor : Double)
    initLinkedHashMap(_capacity, _loadFactor);
-   var EIter = newEntryIterator();
-   //compareValueRef = @CF_CompareObjFromInner;
-
-   if (ValType(_compareValueRef) != V_UNDEF)
-      valueComparator  = _compareValueRef;
-   end;
+   //var EIter = newEntryIterator();
 
    Macro setPrimitive()
       valueComparator = @CF_ComparePrimitive;

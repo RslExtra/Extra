@@ -21,11 +21,6 @@ Private Class (Any) Account(_acc : String, _summ : Integer)
          end;
       end;
    End;
-/*
-   Macro toString() : String
-      return acc + " - " + summ;
-   End;
-*/
 End;
 
 Macro otherCompFun(a1,a2)
