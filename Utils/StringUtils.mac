@@ -1,18 +1,17 @@
 /**
    @package Utils
-
+   Полезные утилиты для работы со строковыми переменными.
 */
 
 import "..\\mac\\extra\\utils\\SArray.mac";
-import "..\\mac\\extra\\utils\\ArrayUtil.mac";
 
 /**
-   Singleton instance класса [StringUtilClass].
+   Singleton instance класса [StringUtilsClass].
 */
-var StringUtils = GenObject("StringUtilClass");
+var StringUtils = GenObject("StringUtilsClass");
 
 Private Macro ifNull(val : Variant, replace : Variant) : Variant
-   if(Valtype(val) == V_UNDEF)
+   if (Valtype(val) == V_UNDEF)
       return replace;
    end;
    return val;
@@ -27,7 +26,7 @@ Class StringBuilder()
       Добавляет к результирующему набору строку 'str'  и возвращает текущий объект.
    */
    Macro append(str : String)
-      if(ValType(str) == V_UNDEF)
+      if (ValType(str) == V_UNDEF)
          return this;
       end;
       parts[parts.size] = str;
@@ -65,18 +64,18 @@ End;
    Если любой из параметров не задан или равен `null` - считается равным пустой строке.
 */
 Class StringJoiner(_delim : String, _prefix : String, _posfix : String)
-   var sb = StringBuilder();
-   var delim   = ifNull(_delim, "");
-   var prefix  = ifNull(_prefix, "");
-   var posfix  = ifNull(_posfix, "");
+   private var sb = StringBuilder();
+   private var delim   = ifNull(_delim, "");
+   private var prefix  = ifNull(_prefix, "");
+   private var posfix  = ifNull(_posfix, "");
 
    Private Macro joinIterable(iter)
       sb.clear();
       sb.append(prefix);
-      if(iter.hasNext)
-         while(true)
+      if (iter.hasNext())
+         while (true)
             sb.append(iter.next());
-            if(iter.hasNext() == false) break; end;
+            if (iter.hasNext() == false) break; end;
             sb.append(delim);
          end;
       end;
@@ -84,17 +83,22 @@ Class StringJoiner(_delim : String, _prefix : String, _posfix : String)
    End;
 
    Private Macro joinArray(arr)
-      if(arr.size == 0)
-         return;
+      sb.clear();
+      sb.append(prefix);
+      var sz = arr.size;
+      for (var i, 0, sz - 1, 1)
+         sb.append(arr[i]);
+         if (i != sz - 1)
+            sb.append(delim);
+         end;
       end;
-      var iter = Arrays.newIterator(arr);
-      joinIterable(iter);
+      sb.append(posfix);
    End;
 
    Private Macro joinSome(someIterable)
-      if(GenClassName(someIterable) == "TArray")
+      if (GenClassName(someIterable) == "TArray")
          joinArray(someIterable);
-      elif(IsEqClass("Iterable", someIterable))
+      elif (IsEqClass("Iterable", someIterable))
          joinIterable(someIterable.newIterator());
       else
          return;
@@ -121,19 +125,19 @@ End;
 /**
    Класс строковых утилит, представлен инстансом [Strings].
 */
-Private Class StringUtilClass()
+Private Class StringUtilsClass()
 
    /**
       Возвращает последнюю позицию подстроки 'findStr' в строке 'srcStr' или 0, в случае отсутствия вхождений. Опционально можно задать параметр 'startPos' - позиция в строке с которой необходимо начинать поиск.
    */
    Macro IndexRev(srcStr : String, findStr : String, startPos:  Integer) : Integer
-      if((ValType(startPos) != V_INTEGER))
+      if ((ValType(startPos) != V_INTEGER))
          startPos = StrLen(srcStr);
       end;
       var findLen = StrLen(findStr);
-      if(findLen == 0) return 0; end;
+      if (findLen == 0) return 0; end;
       for(var i, startPos - findLen + 1, 1, -1)
-         if(SubStr(srcStr, i, findLen) == findStr)
+         if (SubStr(srcStr, i, findLen) == findStr)
             return i;
          end;
       end;

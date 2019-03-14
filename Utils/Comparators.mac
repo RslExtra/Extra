@@ -26,11 +26,14 @@ Macro CF_CompareNullable(el1 : Variant, el2 : Variant) : Integer
    elif(n2)
       return 1;
    else
-      return CF_ComparePrimitive(el1,el2);
+      return CF_ComparePrimitive(el1, el2);
    end;
 End;
 
-
+/**
+   Сравнение двух экземпляров пользовательского класса, реализующих метод `compareTo(otherObj) : Integer`.
+   Способен принимать `null` в качестве аргументов, однако результат сравнения с null должен быть определен в `compareTo`
+*/
 Macro CF_CompareToImpl(o1, o2)
    if (ValType(o1) != V_UNDEF)
       return o1.compareTo(o2);
@@ -41,20 +44,7 @@ Macro CF_CompareToImpl(o1, o2)
    end;
 End;
 
-/**
-   Сравнение двух экземпляров пользовательского класса, реализующих метод `compareTo(otherObj) : Integer`.
-   Способен принимать `null` в качестве аргументов, однако результат сравнения с null должен быть определен в `compareTo` */
-Macro CF_CompareObjFromInner(o1, o2)
-   if (ValType(o1) != V_UNDEF)
-      return o1.compareTo(o2);
-   elif (ValType(o2) != V_UNDEF)
-      return -o2.compareTo(o1);
-   else
-      return 0;
-   end;
-End;
-
-// Функции для сравнения объектов типа Pair
+/*
 Macro CF_comparePairsByValueInner(p1, p2)
    return CF_compareObjFromInner(p1.value, p2.value);
 End;
@@ -70,8 +60,9 @@ End;
 Macro CF_CompareByValuePrimitive(e1, e2) : Integer
    return execMacro2(@CF_ComparePrimitive, e1.value, e2.value);
 End;
-
+*/
 /** Сравнение двух объектов по их свойствам в натуральном виде по порядку. ???*/
+/*
 Macro CF_CompareByProps(obj1 : Object, obj2 : Object) : Integer
    var i = 2;
    var prop;
@@ -85,7 +76,7 @@ Macro CF_CompareByProps(obj1 : Object, obj2 : Object) : Integer
    end;
    return 0;
 End;
-
+*/
 Private Macro isEqualProp(p1, p2) : Bool
    var t1 = ValType(p1);
    var t2 = ValType(p2);

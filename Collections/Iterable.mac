@@ -10,7 +10,7 @@ import "..\\Mac\\Extra\\Utils\\Common.mac";      // ifNull
 import "..\\Mac\\Extra\\OOP\\OOP.mac";           // Any
 import "..\\Mac\\Extra\\Utils\\StringUtils.mac";  // StringJoiner
 import "..\\Mac\\Extra\\Utils\\SArray.mac";
-import "..\\Mac\\Extra\\Utils\\CompareFunc.mac";
+import "..\\Mac\\Extra\\Utils\\Comparators.mac";
 import "..\\Mac\\Extra\\Utils\\SortingFunc.mac";
 import "..\\Mac\\Extra\\Utils\\Exceptions.mac";
 import "..\\Mac\\Extra\\Lambda\\lambda.mac";
@@ -369,10 +369,6 @@ Class Iterable()
       return abs(h);
    End;
 
-   Private Macro baseEquals(otherIterable) : Bool
-      return true;
-   End;
-
    Macro equals(otherIterable) : Bool
       // Inherited implementation
    End;
@@ -402,7 +398,17 @@ Class (Iterable) ListInterface()
    /**
       Устанавливает необходимые для работы с примитивными типами 'comparator' и 'equalsFunc' и возвращает текущий экземпляр списка.
    */
-   Macro setPrimitive() : ListInterface
+   Macro setType(type) : ListInterface
+      if ((type > V_UNDEF) and (type < V_TIME))
+         comparator = @CF_ComparePrimitive;
+         equalsfunc = @CF_EqualsPrimitive;
+      elif (type == V_GENOBJ)
+         comparator = @CF_CompareToImpl;
+         equalsfunc = @CF_EqualsImpl;
+      else
+         return Throw(IllegalArgumentException("Данный тип не предусмотрен реализацией." + type));
+      end;
+      return this;
    End;
 
    /**

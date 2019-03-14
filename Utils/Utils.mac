@@ -6,8 +6,8 @@
 */
 
 import "../mac/Extra/utils/SArray.mac";
-import "../mac/Extra/utils/ArrayUtil.mac";
+import "../mac/Extra/utils/ArrayUtils.mac";
 import "../mac/Extra/utils/StringTemplate.mac";
-import "../mac/Extra/utils/StringUtil.mac";
+import "../mac/Extra/utils/StringUtils.mac";
 import "../mac/Extra/utils/SortingFunc.mac";
 // import "../mac/Extra/utils/TimeUtil.mac";

@@ -1,7 +1,7 @@
 import "..\\mac\\extra\\RUnit\\RUnit.Mac";
 import "..\\mac\\extra\\Collections\\Collections.Mac";
 
-RUnitTest.SHOW_SUCCEED_FUN = true;
+RUnitTest.SHOW_SUCCEED_FUN = false;
 //RUnitTest.SHOW_SUCCEED_ASSERT = true;
 
 Private Class (Any) Account(_acc : String, _summ : Integer)
@@ -41,7 +41,6 @@ Class (TestCase) TestMap()
    Macro test_put_get()
       map.put("key1", 1);
       assertEquals(map.size, 1);
-
       assertTrue(map.containsValue(1));
       assertEquals(map.get("key1"), 1);
       assertNull(map.get("SomeKey"));
@@ -101,7 +100,7 @@ Class (TestCase) TestMap()
       assertEquals(10, map.get("k1"));
    End;
 
-   Macro test_toArrays()
+   Macro test_toArray()
       var i;
       var arr;
       for(i, 1, 1000)
@@ -109,13 +108,31 @@ Class (TestCase) TestMap()
       end;
       arr = map.keys();
       assertEquals(arr.size, 1000);
+       for (i, 0, 999)
+         if (map.containsKey(arr[i]) == false)
+            fail("Keys doesn't contains key " + arr[i]);
+         end;
+      end;
       arr = map.values();
       assertEquals(arr.size, 1000);
+      for (i, 0, 999)
+         if (map.containsValue(arr[i]) == false)
+            fail("Values doesn't contains value " + arr[i]);
+         end;
+      end;
+
+      arr = map.toArray();
+      assertEquals(arr.size, 1000);
+      for (i, 0, 999)
+         var v = map.get(arr[i].key);
+         if (v != arr[i].value)
+            fail("Pairs doesn't contains pair " + arr[i]);
+         end;
+      end;
    End;
 
    Macro test_remove()
-      var i;
-      for(i, 1, 1000)
+      for(var i, 1, 1000)
          map.put("key" + i, "val" + i);
       end;
 
@@ -142,6 +159,35 @@ Class (TestCase) TestMap()
       assertEquals(map.size, 0);
       assertTrue(map.isEmpty);
    End;
+
+   Macro test_Copy()
+      for(var i, 1, 1000)
+         map.put("key" + i, "val" + i);
+      end;
+      var cp = map.copy();
+      for (var el, cp)
+         var v = map.get(el.key);
+         if ((ValType(v) == V_UNDEF) or (v != el.value))
+            fail("On copy map doesn't contains element");
+         end;
+      end;
+      assertTrue(map.equals(cp));
+   End;
+
+   Macro test_iterator()
+      map.put("v1", 1);
+      map.put("v2", 2);
+      map.put("v3", 3);
+      var itr = map.newIterator();
+      AssertTrue(IsEqClass("IteratorInterface", itr));
+      AssertTrue(itr.hasnext);
+      AssertTrue(map.containsKey(itr.next().key));
+      AssertTrue(itr.hasnext);
+      AssertTrue(map.containsKey(itr.next().key));
+      AssertTrue(itr.hasnext);
+      AssertTrue(map.containsKey(itr.next().key));
+      AssertFalse(itr.hasNext);
+   End;
 End;
 
 
@@ -167,25 +213,6 @@ Class (TestMap) TestLinkedHashMap()
    End;
 End;
 
-Class (TestMap) TestSortedLinkedHashMap()
-
-   Macro beforeTest()
-      map = SortedLinkedHashMap();
-   end;
-
-   Macro test_order()
-      map.put(3, 3);
-      map.put(0, 0);
-      map.put(2, 2);
-      map.put(1, 1);
-      assertArrays(arr_(0, 1, 2, 3), map.keys());
-      assertArrays(arr_(0, 1, 2, 3), map.values());
-      map.put(2, 20);
-      assertArrays(arr_(0, 1, 2, 3), map.keys());
-      assertArrays(arr_(0, 1, 20, 3), map.values());
-   End;
-End;
-
 Class (TestMap) TestTreeMap()
    Macro beforeTest()
       map = TreeMap();
@@ -201,6 +228,5 @@ End;
 
 TestHashMap;
 TestLinkedHashMap;
-TestSortedLinkdeHashMap;
 TestTreeMap;
 TestArrayMap;

@@ -43,9 +43,9 @@ Class (MapInterface) ArrayMap()
       elif (type == V_INTEGER)
          ;
       elif (type == V_GENOBJ)
-         RunError("Объектный тип ключей не допустим.");
+         return Throw(IllegalArgumentException("Объектный тип ключей не допустим."));
       else
-         RunError("Данный тип ключей не предусмотрен реализацией." + type);
+         return Throw(IllegalArgumentException("Данный тип ключей не предусмотрен реализацией." + type));
       end;
       return this;
    End;
@@ -129,6 +129,14 @@ Class (MapInterface) ArrayMap()
       return this;
    End;
 
+   Macro toArray() : SArray
+      var res = SArray;
+      for (var i, 0, size - 1, 1)
+         res[i] = Pair(keysArr[i], valuesArr[i]);
+      end;
+      return res;
+   End;
+
    Macro keys() : SArray
       return keysArr;
    End;
@@ -153,6 +161,23 @@ Class (MapInterface) ArrayMap()
       return ExecMacro2("ArrayMapValueIterator", this);
    End;
 
+   Macro newInstance()
+      var ni = ArrayMap();
+      return ni;
+   End;
+
+   Macro equals(map : ArrayMap) : Bool
+      if ((ValType(map) == V_UNDEF) or (size != map.size) or (IsEqClass("ArrayMap", map) == false))
+         return false;
+      end;
+      for (var i, 0, size-1, 1)
+         if ((ExecMacro2(keyEqualsFunc, keysArr[i], map.keysArr[i]) == false) or
+             (ExecMacro2(valueEqualsFunc, valuesArr[i], map.valuesArr[i])== false))
+            return false;
+         end;
+      end;
+      return true;
+   End;
 End;
 
 Private Class (IteratorInterface) ArrayMapIterator(_arrayMap : ArrayMap)

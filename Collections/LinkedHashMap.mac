@@ -1,6 +1,6 @@
 /**
    @package Collections
-   Файл включает в себя реализацию классов [LinkedHashMap] и [SortedLinkedHashMap].
+   Файл включает в себя реализацию классов [LinkedHashMap].
 
 */
 
@@ -108,12 +108,11 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
    initHashMap(_InitialCapacity, _LoadFactor);
    var first;
    var last;
-   //var iter = newEntryIterator();
 
    Private Macro linkNodeLast(ent)
       var l = last;
       last = ent;
-      if (l==null)
+      if (l == null)
          first = ent;
       else
          ent.before = l;
@@ -151,12 +150,11 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
       end;
    End;
 
-   Macro containsValue(_value) : Bool
+   Macro containsValue(value) : Bool
       var ent = first;
       var val;
       while (ent != null)
-         val = ent.value;
-         if (equals(val, _value))
+         if (ExecMacro2(valueEqualsFunc, ent.value, value))
             return true;
          end;
          ent = ent.after;
@@ -178,6 +176,25 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
 
    Macro newIterator() : EntryIterator
       return EntryIterator(this);
+   End;
+
+   Macro clear()
+      first = null;
+      last = null;
+      this.clear();
+   End;
+
+   Macro toArray() : SArray
+      var resArr : SArray = SArray();
+      resArr[size - 1] = null;
+      var curE = first;
+      var i = 0;
+      while (ValType(curE) != V_UNDEF)
+         resArr[i] = curE;
+         curE = curE.after;
+         i = i + 1;
+      end;
+      return resArr;
    End;
 
    Macro values() : SArray
@@ -205,6 +222,7 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
       end;
       return resArr;
    End;
+
 
    Macro sortByKey(keyCompareFunc)
       if (size <= 1) return; end;
@@ -249,12 +267,32 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
       return true;
    End;
 
-   Macro clear()
-      first = null;
-      last = null;
-      this.clear();
+   Macro newInstance()
+      var ni = LinkedHashMap(capacity, loadfactor)
+               .setKeyHashFunc(keyHashFunc)
+               .setKeyComparator(keyComparator)
+               .setKeyEqualsFunc(keyEqualsFunc)
+               .setValueComparator(valueComparator)
+               .setValueEqualsFunc(valueEqualsFunc);
+      return ni;
    End;
 
+   Macro equals(map : LinkedHashMap) : Bool
+      if ((ValType(map) == V_UNDEF) or (size != map.size) or (IsEqClass("LinkedHashMap", map) == false))
+         return false;
+      end;
+      var itr1 = newIterator();
+      var itr2 = newIterator();
+      while (itr1.hasnext())
+         var p1 = itr1.next();
+         var p2 = itr2.next();
+         if ((ExecMacro2(keyEqualsFunc, p1.key, p2.key) == false) or
+             (ExecMacro2(valueEqualsFunc, p1.value, p2.value) == false))
+            return false;
+         end;
+      end;
+      return true;
+   End;
 End;
 
 Macro StringLinkedHashMap(_InitialCapacity : Integer, _LoadFactor : Double)

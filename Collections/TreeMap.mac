@@ -24,64 +24,6 @@ Private Class (Pair) TreeEntry(k, v, p)
    var color : Bool = true;  // Black
 End;
 
-/**
-   Класс итератора [TreeMap]. Возвращает объект класса [TreeEntry].
-*/
-Private Class (IteratorInterface) TreeMapEntryIterator(treeMapInstance)
-   var inMap = treeMapInstance;
-   var nxt = inMap.getFirstEntry();
-   var lastReturned = null;
-
-
-   Macro hasNext()
-      return (nxt != null);
-   End;
-
-   Macro nextEntry()
-      lastReturned = nxt;
-      nxt = inMap.successor(lastReturned);
-      return lastReturned;
-   End;
-
-   Macro next()
-      return nextEntry();
-   End;
-
-   Macro getLastReturned() : Variant
-      return lastReturned;
-   End;
-End;
-
-/**
-   Класс итератора ключей [TreeMap].
-*/
-
-Class (TreeMapEntryIterator) TreeMapKeyIterator(treeMapInstance)
-   initTreeMapEntryIterator(treeMapInstance);
-
-   Macro next()
-      return nextEntry().key;
-   End;
-
-   Macro getLastReturned() : Variant
-      return lastReturned.key;
-   End;
-End;
-
-/**
-   Класс итератора значений [TreeMap].
-*/
-Class (TreeMapEntryIterator) TreeMapValueIterator(treeMapInstance)
-   initTreeMapEntryIterator(treeMapInstance);
-
-   Macro next()
-      return nextEntry.value;
-   End;
-
-   Macro getLastReturned() : Variant
-      return lastReturned.value;
-   End;
-End;
 
 
 /**
@@ -124,14 +66,12 @@ Class (MapInterface) TreeMap(_keyComparator)
       - V_GENOBJ  - Для объектных ключей. Пользовательский класс должен реализовать методы `macro compareTo(obj) : Integer` и `macro calchash() : Integer` с необходимым условием если два экземпляра считаются равными (compareTo возвращает 0), тогда и calcHash должен вернуть равный хэш. Однако экземпляры с равным hash не обязательно должны быть равны.
    */
    Macro setKeyType(type : Integer)
-      if (type == V_STRING)
-         keyComparator = @CF_ComparePrimitive;
-      elif (type == V_INTEGER)
+      if ((type >= V_STRING) and (type <= V_TIME))
          keyComparator = @CF_ComparePrimitive;
       elif (type == V_GENOBJ)
-         keyComparator = @CF_CompareObjFromInner;
+         keyComparator = @CF_CompareToImpl;
       else
-         RunError("Данный тип ключа не предусмотрен." + type);
+         return Throw(IllegalArgumentException("Данный тип ключей не предусмотрен реализацией." + type));
       end;
       return this;
    End;
@@ -146,14 +86,14 @@ Class (MapInterface) TreeMap(_keyComparator)
 
    */
    Macro setValueType(type : Integer)
-      if (type <= 10)
+      if (type <= V_TIME)
          valueComparator  = @CF_ComparePrimitive;
          valueEqualsFunc  = @CF_EqualsPrimitive;
       elif (type == V_GENOBJ)
          valueComparator = @CF_CompareToImpl;
          valueEqualsFunc = @CF_EqualsImpl;
       else
-         RunError("Данный тип значений не предусмотрен реализацией." + type);
+         return Throw(IllegalArgumentException("Данный тип значений не предусмотрен реализацией." + type));
       end;
       return this;
    End;
@@ -543,23 +483,20 @@ Class (MapInterface) TreeMap(_keyComparator)
       return ni;
    End;
 
-   Macro newIterator()
-      return TreeMapEntryIterator(this);
-   End;
-
-   /**
-      Возвращает итератор пар.
-   */
    Macro newEntryIterator()
-      return TreeMapEntryIterator(this);
+      return GenObject("TreeMapEntryIterator", this);
    End;
 
    Macro newKeyIterator()
-      return TreeMapKeyIterator(this);
+      return GenObject("TreeMapKeyIterator", this);
    End;
 
    Macro newValueIterator()
-      return TreeMapValueIterator(this);
+      return  GenObject("TreeMapValueIterator", this);
+   End;
+
+    Macro newIterator()
+      return newEntryIterator();
    End;
 
    Macro toArray() : SArray
@@ -604,4 +541,78 @@ Class (MapInterface) TreeMap(_keyComparator)
       return resArr;
    End;
 
+   Macro equals(map : TreeMap) : bool
+      if ((ValType(map) == V_UNDEF) or (size != map.size) or (IsEqClass("TreeMap", map) == false))
+         return false;
+      end;
+      var itr1 = newIterator();
+      var itr2 = map.newIterator();
+      while (itr1.hasNext())
+         var p1 = itr1.next();
+         var p2 = itr2.next();
+         if ((ExecMacro2(keyEqualsFunc, p1.key, p2.key) == false) or
+             (ExecMacro2(valueEqualsFunc, p1.value, p2.value) == false))
+            return false;
+         end;
+      end;
+      return true;
+   End;
+End;
+
+/**
+   Класс итератора [TreeMap]. Возвращает объект класса [TreeEntry].
+*/
+Private Class (IteratorInterface) TreeMapEntryIterator(treeMapInstance)
+   var inMap = treeMapInstance;
+   var nxt = inMap.getFirstEntry();
+   var lastReturned = null;
+
+   Macro hasNext()
+      return (nxt != null);
+   End;
+
+   Macro nextEntry()
+      lastReturned = nxt;
+      nxt = inMap.successor(lastReturned);
+      return lastReturned;
+   End;
+
+   Macro next()
+      return nextEntry();
+   End;
+
+   Macro getLastReturned() : Variant
+      return lastReturned;
+   End;
+End;
+
+/**
+   Класс итератора ключей [TreeMap].
+*/
+
+Class (TreeMapEntryIterator) TreeMapKeyIterator(treeMapInstance)
+   initTreeMapEntryIterator(treeMapInstance);
+
+   Macro next()
+      return nextEntry().key;
+   End;
+
+   Macro getLastReturned() : Variant
+      return lastReturned.key;
+   End;
+End;
+
+/**
+   Класс итератора значений [TreeMap].
+*/
+Class (TreeMapEntryIterator) TreeMapValueIterator(treeMapInstance)
+   initTreeMapEntryIterator(treeMapInstance);
+
+   Macro next()
+      return nextEntry.value;
+   End;
+
+   Macro getLastReturned() : Variant
+      return lastReturned.value;
+   End;
 End;

@@ -1,21 +1,23 @@
 /**
    @package Utils
 */
-var Arrays = GenObject("ArrayUtil");
+
+/**
+   Singleton instance класса [ArrayUtilsClass].
+*/
+var ArrayUtils = GenObject("ArrayUtilsClass");
 /**
 
    Класс утилит для удобной работы с массивами типа [TArray].
-   Представлен singlton объектом `Arrays`.
+   Представлен singlton объектом [ArrayUtils].
    Например чтобы создать массив, необходимо импортировать макрофайл и вызвать метод
 ```
    import "../mac/Extra/ext_ArrayUtil.mac";
-   var myArr = Arrays.of("first el", 2, null);
+   var myArr = ArrayUtilsof("first el", 2, null);
 ```
 
 */
-
-
-Private Class ArrayUtil()
+Private Class ArrayUtilsClass()
    /**
       Выводит на экран элементы массива 'arr'.
    */
@@ -271,8 +273,8 @@ Private Class ArrayUtil()
             return (mod(el,2) == 0);
          End;
          var arr = SArray(1,2,3,4,5);
-         var even = Arrays.filter(arr, @isEven);
-         Arrays.toScreen(even);  // [2, 4]
+         var even = ArrayUtilsfilter(arr, @isEven);
+         ArrayUtilstoScreen(even);  // [2, 4]
 
       ```
    */
@@ -297,9 +299,9 @@ Private Class ArrayUtil()
          Macro squareInt(el)
             return (el*el);
          End;
-         var arr = Arrays.of(1,2,3,4);
-         var sq = Arrays.map(arr, @squareInt);
-         Arrays.toScreen(sq); // [1, 4, 9, 16]
+         var arr = ArrayUtilsof(1,2,3,4);
+         var sq = ArrayUtilsmap(arr, @squareInt);
+         ArrayUtilstoScreen(sq); // [1, 4, 9, 16]
       ```
    */
    Macro map(arr, mapFunc)
@@ -323,8 +325,8 @@ Private Class ArrayUtil()
             return acc + el;
          End;
 
-         var arr = Arrays.of(1,2,3,4);
-         var res = Arrays.reduce(arr, @sumReduce, 0);
+         var arr = ArrayUtilsof(1,2,3,4);
+         var res = ArrayUtilsreduce(arr, @sumReduce, 0);
          println(res);    //10
       ```
       @param arr исходный массив
@@ -380,8 +382,8 @@ Private Class ArrayIterator(_arr : TArray)
       // не реализовано, по причине неизменности исходного массива
       /*
       var el = arr[nextIndex-1];
-      var newArr = Arrays.subArray(arr, 0, nextIndex-1);
-      Arrays.addArray(newArr, Arrays.subArray(arr, nextIndex));
+      var newArr = ArrayUtilssubArray(arr, 0, nextIndex-1);
+      ArrayUtilsaddArray(newArr, ArrayUtilssubArray(arr, nextIndex));
       arr = StrongRef(newArr);
       return el;
       */
