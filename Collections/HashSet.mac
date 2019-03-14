@@ -8,130 +8,105 @@ import "..\\Mac\\Extra\\Collections\\HashMap.mac";
 /**
    Коллекция уникальных значений. Реализована на основе [HashMap].
 */
-Class (HashMap) HashSet(_InitialCapacity : Integer, _LoadFactor : Double)
-   InitHashMap(_InitialCapacity, _LoadFactor);
+Class (SetInterface) HashSet(_InitialCapacity, _LoadFactor)
+   size = 0;
+   private var inMap = HashMap(_InitialCapacity, _LoadFactor);
+
+   Macro setInMap(newMap)
+      inMap = newMap;
+   End;
 
    Macro setType(type : Integer)
-      setKeyType(type);
+      inMap.setKeyType(type);
       return this;
-   End;
-
-   Macro contains(el : Variant)
-      return containsKey(el);
    End;
 
    Macro add(el : Variant) : Bool
-      var oldval = putVal(el, PRESENT, CalcHash(el));
-      return (ValType(oldVal) == V_UNDEF);
-   End;
-
-   Macro remove(el : Variant) : Bool
-      return (removeEntry(el) == PRESENT);
-   End;
-
-   Macro toArray()
-      var resArr : TArray = TArray();
-      resArr[size - 1] = null;
-      var i = 0;
-      var k = 0;
-      var curE;
-      while(i < capacity)
-         curE = table[i];
-         if(curE != null)
-            while(true)
-               resArr[k] = curE.key;
-               k = k + 1;
-               if(curE.nxt == null)
-                  break;
-               end;
-               curE = curE.nxt;
-            end;
-         end;
-         i = i + 1;
+      if (inMap.containsKey(el))
+         return false;
+      else
+         inmap.put(el, PRESENT);
+         size = size + 1;
+         return true;
       end;
-      return resArr;
    End;
 
-   Macro fromArray(arr : TArray)
-      var el;
-      for(el, arr)
-         add(el);
+   Macro addAll(enumerable) : Bool
+      var res = false;
+      for (var el, enumerable)
+         if (add(el))
+            res = true;
+         end;
+      end;
+      return res;
+   end;
+
+   Macro addItems() : HashSet
+      var i, p;
+      for (i, 1, Parmcount-1, 1)
+         GetParm(i, p);
+         add(p);
       end;
       return this;
    End;
 
-   Macro newIterator()
-      return newKeyIterator();
-   End;
-End;
-
-// Коллекция уникальных Integer
-
-Class (HashSet) IntHashSet(InitialCapacity : Integer, _LoadFactor : Double)
-   initHashSet(InitialCapacity, _LoadFactor);
-   Macro CalcHash(key) : Integer
-      return key;
-   End;
-End;
-
-
-// Коллекция уникальных Объектов.
-// _compareKeyRef - ссылка на процедуру вида compare(o1,o2) : Integer, сравнение двху элементов Set-а
-// _hashfunRef    - ссылка на процедуру вида calcHash(obj) : Integer, расчет хэша объекта
-// Необходимо указать эти функции или (предпочтительней) реализовать в хранимом классе процедуры
-// compareTo(o2) : Integer - сравнение с объектами того же вида
-// calcHash() : Integer    - вычисление хэша объекта
-// При этом ОБЯЗАТЕЛЬНО выполнение условия: Если compareTo(o2) == 0 (объекты считаются равными) o1.calcHash == o2.calcHash (у равных объектов равны Хэши)
-/*
-Class (ObjectHashMap) ObjectHashSet(_InitialCapacity : Integer, _LoadFactor : Double, _compareKeyRef, _hashfunRef)
-   initObjectHashMap(_InitialCapacity, _LoadFactor, null, _compareKeyRef, _hashfunRef);
-
-   Macro contains(el : Variant)
-      return containsKey(el);
+   Macro remove(element : Variant) : Bool
+      if (inMap.remove(element) == PRESENT)
+         size = size - 1;
+         return true;
+      end;
+      return false;
    End;
 
-   Macro add(el : Variant) : Bool
-      return (putVal(el, PRESENT, CalcHash(el)) == null);
-   End;
-
-   Macro remove(el : Variant) : Bool
-      return (removeEntry(el) == PRESENT);
-   End;
-
-   Macro toArray()
-      var resArr : TArray = TArray();
-      if(size == 0) return resArr; end;
-      resArr[size - 1] = null;
-      var i = 0;
-      var k = 0;
-      var curE;
-      while(i < capacity)
-         curE = table[i];
-         if(curE != null)
-            while(true)
-               resArr[k] = curE.key;
-               k = k + 1;
-               if(curE.nxt == null)
-                  break;
-               end;
-               curE = curE.nxt;
-            end;
+   Macro removeAll(enumerable) : Bool
+      var res = false;
+      for (var el, enumerable)
+         if (remove(el))
+            res = true;
          end;
-         i = i + 1;
       end;
-      return resArr;
+      return res;
    End;
 
-   Macro fromArray(arr : TArray)
-      var el;
-      for(el, arr)
-         add(el);
+   Macro contains(element : Variant)
+      return inMap.containsKey(element);
+   End;
+
+   Macro containsAll(enumerable) : Bool
+      for (var el, enumerable)
+         if (inMap.containsKey(el) == false)
+            return false;
+         end;
       end;
+      return true;
+   End;
+
+   Macro clear() : HashSet
+      inMap.clear();
+      size = 0;
       return this;
    End;
 
+   Macro toArray() : SArray
+      return inMap.keys();
+   End;
+
+   Macro newInstance() : HashSet
+      var inst = HashSet();
+      inst.setInMap(inMap.newInstance());
+      return inst;
+   End;
+
+   Macro append(el)
+      add(el);
+   End;
+
    Macro newIterator()
-      return newKeyIterator();
+      return inMap.newKeyIterator();
    End;
 End;
-*/
+
+/** Возвращает [HashSet] уникальных Integer */
+Macro IntHashSet(_InitialCapacity, _LoadFactor)
+   return HashSet(_InitialCapacity, _LoadFactor).setType(V_INTEGER);
+End;

@@ -7,59 +7,109 @@ import "..\\Mac\\Extra\\Collections\\LinkedHashMap.mac";
 /**
    Коллекции уникальных элементов с сохранением порядка добавления.
 */
-Class (LinkedHashMap) LinkedHashSet(_InitialCapacity : Integer, _LoadFactor : Double)
-   InitLinkedHashMap(_InitialCapacity, _LoadFactor);
-   compareRef = @compareObjFromInner();
+Class (SetInterface) LinkedHashSet(_InitialCapacity : Integer, _LoadFactor : Double)
+   size = 0;
+   var inMap = LinkedHashMap(_InitialCapacity, _LoadFactor);
 
-   Macro setPrimitive()
-      compareRef = @comparePrimitive;
-      return this;
+   Macro setInMap(newMap)
+      inMap = newMap;
    End;
 
-   Macro contains(el : Variant) : Bool
-      return containsKey(el);
+   Macro setType(type : Integer)
+      inMap.setKeyType(type);
+      return this;
    End;
 
    Macro add(el : Variant) : Bool
-      return (putVal(el, PRESENT, CalcHash(el)) == null);
-   End;
-
-   Macro remove(el : Variant) : Bool
-      return (removeEntry(el) == PRESENT);
-   End;
-
-   Macro newIterator()
-      return newKeyIterator();
-   End;
-
-   Macro toArray() : TArray
-      var resArr = TArray;
-      resArr[size-1] = null;
-      var itr = newIterator();
-      var i = 0;
-      while(itr.hasNext)
-         resArr[i] = itr.next;
-         i = i + 1;
+      if (inMap.containsKey(el))
+         return false;
+      else
+         inmap.put(el, PRESENT);
+         size = size + 1;
+         return true;
       end;
-      return resArr;
    End;
 
-   Macro fromArray(arr : TArray)
-      var el;
-      for(el, arr)
-         this.add(el);
+   Macro addAll(enumerable) : Bool
+      var res = false;
+      for (var el, enumerable)
+         if (add(el))
+            res = true;
+         end;
+      end;
+      return res;
+   end;
+
+   Macro addItems() : LinkedHashSet
+      var i, p;
+      for (i, 1, Parmcount-1, 1)
+         GetParm(i, p);
+         add(p);
       end;
       return this;
    End;
 
-   Macro sort(_compareFun)
-      if(Valtype(_compareFun)!=V_UNDEF)
-         compareRef = _compareFun;
+   Macro remove(el : Variant) : Bool
+      if (inMap.remove(el) == PRESENT)
+         size = size - 1;
+         return true;
       end;
-      var arr = toArray();
-      QSort(arr, compareRef);
-      clear();
-      fromArray(arr);
+      return false;
+   End;
+
+   Macro removeAll(enumerable) : Bool
+      var res = false;
+      for (var el, enumerable)
+         if (remove(el))
+            res = true;
+         end;
+      end;
+      return res;
+   End;
+
+   Macro contains(el : Variant)
+      return inMap.containsKey(el);
+   End;
+
+   Macro containsAll(enumerable) : Bool
+      for (var el, enumerable)
+         if (inMap.containsKey(el) == false)
+            return false;
+         end;
+      end;
+      return true;
+   End;
+
+   Macro clear() : LinkedHashSet
+      inMap.clear();
+      size = 0;
+      return this;
+   End;
+
+   Macro toArray() : SArray
+      return inMap.keys();
+   End;
+
+   Macro newInstance() : LinkedHashSet
+      var inst = LinkedHashSet();
+      inst.setInMap(inMap.newInstance());
+      return inst;
+   End;
+
+   Macro append(el)
+      add(el);
+   End;
+
+   Macro newIterator()
+      return inMap.newKeyIterator();
+   End;
+
+   Macro isSorted(compareFun) : Bool
+      return inMap.isSorted(compareFun);
+   End;
+
+   Macro sort(compareFun)
+      inMap.sort(compareFun);
       return this;
    End;
 End;

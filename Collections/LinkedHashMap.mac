@@ -10,7 +10,6 @@ Private Class (IteratorInterface) LinkedHashIterator (_map)
    var map           = _map;
    var nextEnt       = map.first;
    var lastReturned  = null;
-   //var ind : Integer = 0; // текущая корзина
 
    Macro hasNext() : Bool
       return (nextEnt != null);
@@ -65,6 +64,11 @@ End;
 //! Класс итератора ключей
 Private Class (LinkedHashIterator) KeyIterator(_map)
    initLinkedHashIterator(_map);
+
+   Macro getLastReturned()
+      return lastReturned.key;
+   End;
+
    Macro next () : Variant
       return nextEntry().key;
    End;
@@ -73,6 +77,11 @@ End;
 //! Класс итератора значений
 Private Class (LinkedHashIterator) ValueIterator(_map)
    initLinkedHashIterator(_map);
+
+   Macro getLastReturned()
+      return lastReturned.value;
+   End;
+
    Macro next () : Variant
       return nextEntry().value;
    End;
@@ -202,9 +211,10 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
       if (ValType(keyCompareFunc) == V_UNDEF)
          keyCompareFunc = keyComparator;
       end;
-      var entryCompareFunc = CF_PairsComparator(keyCompareFunc).getFunc();
+      var objComparator =  CF_PairsComparator(keyCompareFunc);
+      var entryCompareFunc = objComparator.getFunc();
       var es = toArray();
-      qsort(es, entryCompareFunc);
+      ExQSort(es, entryCompareFunc);
       es[0].before = null;
       es[0].after  = es[1];
       first   = es[0];
@@ -222,6 +232,23 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
       return sortByKey(keyCompareFunc);
    End;
 
+   Macro isSorted(keyCompareFunc) : Bool
+      if (ValType(keyCompareFunc) == V_UNDEF)
+         keyCompareFunc = keyComparator;
+      end;
+      if (size <= 1) return true; end;
+      var ent = first;
+      var ne  = ent.after;
+      while (ne != null)
+         if (ExecMacro2(keyCompareFunc, ent, ne) > 0)
+            return false;
+         end;
+         ent = ne;
+         ne = ne.after;
+      end;
+      return true;
+   End;
+
    Macro clear()
       first = null;
       last = null;
@@ -230,74 +257,10 @@ Class (HashMap) LinkedHashMap(_InitialCapacity : Integer, _loadFactor : Double)
 
 End;
 
-/**
-   Реализация коллекции пар ключ-значение в отсортированном по ключам виде.
-   В большинстве случаев предпочтительней (по производительности) использовать [Collections.TreeMap]
-
-*/
-Class (LinkedHashMap) SortedLinkedHashMap(_capacity : Integer, _loadFactor : Double)
-   initLinkedHashMap(_capacity, _loadFactor);
-   //var EIter = newEntryIterator();
-
-   Macro setPrimitive()
-      valueComparator = @CF_ComparePrimitive;
-   End;
-
-   Macro linkAfter(newEnt, ent)
-      if (ent.After == null)
-         last = newEnt;
-      else
-         ent.after.before = newEnt;
-         newEnt.after = ent.after;
-      end;
-      newEnt.before = ent;
-      ent.after = newEnt;
-   End;
-
-   Macro compareEntry(e1,e2) : Integer
-      return compare(e1.value, e2.value);
-   End;
-
-   Private Macro findPlace(newEnt)
-      if (last == null)
-         last  = newEnt;
-         first = newEnt;
-         return;
-      end;
-      var curE = last;
-      while (curE != null)
-         if (ExecMacro2(valueComparator, newEnt.value, curE.value)>=0)
-            linkAfter(newEnt, curE);
-            return;
-         end;
-         curE = curE.Before;
-      end;
-      first.before = newEnt;
-      newEnt.after = first;
-      first = newEnt;
-   End;
-
-   Private Macro newNode(_key, _value, _hash)
-      var newEnt = LHMEntry(_key, _value, _hash);
-      findPlace(newEnt);
-      return newEnt;
-   End;
-End;
-
 Macro StringLinkedHashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    return LinkedHashMap(_InitialCapacity, _LoadFactor).setKeyType(V_STRING);
 End;
 
-Class (LinkedHashMap) IntLinkedHashMap(_InitialCapacity : Integer, _LoadFactor : Double)
-   initLinkedHashMap (_InitialCapacity,_LoadFactor);
-   Macro CalcHash(key : Integer) : Integer
-      return key;
-   End;
-End;
-
-Class (SortedLinkedHashMap) IntSortedLinkedHashMap(_capacity : Integer, _loadFactor : Double, _compRef)
-   initSortedLinkedHashMap(_capacity, _loadFactor,_compRef);
-   Macro CalcHash(key : Integer) : Integer
-      return key;
-   End;
+Macro IntLinkedHashMap(_InitialCapacity : Integer, _LoadFactor : Double)
+   return LinkedHashMap(_InitialCapacity, _LoadFactor).setKeyType(V_INTEGER);
 End;

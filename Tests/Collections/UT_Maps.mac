@@ -1,7 +1,8 @@
 import "..\\mac\\extra\\RUnit\\RUnit.Mac";
 import "..\\mac\\extra\\Collections\\Collections.Mac";
 
-RUnitTest.SHOW_SUCCEED_FUN = false;
+RUnitTest.SHOW_SUCCEED_FUN = true;
+//RUnitTest.SHOW_SUCCEED_ASSERT = true;
 
 Private Class (Any) Account(_acc : String, _summ : Integer)
    var acc = _acc;
@@ -166,7 +167,7 @@ Class (TestMap) TestLinkedHashMap()
    End;
 End;
 
-Class (TestMap) TestSortedLinkdeHashMap()
+Class (TestMap) TestSortedLinkedHashMap()
 
    Macro beforeTest()
       map = SortedLinkedHashMap();

@@ -8,31 +8,46 @@ import "..\\Mac\\Extra\\Collections\\TreeMap.mac";
 
 Class (SetInterface) TreeSet(_keyComparator)
    size = 0;
-   private var inmap = TreeMap(_keyComparator);
+   private var inMap = TreeMap(_keyComparator);
 
-   Macro setPrimitive() : TreeSet
-      inmap.setKeyType(V_STRING);
+   Macro setInMap(newMap)
+      inMap = newMap;
+   End;
+
+   Macro setType(type : Integer)
+      inMap.setKeyType(type);
       return this;
    End;
 
    Macro add(element : Variant) : Bool
-      if (inmap.put(element, PRESENT) != PRESENT)
+      if (inMap.put(element, PRESENT) != PRESENT)
          size = size + 1;
          return true;
       end;
       return false;
    End;
 
-   Macro addAll(iterable) : Bool
-      var r = true;
-      for(var el, iterable)
-         r = (r and inmap.put(el));
+   Macro addAll(enumerable) : Bool
+      var res = false;
+      for (var el, enumerable)
+         if (add(el))
+            res = true;
+         end;
       end;
-      return r;
+      return res;
+   end;
+
+   Macro addItems() : TreeSet
+      var i, p;
+      for (i, 1, Parmcount-1, 1)
+         GetParm(i, p);
+         add(p);
+      end;
+      return this;
    End;
 
-   Macro remove(element) : Bool
-      if (inmap.remove(element) == PRESENT)
+   Macro remove(element : Variant) : Bool
+      if (inMap.remove(element) == PRESENT)
          size = size - 1;
          return true;
       end;
@@ -40,15 +55,17 @@ Class (SetInterface) TreeSet(_keyComparator)
    End;
 
    Macro removeAll(enumerable) : Bool
-      var r = true;
+      var res = false;
       for (var el, enumerable)
-         r = (r and remove(el));
+         if (remove(el))
+            res = true;
+         end;
       end;
-      return r;
+      return res;
    End;
 
-   Macro contains(element) : Bool
-      return (inmap.get(element) == PRESENT);
+   Macro contains(element : Variant) : Bool
+      return (inMap.containsKey(element));
    End;
 
    Macro containsAll(enumerable) : Bool
@@ -60,42 +77,27 @@ Class (SetInterface) TreeSet(_keyComparator)
       return true;
    End;
 
-   Macro newIterator()
-      return inmap.newKeyIterator();
+   Macro clear()
+      inMap.clear();
+      size = 0;
+      return this;
    End;
 
    Macro toArray() : TArray
-      return inmap.keys();
-   End;
-End;
-
-var comp2 = CF_ObjectComparator(Arrays.of("name"));
-var comp = CF_ObjectComparator(Arrays.of("name" , "year"));
-
-Class TClass()
-   var name = "n" + Random(100);
-   var year = 1000 + Random(1000);
-
-   Macro CompareTo(o)
-      return comp.compare(this, o);
+      return inMap.keys();
    End;
 
-   Macro toString()
-      return name + " - " + year;
+   Macro newInstance() : TreeSet
+      var inst = TreeSet();
+      inst.setInMap(inMap.newInstance());
+      return inst;
+   End;
+
+   Macro append(el)
+      add(el);
+   End;
+
+   Macro newIterator()
+      return inMap.newKeyIterator();
    End;
 End;
-
-Macro testTreeSet()
-   var set = TreeSet(R2M(comp2, "compare"));
-   var i;
-   for(i, 1, 10000)
-      set.add(TClass);
-   end;
-   println(set.size);
-   var arr = set.toArray;
-   for(i, 0, arr.size-1)
-      println(arr[i]);
-   end;
-End;
-
-//testTreeSet;

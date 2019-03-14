@@ -534,6 +534,14 @@ Class (MapInterface) TreeMap(_keyComparator)
       put(p.key, p.value);
    End;
 
+   Macro newInstance() : TreeMap
+      var ni = TreeMap()
+               .setKeyComparator(keyComparator)
+               .setKeyEqualsFunc(keyEqualsFunc)
+               .setValueComparator(valueComparator)
+               .setValueEqualsFunc(valueEqualsFunc);
+      return ni;
+   End;
 
    Macro newIterator()
       return TreeMapEntryIterator(this);
@@ -597,31 +605,3 @@ Class (MapInterface) TreeMap(_keyComparator)
    End;
 
 End;
-
-/*
-Macro testTreeMap()
-   var keys = TArray();
-   var map = TreeMap();
-   for(var i, 1, 1000)
-      var r = Random(i);
-      map.put(r, i);
-      keys[keys.size] = r;
-   end;
-   println(map.size);
-   for(i, 1, 1000)
-      map.get(i);
-   end;
-   println(map.size);
-   for(i, 0, keys.size-1)
-      map.set(keys[i], "newVal" + i);
-   end;
-   map.toScreen();
-   for(i, 0, keys.size-1)
-      map.remove(keys[i]);
-   end;
-   println(map.size);
-   map.toScreen();
-End;
-*/
-//testTreeMap;
-

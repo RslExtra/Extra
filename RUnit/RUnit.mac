@@ -81,7 +81,16 @@ Private Class RUnitProperties()
    /** Установка префикса для тестовых методов. По умолчанию 'TEST_'.*/
    var METHOD_PREFIX : String = "TEST_";             // Префикс тестовых методов
 
-   var LINE_WIDTH : Integer = 80;
+   var SEPARATOR_LINE_WIDTH        : Integer = 80;
+
+   var ALL_TEST_RESULT_LINE_WIDTH  : Integer = 70;
+
+   var TEST_CASE_RESULT_LINE_WIDTH : Integer = 40;
+
+   var TEST_FUNC_RESULT_LINE_WIDTH : Integer = 30;
+
+   var ASSERT_STATUS_WIDHT         : Integer = 6;
+
 End;
 
 /**
@@ -116,10 +125,13 @@ Private Class AssertResult(_definition : String)
    Macro toScreen()
       if (not(RUnitTest.SHOW_SUCCEED_ASSERT) and passed) return; end;
       var st = "ok  ";
-      if (not(passed))
-         st = "fail";
+      if (passed)
+         println("      " + String(num:2:0) + " : ok   :   " + definition);
+      else
+         println("      " + String(num:2:0) + " : fail :   " + definition + " - " + msg);
       end;
-      println("      " + String(num:2:0) + " : " + st + " : " + " - "+ definition + " - " + msg);
+
+
    End;
 
    Macro toLog()
@@ -127,7 +139,7 @@ Private Class AssertResult(_definition : String)
       if (not(passed))
          toLogE("fail - " + definition + " - " + msg);
       else
-         toLogI("ok   - " + definition + " - " + msg);
+         toLogI("ok   - " + definition);
       end;
    End;
 End;
@@ -164,8 +176,9 @@ Private Class FunResult(_funcname)
       if (not(isPassed))
          st = "[FAIL]";
       end;
-      var stats = "   Asserts run:" + (pass_asserts + fail_asserts) + ", failed:" + fail_asserts;
-      print("   "); print(funcname:20:0); print(st:8:0); println(stats);
+      var stats = "Asserts run:" + (pass_asserts + fail_asserts) + ", failed:" + fail_asserts;
+      print("   "); println(StringUtils.fillBetween(funcname, st, RUnitTest.TEST_FUNC_RESULT_LINE_WIDTH, " "));
+      print("   "); println(stats);
       if (RUnitTest.SHOW_FUN_EXECUTION_TIME)
          println("   " + "(" + execTimeMillis + " ms)");
       end;
@@ -221,7 +234,8 @@ Private Class CaseResult(_casename : String)
       end;
       var stats = "Tests method run: " + (pass_funs + fail_funs) + ", failed: " + fail_funs;
 
-      print(casename:20:0); println(st:10:0);
+      println(StringUtils.fillBetween(casename, st, RUnitTest.TEST_CASE_RESULT_LINE_WIDTH, " "));
+      //print(casename:20:0); println(st:10:0);
       println(stats);
       if (RUnitTest.SHOW_CASE_EXECUTION_TIME)
          println("("+ execTimeMillis +" ms)")
@@ -231,7 +245,7 @@ Private Class CaseResult(_casename : String)
       for (var funRes, funResults)
          funRes.toScreen();
       end;
-      println("--------------------------------------------------------------------------------");
+      println(StringUtils.repeat("-", RUnitTest.SEPARATOR_LINE_WIDTH));
 
    End;
 
@@ -360,6 +374,7 @@ End;
 
 Private Class (AssertClass) AssertNullClass(_val1)
    initAssertClass(_val1);
+   result.definition = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " )";
 
    Macro runAssert() : Bool
       if(ValType(val1) == V_UNDEF)
@@ -373,6 +388,7 @@ End;
 
 Private Class (AssertClass) AssertNotNullClass(_val1)
    initAssertClass(_val1);
+   result.definition = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " )";
 
    Macro runAssert() : Bool
       if(ValType(val1) != V_UNDEF)
@@ -386,6 +402,7 @@ End;
 
 Private Class (AssertClass) AssertTrueClass(_val1)
    initAssertClass(_val1);
+   result.definition = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " )";
 
    Macro runAssert() : Bool
       if(ValType(val1) == V_BOOL)
@@ -404,6 +421,7 @@ End;
 
 Private Class (AssertClass) AssertFalseClass(_val1)
    initAssertClass(_val1);
+   result.definition = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " )";
 
    Macro runAssert() : Bool
       if(ValType(val1) == V_BOOL)

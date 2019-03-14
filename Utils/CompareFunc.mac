@@ -219,7 +219,7 @@ Class CF_PairsComparator(keyComparator)
    var comparator = keyComparator;
 
    Macro apply(p1, p2) : Integer
-      return ExecMacro2(comparator, p1, p2);
+      return ExecMacro2(comparator, p1.key, p2.key);
    End;
 
    /**

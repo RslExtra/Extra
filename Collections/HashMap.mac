@@ -187,7 +187,7 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    private var curdepth   : Integer = 1;
    private var treshold   : Integer = 0;
 
-   private var keyHashFunc          = @VariantHashCode;
+   var keyHashFunc          = @VariantHashCode;
 
 
    /**
@@ -212,7 +212,7 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
          keyEqualsFunc = @CF_EqualsImpl;
          keyComparator = @CF_CompareToImpl;
       else
-         RunError("Данный тип ключей не предусмотрен реализацией." + type);
+         return Throw(IllegalArgumentException("Данный тип ключей не предусмотрен реализацией." + type));
       end;
       return this;
    End;
@@ -244,32 +244,6 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    */
    Macro setKeyHashFunc(kHashFunc)
       keyHashFunc = kHashFunc;
-      return this;
-   End;
-
-   /**
-      Устанавливает компаратор ключей '_keyComparator'.
-   */
-   Macro setKeyComparator(kComparator)
-      keyComparator = kComparator;
-      return this;
-   End;
-
-
-   Macro setKeyEqualsFunc(kEqualsFun)
-      keyEqualsFunc = kEqualsFun;
-      return this;
-   End;
-   /**
-      Устанавливает компаратор значений 'vComparator'.
-   */
-   Macro setValueComparator(vComparator)
-      valueComparator = vComparator;
-      return this;
-   End;
-
-   Macro setValueEqualsFunc(vEqualsFun)
-      valueEqualsFunc = vEqualsFun;
       return this;
    End;
 

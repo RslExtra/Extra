@@ -361,6 +361,14 @@ Class Iterable()
       StrJoinerML.joinToPrint(this);
    End;
 
+   Macro hash() : Integer
+      var h = 1;
+      for (var el, this)
+         h = h*17 + VariantHashCode(el);
+      end;
+      return abs(h);
+   End;
+
    Private Macro baseEquals(otherIterable) : Bool
       return true;
    End;
@@ -555,13 +563,23 @@ Class (Iterable) ListInterface()
       return DescendingIterator(this, ind);
    End;
 
-   Macro hash() : Integer
-      var h = 1;
-      for (var el, this)
-         h = h*17 + VariantHashCode(el);
+
+   Macro equals(othList)
+      if (size != othList.size)
+         return false;
       end;
-      return abs(h);
+      var itr1 = newIterator();
+      var itr2 = othList.newIterator();
+      while (itr1.hasnext)
+         var t1 = itr1.next();
+         var t2 = itr2.next();
+         if (ExecMacro2("equalsfunc", t1, t2) == false)
+            return false;
+         end;
+      end;
+      return true;
    End;
+
 End;
 
 /**
@@ -589,7 +607,7 @@ Class (Iterable) MapInterface()
    /**
       Устанавливает функцию проверки на равенство ключей 'kEqualsFun' и возвращает текущую коллекцию.
    */
-   Macro setKeyEqualsFun(kEqualsFun)
+   Macro setKeyEqualsFunc(kEqualsFun)
       keyEqualsFunc = kEqualsFun;
       return this;
    End;
@@ -605,7 +623,7 @@ Class (Iterable) MapInterface()
    /**
       Устанавливает функцию проверки на равенство значений 'vEqualsFun' и возвращает текущую коллекцию.
    */
-   Macro setValueEqualsFun(vEqualsFun)
+   Macro setValueEqualsFunc(vEqualsFun)
       valueEqualsFunc = vEqualsFun;
       return this;
    End;
@@ -707,10 +725,26 @@ End;
 */
 Class (Iterable) SetInterface()
 
+   Macro setType(rslType : Integer) : SetInterface
+
+   End;
+
    /**
       Добавляет 'element' в сэт и возвразает `true`, если элемент добавляется впервые.
    */
    Macro add(element) : Bool
+   End;
+
+   /**
+      Добавляет все элементы 'enumerable' в конец сэта. Возвращает `true` если был добавлен хотя бы один элемент.
+   */
+   Macro addAll(enumerable) : Bool
+   End;
+
+   /**
+      Добавляет все аргументы в сэт и возвращает текущий экземпляр.
+   */
+   Macro addItems(varargs)
    End;
 
    /**
@@ -720,86 +754,37 @@ Class (Iterable) SetInterface()
    End;
 
    /**
-      Ищет и удаляет все элементы иходного массива которые содержаться в 'enumerable', который может являться списком или массивом.
+      Ищет и удаляет все элементы иcходного сэта, которые содержаться в 'enumerable', который может являться списком, сэтом или массивом. Вовзращает `true` если был найден или удален хотя бы один элемент.
    */
    Macro removeAll(enumerable) : Bool
    End;
 
    /**
-      Возвращает `true`, если коллекция содержит элемент равный 'element'.
+      Возвращает `true`, если сэт содержит элемент равный 'element'.
    */
    Macro contains(element) : Bool
    End;
 
    /**
-      Возвращает `true`, если коллекция содержит все элементы из 'enumerable'.
+      Возвращает `true`, если сэт содержит все элементы из 'enumerable'.
    */
    Macro containsAll(enumerable) : Bool
    End;
 
-
-End;
-
-/**
-   Базовый класс для итераторов списка.
-   @param iList объект списка
-   @oparam ind = 0 начальный индекс
-*/
-/*
-Class (IteratorInterface) ListIterator(ilist : ListInterface, ind : Integer)
-   var list = ilist;
-   var curIndex  : Integer = -1;
-   var nextIndex : Integer = 0;
-   var lastReturned;
-
-   if(ValType(ind)==V_UNDEF)
-      ind = 0;
-   end;
-
-   nextIndex = ind;
-
-   Macro getLastReturned()
-      return lastReturned;
-   End;
-
-   Macro getNextIndex()
-      return nextIndex;
-   End;
-
-   Macro clear()
-      nextIndex = 0;
-      lastReturned = null;
-   End;
-
-   Macro hasNext() : Bool
-      return (nextIndex < list.size);
-   End;
-
-   Macro hasPrev()
-      return (nextIndex>0);
-   End;
-
-   Macro next() : Variant
-      lastReturned = list.get(nextIndex);
-      curIndex = nextIndex;
-      nextIndex = nextIndex + 1;
-      return lastReturned;
-   End;
-
-   Macro prev() : Variant
-      if (not(hasPrev))
-         return;
+   Macro equals(oth)
+      if (size != oth.size)
+         return false;
       end;
-      nextIndex = nextIndex - 1;
-      curIndex = nextIndex;
-      lastReturned = list.get(nextIndex);
-      return lastReturned;
+      var itr1 = newIterator();
+      var itr2 = oth.newIterator();
+      while (itr1.hasnext)
+         var t1 = itr1.next();
+         var t2 = itr2.next();
+         if (ExecMacro2("equalsfunc", t1, t2) == false)
+            return false;
+         end;
+      end;
+      return true;
    End;
 
-   Macro toPos(ind : Integer)
-      if ((ind<0) or (ind>list.size-1)) return; end;
-      curIndex = ind;
-      nextIndex = ind + 1;
-   End;
 End;
-*/
