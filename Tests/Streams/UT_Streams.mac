@@ -1,0 +1,13 @@
+import "..\\mac\\extra\\RUnit\\RUnit.mac";
+import "..\\mac\\extra\\StreamApi\\Streams.mac";
+
+
+Class (TestCase) TestStreamApi()
+
+   Macro test_int()
+
+   End;
+
+
+
+End;

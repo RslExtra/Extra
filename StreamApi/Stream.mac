@@ -1,4 +1,4 @@
-import "..\\Mac\\Extra\\Collections\\collections.mac";
+import "..\\Mac\\Extra\\Collections\\Collections.mac";
 import "..\\Mac\\Extra\\Utils\\ArrayUtils.mac";
 import "..\\Mac\\Extra\\Stream\\EXTbfile.mac";
 

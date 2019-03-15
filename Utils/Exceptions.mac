@@ -73,6 +73,8 @@ Class (Exception) UnsupportedOperationException(detailMessage : String)
    initException(detailMessage);
 End;
 
+
+
 private var ThrowMode = 0;
 
 /**

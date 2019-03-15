@@ -1,0 +1,50 @@
+import "..\\mac\\extra\\RUnit\\RUnit.mac";
+import "..\\mac\\extra\\Lambda\\Lambda.mac";
+
+macro __fit(a)
+   return trim(a);
+end;
+
+var __somevar__;
+
+Class (TestCase) TestLambda()
+   var func;
+
+   Macro do(p1, p2, p3)
+      return ExecMacro2(func, p1, p2, p3);
+   End;
+
+   Macro test_create()
+      func = Lambdas.create("i -> i * i");
+      assertNotNull(func);
+      assertEquals(4, do(2));
+
+      func = Lambdas.create("it+3");
+      assertEquals(5, do(2));
+   End;
+
+   Macro test_getFunc()
+      func = Lambdas.getFunc("@__fit");
+      assertEquals("a", do("  a   "));
+      assertException(IllegalArgumentException, Lambdas.getFunc("@__somevar__"));
+      func = Lambdas.getFunc("__fit(it+'mit')");
+      assertEquals("mymit", do("  my"));
+   End;
+
+   Macro test_options()
+      // Scala style lol
+      Lambdas.ARROW = "=>";
+      Lambdas.DEFARG = "_";
+      func = Lambdas.create("i => i * i");
+      assertNotNull(func);
+      assertEquals(4, do(2));
+
+      func = Lambdas.create("_+3");
+      assertEquals(5, do(2));
+   End;
+End;
+
+SetThrowMode(2);
+TestLambda();
+
+SetThrowMode(0);

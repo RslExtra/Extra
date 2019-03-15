@@ -206,7 +206,7 @@ Class Iterable()
       @param _func - ссылка на функцию - предикат вида Macro func(el : Variant) : Bool
    */
    Macro filter(_func) : Iterable
-      var func = getFunOrLambda(_func);
+      var func = Lambdas.getFunc(_func);
       var result = newInstance();
       var el;
       var itr = newIterator();
@@ -222,7 +222,7 @@ Class Iterable()
    // Возвращает объект того же типа коллекции с элементами преобразованными функцией
    // _func - ссылка на функцию вида Macro func(el : Variant) : Variant
    Macro map(_func) : Iterable
-      var func = getFunOrLambda(_func);
+      var func = Lambdas.getFunc(_func);
       var result = newInstance();
       var el, outEl;
       var itr = newIterator();
@@ -261,7 +261,7 @@ Class Iterable()
    // Возвращает сумму элементов коллекции(для объектной и примитивной)
    // _func - ссылка на функцию - преобразователь вида Macro func(el : Variant) : Numeric
    Macro sumBy(_func)
-      var func = getFunOrLambda(_func);
+      var func = Lambdas.getFunc(_func);
       var sum : Numeric = 0;
       var itr = newIterator();
       var p;
