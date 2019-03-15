@@ -160,7 +160,7 @@ Class (TestCase) TestMap()
       assertTrue(map.isEmpty);
    End;
 
-   Macro test_Copy()
+   Macro test_Copy_Equals()
       for(var i, 1, 1000)
          map.put("key" + i, "val" + i);
       end;
@@ -208,8 +208,8 @@ Class (TestMap) TestLinkedHashMap()
       map.put(1, 1);
       map.put(2, 2);
       map.put(3, 3);
-      assertArrays(arr_(1, 2, 3), map.keys());
-      assertArrays(arr_(1, 2, 3), map.values());
+      assertArrays(Ar(1, 2, 3), map.keys());
+      assertArrays(Ar(1, 2, 3), map.values());
    End;
 End;
 

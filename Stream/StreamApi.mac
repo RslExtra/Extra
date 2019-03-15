@@ -1,4 +1,5 @@
 import "..\\Mac\\Extra\\Collections\\collections.mac";
+import "..\\Mac\\Extra\\Utils\\ArrayUtils.mac";
 import "..\\Mac\\Extra\\Stream\\EXTbfile.mac";
 
 Private var factory  = GenObject("StreamFactory");
@@ -398,7 +399,7 @@ Class (AgregateStream) SortStream(_func)
       end;
       ifNull(func, @CF_ComparePrimitive);
       ExQSort(arr, func);
-      iter = Arrays.newIterator(arr);
+      iter = ArrayUtils.newIterator(arr);
       isReadyToGive = true;
       needStop = false;
    End;
@@ -650,7 +651,7 @@ End;
 
 Class Stream(obj)
    Macro ofArray(_arr)
-      return BornStream(Arrays.newIterator(_arr));
+      return BornStream(ArrayUtils.newIterator(_arr));
    End;
 
    Macro ofTbFile(tbFile : TbFile, fixed)

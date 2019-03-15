@@ -7,33 +7,39 @@
    - Если тестируется исполняемый модуль, то в тексте него после иннициализации глобных переменных и до начала исполнения необходимо добавить строку
      `if (ExecMacro2("UnitTestMarker") != null) return; end;`, что завершит выполнение модуля, при его импорте.
    - Импортируем тестируемый модуль
-   - При необходимости настраиваем поведение RUnit, через объект [RUnitTest].
+   - При необходимости настраиваем поведение 'RUnit', через свойства объект [RUnitTest].
 
-   - Создаем тестовый кейс как класс, расширяющий 'TestCase'.
+   - Создаем тестовый кейс как класс, расширяющий [TestCase].
    - Тестовые методы называем начиная со слова `test_`
    - Все остальные вспомогательные методы и поля класса называем иначе.
-   - В конце файла создаем классы
-   - При сборке мусора, т.е следующей строкой после объявления класса начнется выполнение тестов.
+
+   Для запуска тестов существует два варианта:
+   - По умолчанию настройка [RUnitProperties.AUTO_RUN_UNIT_TEST AUTO_RUN_UNIT_TEST] == `true`, что запускает тесты при вызове деструктора обхъекта кейса, поэтому необходимо в конце файла создать инстанс тестового кейса, не присваивая его переменной. Например `MyTestCase();`.
+   - Выставить значение [RUnitProperties.AUTO_RUN_UNIT_TEST AUTO_RUN_UNIT_TEST] == `false`. Запустить тест методом [TestCase.RunCase].
+
+   Для вывода результатов теста, существует также два вариант в зависимости от настройки [RUnitProperties.AUTO_PRINT_RESULT AUTO_PRINT_RESULT] :
+   - По умолчанию значение `true`. Дополнительных манипуляций производить не нужно. При вызове деструктора в конце работы программы. Резульаты теста выведуться на экран.
+   - Если установить значение `false`. В нужный момент работы програмы вызвать функцию [UT_PrintResults UT_PrintResults()]. На экран выведутся результаты все выполненных тестов.
+
+   Для логирования всё аналогично выводу на экран. За вывод отвечает настройка [RUnitProperties.AUTO_LOG_RESULT AUTO_LOG_RESULT] :
+   - По умолчанию значение `true`. В конце работы программы результаты тестов запишуться в лог.
+   - Если установить значение `false`. Необходимо вызвать функцию [UT_LogResults UT_LogResults()].
+
+
+
 */
 
 import rcw;
 import "..\\Mac\\Extra\\Utils\\StringUtils.mac";
+
 /**
    Объект класса [RUnitProperties] для настройки поведения тестов.
 */
-var RUnitTest = GenObject("RUnitProperties");
+const RUnitTest = GenObject("RUnitProperties");
 
 Private var AllTestResult = GenObject("AllTestsResult");
 
-Private Class ModuleMarker()
-   Macro Destructor()
-      debugbreak;
-      var a = getCallStack;
-      println(1);
-   End;
-End;
-
-Macro getTimeDiffMillis(t1, t2) : Integer
+Private Macro getTimeDiffMillis(t1, t2) : Integer
    var strTime = String((t2 - t1) : m);
    var h = Int(SubStr(strTime, 1, 2));
    var m = Int(SubStr(strTime, 4, 2));
@@ -42,9 +48,18 @@ Macro getTimeDiffMillis(t1, t2) : Integer
    return ((((h*60) + m) * 60) + s) * 100 + ms;
 end;
 
+/**
+   Класс настроек библиотеки представленный [RUnitTest].
+*/
 Private Class RUnitProperties()
-   /** Флаг запуска теста. При установка значения `false`, тесты запускаться не будут. */
-   var RUN_UNIT_TEST               : Bool = true;           // Запускать тест
+   /** Флаг автоматического запуска теста при вызове деструктора объекта. При установка значения `false`, тесты запускаться не будут. */
+   var AUTO_RUN_UNIT_TEST      : Bool = true;
+
+   /** Флаг автоматического вывода на экран результатов тестов */
+   var AUTO_PRINT_RESULT       : Bool = true;
+
+   /** Флаг автоматического вывода на экран результатов тестов */
+   var AUTO_LOG_RESULT         : Bool = true;
 
    /** Флаг вывода успешнопройденных тестовых кейсов. По умолчанию `true` */
    var SHOW_SUCCEED_CASE       : Bool = true;
@@ -89,24 +104,10 @@ Private Class RUnitProperties()
 
    var TEST_FUNC_RESULT_LINE_WIDTH : Integer = 30;
 
-   var ASSERT_STATUS_WIDHT         : Integer = 6;
+   var ASSERT_STATUS_WIDTH         : Integer = 6;
 
 End;
 
-/**
-   Генерирует массив [TArray] из переданных параметров.
-   @oparam varargs параметры инициализации массива.
-*/
-Macro Arr_()
-   var arr = TArray();
-   var p, i = 0;
-   while(i < Parmcount)
-      getParm(i, p);
-      arr[i] = p;
-      i = i + 1;
-   end;
-   return arr;
-End;
 
 Private Macro toLogI(msg)
    RUnitTest.LOGGER_INSTANCE.i(msg);
@@ -182,7 +183,7 @@ Private Class FunResult(_funcname)
       if (RUnitTest.SHOW_FUN_EXECUTION_TIME)
          println("   " + "(" + execTimeMillis + " ms)");
       end;
-      for(var assRes, assertResults)
+      for (var assRes, assertResults)
          assRes.toScreen();
       end;
       if (fail_flag)
@@ -200,7 +201,7 @@ Private Class FunResult(_funcname)
          toLogI(String(funcname:20:0) + "[OK]    " + stats);
       end;
 
-      for(var assRes, assertResults)
+      for (var assRes, assertResults)
          assRes.toLog();
       end;
    End;
@@ -216,7 +217,7 @@ Private Class CaseResult(_casename : String)
 
    Macro addFunResult(_funResult : FunResult)
       funResults[funResults.size] = _funResult;
-      if(_funResult.passed)
+      if (_funResult.passed)
          pass_funs = pass_funs + 1;
       else
          fail_funs = fail_funs + 1;
@@ -235,7 +236,6 @@ Private Class CaseResult(_casename : String)
       var stats = "Tests method run: " + (pass_funs + fail_funs) + ", failed: " + fail_funs;
 
       println(StringUtils.fillBetween(casename, st, RUnitTest.TEST_CASE_RESULT_LINE_WIDTH, " "));
-      //print(casename:20:0); println(st:10:0);
       println(stats);
       if (RUnitTest.SHOW_CASE_EXECUTION_TIME)
          println("("+ execTimeMillis +" ms)")
@@ -250,16 +250,16 @@ Private Class CaseResult(_casename : String)
    End;
 
    Macro toLog()
-      if(funResults.size == 0) return; end;
-      if(RUnitTest.LOG_SUCCEED_CASE and passed) return; end;
+      if (funResults.size == 0) return; end;
+      if (RUnitTest.LOG_SUCCEED_CASE and passed) return; end;
       var stats = "Tests method run: " + (pass_funs + fail_funs) + ", failed: " + fail_funs;
-      if(not(passed))
+      if (not(passed))
          toLogE(String(casename:20:0) + "[FAIL]");
       else
          toLogI(String(casename:20:0) + "[OK]");
       end;
       toLogI(stats);
-      for(var funRes, funResults)
+      for (var funRes, funResults)
          funRes.toLog();
       end;
    End;
@@ -270,11 +270,12 @@ Private Class AllTestsResult()
    var pass_case = 0;
    var fail_case = 0;
    var printed = false;
+   var logged  = false;
    var testResults = TArray();
 
    Macro addTestResult(testResult : caseResult)
       testResults[testResults.size] = testResult;
-      if(testResult.passed)
+      if (testResult.passed)
          pass_case = pass_case + 1;
       else
          fail_case = fail_case + 1;
@@ -282,35 +283,40 @@ Private Class AllTestsResult()
       end;
    End;
 
+   Macro clearResults()
+      testResults.size = 0;
+   End;
+
    Macro printTestResults()
-      if(testResults.size == 0) return; end;
+      if (testResults.size == 0) return; end;
 
       Println("================================= START TESTS ==================================");
       var st = "[OK]";
-      if(not(passed))
+      if (not(passed))
          st = "[FAILED]"
       end;
       println(st + " Testcases successful complete: " + pass_case + "/" + (pass_case+fail_case));
       println("");
-      for(var testRes, testResults)
+      for (var testRes, testResults)
          testRes.toScreen();
       end;
       //Println("================================== END TESTS ==========+========================");
+      clearResults();
    End;
 
    Macro logTestResults()
-      if(testResults.size == 0) return; end;
-      if(not(RUnitTest.WRITE_TO_LOG)) return; end;
+      if (testResults.size == 0) return; end;
+      if (not(RUnitTest.WRITE_TO_LOG)) return; end;
 
-      toLogI("START UNIT TESTS");
+      toLogI("START UNIT TESTS " + Date() + "  " + Time());
       var st;;
-      if(not(passed))
+      if (not(passed))
          st = "[FAILED]";
          toLogE("[FAILED] " + "Testcases successful complete: "  + pass_case + "/" + (pass_case+fail_case));
       else
          toLogI("[OK    ] " + "Testcases successful complete: "  + pass_case + "/" + (pass_case+fail_case));
       end;
-      for(var testRes, testResults)
+      for (var testRes, testResults)
          testRes.toLog();
       end;
       toLogI("END UNIT TESTS");
@@ -318,10 +324,13 @@ Private Class AllTestsResult()
    End;
 
    Macro Destructor()
-      if (not(printed))
+      if (RUnitTest.AUTO_PRINT_RESULT and (not(printed)))
          printTestResults();
-         logTestResults();
          printed = true;
+      end;
+      if (RUnitTest.AUTO_LOG_RESULT and (not(logged)))
+         logTestResults();
+         logged = true;
       end;
    End;
 End;
@@ -360,7 +369,7 @@ Private Class (AssertClass) AssertEqualsClass(_val1, _val2)
    initAssertClass(_val1, _val2);
 
    Macro runAssert() : Bool
-      if(ValType(val1) != ValType(val2))
+      if (ValType(val1) != ValType(val2))
          setResult(false);
          setFaultCause("AssertEquals different ValTypes.");
       elif (val1 != val2)
@@ -377,7 +386,7 @@ Private Class (AssertClass) AssertNullClass(_val1)
    result.definition = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " )";
 
    Macro runAssert() : Bool
-      if(ValType(val1) == V_UNDEF)
+      if (ValType(val1) == V_UNDEF)
          setResult(true);
       else
          setResult(false);
@@ -391,7 +400,7 @@ Private Class (AssertClass) AssertNotNullClass(_val1)
    result.definition = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " )";
 
    Macro runAssert() : Bool
-      if(ValType(val1) != V_UNDEF)
+      if (ValType(val1) != V_UNDEF)
          setResult(true);
       else
          setResult(false);
@@ -405,8 +414,8 @@ Private Class (AssertClass) AssertTrueClass(_val1)
    result.definition = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " )";
 
    Macro runAssert() : Bool
-      if(ValType(val1) == V_BOOL)
-         if(val1)
+      if (ValType(val1) == V_BOOL)
+         if (val1)
             setResult(true);
          else
             setResult(false);
@@ -424,8 +433,8 @@ Private Class (AssertClass) AssertFalseClass(_val1)
    result.definition = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_val1) + " )";
 
    Macro runAssert() : Bool
-      if(ValType(val1) == V_BOOL)
-         if(Not(val1))
+      if (ValType(val1) == V_BOOL)
+         if (Not(val1))
             setResult(true);
          else
             setResult(false);
@@ -443,19 +452,19 @@ Private Class (AssertClass) AssertArraysClass(_arr1, _arr2)
 
    Macro runAssert() : Bool
       setResult(true);
-      if(IsEqClass("TArray", val1) == false)
+      if (IsEqClass("TArray", val1) == false)
          setResult(false);
          setFaultCause("AssertArrays first parm is not an Array");
-      elif(IsEqClass("TArray", val2) == false)
+      elif (IsEqClass("TArray", val2) == false)
          setResult(false);
          setFaultCause("AssertArrays second parm is not an Array");
-      elif(val1.size != val2.size)
+      elif (val1.size != val2.size)
          setResult(false);
          setFaultCause("AssertArrays arrays has a different size. " + val1.size + " and " + val2.size);
       else
          var i;
-         for(i,0,val1.size-1,1)
-            if(val1[i]!=val2[i])
+         for (i,0,val1.size-1,1)
+            if (val1[i]!=val2[i])
                setResult(false);
                setFaultCause("AssertArrays arrays are not equal. At least on index: " + i + " , values: '" + val1[i] + "' and '" + val2[i] + "'");
                break;
@@ -468,7 +477,7 @@ End;
 Private Class (AssertClass) AssertErrorClass(_expCode, _err)
    initAssertClass(_expCode, _err);
 
-   if(isEqClass("TRSLERROR",_err))
+   if (isEqClass("TRSLERROR",_err))
       strAssert = StrSubst(GenClassName(this),"CLASS", "") + " ( " + String(_expCode) + " , " + String(_err.code) + " )";
       result = AssertResult(strAssert);
    end;
@@ -476,9 +485,9 @@ Private Class (AssertClass) AssertErrorClass(_expCode, _err)
    Macro runAssert()
       var expCode = val1;
       var err = val2;
-      if(ValType(err)!=V_UNDEF)
-         if(ValType(expCode) == V_INTEGER)    // Если ожидалась ошибка проверим код
-               if((expCode == -1) or (expCode == err.Code))
+      if (ValType(err)!=V_UNDEF)
+         if (ValType(expCode) == V_INTEGER)    // Если ожидалась ошибка проверим код
+               if ((expCode == -1) or (expCode == err.Code))
                   setResult(true);
                else
                   setResult(false);
@@ -563,7 +572,7 @@ Private Class UnitFun(_testCase, _funcname : String)
 End;
 
 /**
-
+   Основной класс библиотеки, для написания юнит теста необходимо унаследоваться от него. Для запуска
 */
 Class TestCase(_name)
    var name       : String;
@@ -574,38 +583,64 @@ Class TestCase(_name)
 
    var result;
 
-   if(ValType(_name) == V_STRING)
+   if (ValType(_name) == V_STRING)
       name = _name;
    end;
 
+   /**
+      Метод выполняется до проведения тестов кейса. Используется для моков в контексте кейса.
+   */
    Macro beforeClass()
    End;
-
+   /**
+      Метод выполняется после проведения тестов кейса.
+   */
    Macro afterClass()
    End;
 
+   /**
+      Метод будет выполнен перед каждым тестом.
+   */
    Macro beforeTest()
    End;
 
+   /**
+      Метод будет выполнен после каждого теста.
+   */
    Macro afterTest()
    End;
 
+   /**
+      Проверка на равенство 'val1 == val2'.
+   */
    Macro assertEquals(val1, val2)
       curTestFun.addAssert(AssertEqualsClass(val1,val2));
    End;
 
+   /**
+      Проверка является ли 'val1' `null`.
+   */
    Macro assertNull(val1) : Bool
       curTestFun.addAssert(AssertNullClass(val1));
    End;
 
+   /**
+      Проверка не является ли 'val1' `null`.
+   */
    Macro assertNotNull(val1) : Bool
       curTestFun.addAssert(AssertNotNullClass(val1));
    End;
 
-   Macro assertTrue(val1, val2) : Bool
+   /**
+      Проверка на равенство с `true`.
+   */
+   Macro assertTrue(val1) : Bool
       curTestFun.addAssert(AssertTrueClass(val1));
    End;
 
+   /**
+      Проверка на равенство с `false`.
+   */
    Macro assertFalse(val1) : Bool
       curTestFun.addAssert(AssertFalseClass(val1));
    End;
@@ -614,24 +649,48 @@ Class TestCase(_name)
       curTestFun.addAssert(assertErrorClass(val1));
    End;
 
+   /**
+      Проверка, является ли последнее брошенное исключение [Utils.Exception Exception] 'val2' того же типа, что и  'val1'.
+   */
    Macro assertException(val1, val2)
-      curTestFun.addAssert(AssertExceptionClass(val1,val2));
+      curTestFun.addAssert(AssertExceptionClass(val1, val2));
    End;
 
+   /**
+      Проверка на равенство двух массивов [TArray] 'arr1' и 'arr2'.
+   */
    Macro assertArrays(arr1, arr2)
       curTestFun.addAssert(assertArraysClass(arr1, arr2));
    End;
 
+   /**
+      Принудительно заваливает тест. Полезно при проверке внутри большого цикла вместо создания 1000 ассертов.
+   */
    Macro fail(msg : String)
       curTestFun.fail(msg);
    End;
 
    Macro catchError(_code)
       var code = _code;
-      if(valType(code) != V_INTEGER)
+      if (valType(code) != V_INTEGER)
          code = -1;           // Catch all errors
       end;
       curTestFun.expErrCode = code;
+   End;
+
+   /**
+      Генерирует массив [TArray] из переданных параметров.
+      @oparam varargs параметры инициализации массива.
+   */
+   Macro Ar()
+      var arr = TArray();
+      var p, i = 1;
+      while (i < Parmcount)
+         getParm(i, p);
+         arr[i-1] = p;
+         i = i + 1;
+      end;
+      return arr;
    End;
 
    Private Macro __AddTestFun(funName)
@@ -639,18 +698,18 @@ Class TestCase(_name)
    End;
 
    Private Macro __ParseMethods()
-      for(var mn, GetObjMethods(this))
-         if(SubStr(mn,1,5) == StrUpr(RUnitTest.METHOD_PREFIX))
+      for (var mn, GetObjMethods(this))
+         if (SubStr(mn,1,5) == StrUpr(RUnitTest.METHOD_PREFIX))
             __AddTestFun(mn);
          end;
       end;
    End;
 
-   Macro startTests()
+   Private Macro startTests()
       testFuns = TArray();
       __ParseMethods();
 
-      for(curTestFun, testFuns)
+      for (curTestFun, testFuns)
          beforeTest();
          curTestFun.runTestFun();
          afterTest();
@@ -658,8 +717,11 @@ Class TestCase(_name)
       end;
    End;
 
+   /**
+      Запускает тесты текущего кейса. Целесообразно использовать только при настройке [RUnitProperties.AUTO_RUN_UNIT_TEST AUTO_RUN_UNIT_TEST] = `false`.
+   */
    Macro RunCase()
-      if(ValType(name) == V_UNDEF)
+      if (ValType(name) == V_UNDEF)
          name = GenClassName(this);
       end;
       result = CaseResult(name);
@@ -672,21 +734,23 @@ Class TestCase(_name)
    End;
 
    Macro Destructor()
-      if((ValType(complete) == V_UNDEF) and RUnitTest.RUN_UNIT_TEST)
+      if ((ValType(complete) == V_UNDEF) and RUnitTest.AUTO_RUN_UNIT_TEST)
          RunCase();
          complete = true;
       end;
    End;
 End;
 
-Macro UnitTestMarker()
-   return ModuleMarker();
-End;
-
+/**
+   Выводит на экран результаты всех кейсов. Вызывать после проведения всех тестов.
+*/
 Macro UT_PrintResults()
    AllTestResult.printTestResults();
 End;
 
+/**
+   Выводит в лог результаты всех кейсов. Вызывать после проведения всех тестов.
+*/
 Macro UT_LogResults()
    AllTestResult.logTestResults();
 End;

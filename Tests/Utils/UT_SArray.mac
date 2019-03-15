@@ -1,9 +1,12 @@
-import "../mac/extra/RUnit/RUnit.Mac";
-import "../mac/extra/utils/SArray.mac";
-import "../mac/extra/utils/functions.mac";
-import "../mac/extra/utils/CompareFunc.mac";
+
+import "..\\mac\\extra\\RUnit\\RUnit.Mac";
+//
+import "..\\mac\\extra\\utils\\functions.mac";
+import "..\\mac\\extra\\utils\\Comparators.mac";
+import "..\\mac\\extra\\utils\\SArray.mac";
 import bankinter;
 import rcw;
+
 
 
 //RUnitTest.SHOW_SUCCEED_FUN = false;
@@ -90,7 +93,7 @@ Class (TestCase) TestSArray()
       assertEquals(2, arr.size);
       arr.add(18, 1);
       assertEquals(3, arr.size);
-      assertArrays(arr_(2, 18, 1), arr);
+      assertArrays(Ar(2, 18, 1), arr);
    End;
 
    Macro test_bigAdd()
@@ -98,7 +101,7 @@ Class (TestCase) TestSArray()
       for(i, 1, 100000)
          arr.push(i);
       end;
-      assertEquals(10000, arr.size);
+      assertEquals(100000, arr.size);
    End;
 
    Macro test_get()
@@ -109,9 +112,9 @@ Class (TestCase) TestSArray()
 
    Macro test_push()
       arr.push("one");
-      assertArrays(arr_("one"), arr);
+      assertArrays(Ar("one"), arr);
       arr.push("two");
-      assertArrays(arr_("one", "two"), arr);
+      assertArrays(Ar("one", "two"), arr);
    End;
 
    Macro test_peek()
@@ -163,30 +166,30 @@ Class (TestCase) TestSArray()
    Macro test_slice()
       assertEquals(0, arr.slice().size);
       arr.addAll(1, 2, 3);
-      assertArrays(arr_(1, 2, 3), arr.slice);
-      assertArrays(arr_(1, 2), arr.slice(0, 2));
-      assertArrays(arr_(2, 3), arr.slice(1));
+      assertArrays(Ar(1, 2, 3), arr.slice);
+      assertArrays(Ar(1, 2), arr.slice(0, 2));
+      assertArrays(Ar(2, 3), arr.slice(1));
 
    End;
 
    Macro test_reverse()
       assertEquals(0, arr.reverse().size);
       arr.addAll(1, 2, 3);
-      assertArrays(arr_(3, 2, 1), arr.reverse);
-      assertArrays(arr_(1, 2, 3), arr.reverse);
+      assertArrays(Ar(3, 2, 1), arr.reverse);
+      assertArrays(Ar(1, 2, 3), arr.reverse);
       arr.add(4);
-      assertArrays(arr_(4, 3, 2, 1), arr.reverse);
+      assertArrays(Ar(4, 3, 2, 1), arr.reverse);
    End;
 
    Macro test_distinct()
       arr.addAll(1, 2, -1, 2, 3, -4, 4, 3, 0);
-      assertArrays(arr_(1, 2, -1, 3, -4, 4, 0), arr.distinct);
-      assertArrays(arr_(1, 2, 3, -4, 0), arr.distinct(@equalAbs));
+      assertArrays(Ar(1, 2, -1, 3, -4, 4, 0), arr.distinct);
+      assertArrays(Ar(1, 2, 3, -4, 0), arr.distinct(@equalAbs));
 
       arr = SArray(2, 1, 1, 2, 3, 3, 3, 3, 3);
 
       var a = arr.distinctSort();
-      assertArrays(arr_(1,2,3), a);
+      assertArrays(Ar(1,2,3), a);
    End;
 
 
@@ -201,25 +204,25 @@ Class (TestCase) TestSArray()
       arr.addAll(1, 2, 3);
       var arr2 = SArray(4, 5, 6, 7);
       var arrc = arr.concat(arr2);
-      assertArrays(arr_(1, 2, 3, 4, 5, 6, 7), arrc);
-      assertArrays(arr_(1, 2, 3), arr);
-      assertArrays(arr_(4, 5, 6, 7), arr2);
+      assertArrays(Ar(1, 2, 3, 4, 5, 6, 7), arrc);
+      assertArrays(Ar(1, 2, 3), arr);
+      assertArrays(Ar(4, 5, 6, 7), arr2);
       arr.clear();
       arrc = arr.concat(arr2);
-      assertArrays(arr_(4,5,6,7), arrc);
+      assertArrays(Ar(4,5,6,7), arrc);
       arrc = arr2.concat(arr);
-      assertArrays(arr_(4,5,6,7), arrc);
+      assertArrays(Ar(4,5,6,7), arrc);
       arr2.clear();
       arrc = arr2.concat(arr2);
       assertEquals(0, arrc.size);
    End;
 
    Macro test_addArray()
-      assertArrays(arr_(1,2,3), arr.addArray(SArray(1,2,3)));
+      assertArrays(Ar(1,2,3), arr.addArray(SArray(1,2,3)));
       assertEquals(3, arr.size);
-      assertArrays(arr_(1,2,3,1), arr.addArray(SArray(1)));
+      assertArrays(Ar(1,2,3,1), arr.addArray(SArray(1)));
       assertEquals(4, arr.size);
-      assertArrays(arr_(1,2,3,1), arr.addArray(SArray()));
+      assertArrays(Ar(1,2,3,1), arr.addArray(SArray()));
    End;
 
    Macro test_join()
@@ -257,9 +260,9 @@ Class (TestCase) TestSArray()
    Macro test_sort()
       arr = SArray(4, 5, 6, 5, 1, 3, 2);
       arr.sort();
-      assertArrays(arr_(1, 2, 3, 4, 5, 5, 6), arr);
-
-      var sf = CF_ObjectComparator("-summ", "acc").getFunc();
+      assertArrays(Ar(1, 2, 3, 4, 5, 5, 6), arr);
+      var cmp = CF_ObjectComparator("-summ", "acc");
+      var sf = cmp.getFunc();
       arr = SArray(Account("123", 100), Account("124", 100), Account("123", 200), Account("124", 200));
       arr.sort(sf);
       assertEquals("123", arr[0].acc);
@@ -269,8 +272,7 @@ Class (TestCase) TestSArray()
       assertEquals("123", arr[2].acc);
       assertEquals(100, arr[2].summ);
       assertEquals("124", arr[3].acc);
-      assertEquals(100, arr[0].summ);
-      assertTrue(false);
+      assertEquals(100, arr[3].summ);
    End;
 
    Macro test_iterator()
@@ -330,25 +332,6 @@ Macro er()
       addEvent(32);
       msgBox(err);*/
 end;
-//er;
+
 TestSArray;
 
-/*
-var arr = SArray;
-for(var i, 0, 1000)
-   arr.push(Account("ran" + Random, Random(10000)));
-end;
-
-var t0 = time();
-/*
-for(var ac, arr)
-   if (ac.summ > 9900) println(ac); end;
-end;
-*/
-
-arr = SArray(0, 20, 3, 2, 5);
-var a = arr.reduce(null, accums.minind);
-
-println(a);
-
-*/

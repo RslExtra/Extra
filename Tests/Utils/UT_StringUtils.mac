@@ -23,7 +23,7 @@ Class (TestCase) TestStringUtils()
       assertEquals("string",arr[2]);
       str = "some::new::string:comes::";
       arr = su.split(str, "::");
-      assertArrays(arr_("some", "new", "string:comes", ""), arr);
+      assertArrays(Ar("some", "new", "string:comes", ""), arr);
    End;
 
    Macro test_commonPrefix()

@@ -1,3 +1,4 @@
+import rcw;
 /**
    @package Utils
    Реализованные функции-компараторы (compare и equals).
@@ -44,39 +45,30 @@ Macro CF_CompareToImpl(o1, o2)
    end;
 End;
 
-/*
-Macro CF_comparePairsByValueInner(p1, p2)
-   return CF_compareObjFromInner(p1.value, p2.value);
-End;
-
-Macro CF_comparePairsByKeyInner(p1, p2)
-   return CF_ComparePrimitive(p1.key, p2.key);
-End;
-
-Macro CF_CompareByKeyPrimitive(e1, e2) : Integer
-   return execMacro2(@CF_ComparePrimitive, e1.key, e2.key);
-End;
-
-Macro CF_CompareByValuePrimitive(e1, e2) : Integer
-   return execMacro2(@CF_ComparePrimitive, e1.value, e2.value);
-End;
+/**
+   Проверка равенства двух экземпляров пользовательского класса, реализующих метод `Equals(otherObj) : Bool`.
+   Способен принимать `null` в качестве аргументов, однако результат сравнения с null должен быть определен в `Equals`
 */
-/** Сравнение двух объектов по их свойствам в натуральном виде по порядку. ???*/
-/*
-Macro CF_CompareByProps(obj1 : Object, obj2 : Object) : Integer
-   var i = 2;
-   var prop;
-   while (i < parmCount)
-      getParm(i, prop);
-      var res = CF_ComparePrimitive(GenGetProp(obj1, prop), GenGetProp(obj2, prop));
-      if (res != 0)
-         return res;
-      end;
-      i = i + 1;
+Macro CF_EqualsImpl(o1 : Object, o2 : Object) : Bool
+   if (ValType(o1) != V_UNDEF)
+      return o1.equals(o2);
+   elif (ValType(o2) != V_UNDEF)
+      return o2.equals(o1);
+   else
+      return true;
    end;
-   return 0;
 End;
+
+/**
+   Проверка равенства двух экземпляров пользовательского класса, реализующих метод `compareTo(otherObj) : Integer`.
+   Возвращает `true` если `compareTo` вернет 0.
+   Способен принимать `null` в качестве аргументов, однако результат сравнения с null должен быть определен в `Equals`
 */
+Macro CF_EqualsByCompareTo(o1 : Object, o2 : Object) : Bool
+    return (CF_CompareToImpl(o1, o2) == 0);
+End;
+
+
 Private Macro isEqualProp(p1, p2) : Bool
    var t1 = ValType(p1);
    var t2 = ValType(p2);
@@ -98,11 +90,9 @@ Private Macro isEqualProp(p1, p2) : Bool
    return true;
 End;
 
-
-Macro CF_PrimitiveEquals(p1, p2) : Bool
-   return (p1 == p2);
-End;
-
+/**
+   Функция проверки на равенство двух примитивов одного типа.
+*/
 Macro CF_EqualsPrimitive(p1, p2) : Bool
    return (p1 == p2);
 End;
@@ -125,33 +115,6 @@ Macro CF_ObjectEquals(o1, o2) : Bool
    return true;
 End;
 
-Macro CF_EqualsImpl(o1 : Object, o2 : Object) : Bool
-   if (ValType(o1) != V_UNDEF)
-      return o1.equals(o2);
-   elif (ValType(o2) != V_UNDEF)
-      return o2.equals(o1);
-   else
-      return true;
-   end;
-End;
-
-Macro CF_EqualsByCompareTo(o1 : Object, o2 : Object) : Bool
-    return (CF_CompareToImpl(o1, o2) == 0);
-End;
-
-/**
-   Функция обертка для проверки равенства объектов классов реализующих метод `equals(otherObject) : Bool`.
-   Способен принимать `null` в качестве аргументов, однако результат сравнения с null должен быть определен в `equals`.
- */
-Macro CF_EqualsFromInner(o1 : Object, o2 : Object) : Bool
-   if (ValType(o1) != V_UNDEF)
-      return o1.equals(o2);
-   elif (ValType(o2) != V_UNDEF)
-      return o2.equals(o1);
-   else
-      return true;
-   end;
-End;
 
 private var tmpArr = TArray();
 /**
@@ -181,8 +144,8 @@ Class CF_ObjectComparator()
    Macro compare(o1, o2) : Integer
       for (var i, 0, propsName.size-1, 1)
          var p  = propsName[i];
-         var p1 = o1[i];
-         var p2 = o2[i];
+         var p1 = GenGetProp(o1, p);
+         var p2 = GenGetProp(o2, p);
          var t1 = ValType(p1);
          var t2 = ValType(p2);
          if ((t1 != V_UNDEF) and (t2 != V_UNDEF))
@@ -200,23 +163,80 @@ Class CF_ObjectComparator()
    Macro getFunc()
       return (R2M(this, "compare"));
    End;
-
 End;
 
 /**
-   Объект для сравнения объектов типа [Iterable.Pair] по ключу согласно функции 'keyComparator'. Методом [CF_PairsComparator.getFunc getFunc()] возвращается необходимая функция компаратор.
+   Объект-компаратор генерирует метод-компаратор и предоставляет ссылку на него методом [CF_ObjectComparator2.getfunc getFunc()].
+   Схож с [CF_ObjectComparator], однако сравнивает объекты одного класса, в конструктор он передается первым параметром 'obj'. Далее следуют имена полей, в т.ч и приватных! Если поля с таким именем не найдено у объекта будет брошена ошибка.
+*/
+Class CF_ObjectComparator2(obj)
+   private var propsId   = TArray();
+   private var order     = TArray();
+   if (ValType(obj) != V_GENOBJ)
+      RunError("Первый входящий параметр CF_ObjectComparator2 должен быть объектного типа");
+   end;
+   local var i, j, pr, nm, p;
+   local var props = GetObjProps(obj);
+   for (i, 2, Parmcount-1, 1)
+      GetParm(i, pr);
+      if (SubStr(pr, 1, 1) == "-")
+         nm = SubStr(pr, 2);
+         order.value(i-2) = -1;
+      else
+         nm = pr;
+         order.value(i-2) = 1;
+      end;
+      j = 0;
+      for (p, props)
+         if (p == StrUpr(nm))
+            propsId[i-2] = j;
+            break;
+         end;
+         j = j + 1;
+      end;
+      if (ValType(propsId[i-2]) == V_UNDEF)
+         RunError("У объекта отсутсвует поле с именем " + nm);
+      end;
+   end;
+   tmpArr[tmpArr.size] = this;
+   Macro compare(o1, o2) : Integer
+      for (var i, 0, propsId.size-1, 1)
+         var ind  = propsId[i];
+         var p1 = o1[ind];
+         var p2 = o2[ind];
+         var t1 = ValType(p1);
+         var t2 = ValType(p2);
+         if ((t1 != V_UNDEF) and (t2 != V_UNDEF))
+            var resCompare = CF_ComparePrimitive(p1, p2);
+            if(resCompare != 0)
+               return resCompare*order[i];
+            end;
+         elif (t1 == V_UNDEF)
+            return -order[i];
+         end;
+      end;
+      return 0;
+   End;
+
+   Macro getFunc()
+      return (R2M(this, "compare"));
+   End;
+End;
+
+/**
+   Объект для сравнения объектов типа [Collections.Pair] по ключу согласно функции 'keyComparator'. Методом [CF_PairsComparator.getFunc getFunc()] возвращается необходимая функция компаратор.
 */
 Class CF_PairsComparator(keyComparator)
    var comparator = keyComparator;
+   tmpArr[tmpArr.size] = this;
 
-   Macro apply(p1, p2) : Integer
+   Macro compare(p1, p2) : Integer
       return ExecMacro2(comparator, p1.key, p2.key);
    End;
-
    /**
-      Возвращает функцию-компаратор, которая принимает две [Iterable.Pair] и вовзращает резульат сравнения по их ключам.
+      Возвращает функцию-компаратор, которая принимает две [Collections.Pair] и возвращает результат сравнения по их ключам.
    */
    Macro getFunc()
-      return R2M(this, "apply");
+      return R2M(this, "compare");
    End;
 End;
