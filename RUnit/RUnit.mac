@@ -365,6 +365,24 @@ Private Class AssertClass(_val1, _val2)
 
 End;
 
+Private Macro VariantEquals(o1: Variant, o2: Variant) : Bool
+   var t1 = ValType(o1);
+   var t2 = ValType(o2);
+   if (t1 != t2) return false; end;
+   if (t1 <= 10)                    // Примитивы
+      return (o1 == o2);
+   elif (t1 == V_GENOBJ)            // Объекты
+      var rEq = ExecMacro2(R2M(o1,"equals"), o2);
+      if (ValType(req) == V_BOOL) return req; end;
+      var rCmp = ExecMacro2(R2M(o1,"compareTo"), o2);
+      if (ValType(rCmp) == V_INTEGER)
+         return (rCmp == 0);
+      end;
+      return false;
+   end;
+   return (o1 == o2);
+End;
+
 Private Class (AssertClass) AssertEqualsClass(_val1, _val2)
    initAssertClass(_val1, _val2);
 
@@ -372,6 +390,12 @@ Private Class (AssertClass) AssertEqualsClass(_val1, _val2)
       if (ValType(val1) != ValType(val2))
          setResult(false);
          setFaultCause("AssertEquals different ValTypes.");
+      elif (ValType(val1) == V_GENOBJ)
+         var eq = VariantEquals(val1, val2);
+         setResult(eq);
+         if (eq == false)
+            setFaultCause("Object not equals: " + val1 + " and " + val2);
+         end;
       elif (val1 != val2)
          setResult(false);
          setFaultCause("AssertEquals expected value: " + String(val1) + " , real value: " + String(val2));
