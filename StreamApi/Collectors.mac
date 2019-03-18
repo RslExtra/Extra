@@ -1,0 +1,161 @@
+/**
+   @Package Utils
+
+   Объекты коллекторы.
+
+*/
+
+
+import "..\\Mac\\Extra\\Collections\\Collections.mac";
+
+/**
+   Singleton instance класса [CollectorsClass]. Предоставляет предопределенные популярные варианты коллекторов.
+*/
+Const Collectors = GenObject("CollectorsClass");
+
+/**
+   Пользовательский класс коллектора. Принимает на вход три аргумента ссылки на функции или валидные лямбда-выражения.
+
+   @param supplier - функция создающая экземпляр класса, в который необходимо будет собрать элементы вида Supply() : Variant.
+   @param accumulator - функция-аккумулятор, добавляет элементы. Функция должна быть вида accumulate(SupplyObj, el).
+   @param finisher - функция-финишер, принимает сборщик и возвращает итоговый результат. Должна быть вида finish(SupplyObj) : Variant
+*/
+Class CustomCollector(supplier, accumulator, finisher)
+   var supplierFunc = Lambdas.getFunc(supplier);
+   var accumulatorFunc = Lambdas.getFunc(accumulator);
+   var finisherFunc = Lambdas.getFunc(finisher);
+
+   Macro create(p1, p2, p3)
+      return ExecMacro2(supplierFunc, p1, p2, p3);
+   End;
+
+   Macro accumulate(preresult, el : Variant)
+      return ExecMacro2(accumulatorFunc, preresult, el);
+   End;
+
+   Macro finish(preresult)
+       return ExecMacro2(finisherFunc, preresult);
+   End;
+End;
+
+Private Class TArrayCollector()
+   Macro create()
+      return TArray();
+   End;
+
+   Macro accumulate(arr, el)
+      arr[arr.size] = el;
+   End;
+
+   Macro finish(arr)
+      return arr;
+   End;
+End;
+
+
+Private Class SArrayCollector()
+   Macro create()
+      return SArray();
+   End;
+
+   Macro accumulate(arr, el)
+      arr[arr.size] = el;
+   End;
+
+   Macro finish(arr)
+      return arr;
+   End;
+End;
+
+Private Class ArrayListCollector()
+   Macro create()
+      return ArrayList();
+   End;
+
+   Macro accumulate(list, el)
+      list.addLast(el);
+   End;
+
+   Macro finish(list)
+      return list;
+   End;
+End;
+
+Private Class LinkedListCollector()
+   Macro create()
+      return LinkedList();
+   End;
+
+   Macro accumulate(list, el)
+      list.addLast(el);
+   End;
+
+   Macro finish(list)
+      return list;
+   End;
+End;
+
+Private Class HashMapCollector(_keyMapper, _valueMapper)
+   var keyMapper = _keyMapper;
+   var valueMapper = _valueMapper;
+
+   Macro create()
+      return HashMap();
+   End;
+
+   Macro accumulate(map, el)
+      var k = ExecMacro2(keyMapper, el);
+      var v = ExecMacro2(valueMapper, el);
+      map.put(k, v);
+   End;
+
+   Macro finish(map)
+      return map;
+   End;
+End;
+
+
+Private Class CollectorsClass()
+
+   /**
+      Возвращает коллектор в массив [TArray]
+   */
+   Macro toTArray()
+      return TArrayCollector();
+   End;
+
+   Macro toSArray()
+      return SArrayCollector();
+   End;
+
+   /**
+      Возвращает коллектор в массив [SArray]
+   */
+   Macro toArray()
+      return SArrayCollector();
+   End;
+
+   /**
+      Возвращает коллектор в список [ArrayList]
+   */
+   Macro toList()
+      return ArrayListCollector();
+   End;
+
+   /**
+      Возвращает коллектор в список [LinkedList]
+   */
+   Macro toLinkedList()
+      return LinkedListCollector();
+   End;
+
+   /**
+      Возвращает коллектор в карту [HashMap] согласно преобразованию ключей через функцию 'keyMapper' и значений 'valueMapper'. Аргументы могут быть ссылками на функции или лямбда выражениями.
+   */
+   Macro toMap(keyMapper, valueMapper)
+      keyMapper = Lambdas.getFunc(keyMapper);
+      valueMapper = Lambdas.getFunc(valueMapper);
+      return HashMapCollector(keyMapper, valueMapper);
+   End;
+
+End;
