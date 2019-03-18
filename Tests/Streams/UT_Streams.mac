@@ -1,13 +1,261 @@
 import "..\\mac\\extra\\RUnit\\RUnit.mac";
-import "..\\mac\\extra\\StreamApi\\Streams.mac";
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+import "..\\mac\\extra\\Collections\\Collections.mac";
 
+Private Class Account(_acc : String, _summ : Integer)
+   var acc = _acc;
+   var summ = _summ;
+   var refAccs = SArray();
+
+   Macro addRefAcc(ac)
+      refAccs.push(ac);
+      return this;
+   End;
+
+   Macro compareTo(othAcc : Account)
+      if(acc > othAcc.acc)
+         return 1;
+      elif(acc < othAcc.acc)
+         return -1;
+      else
+         if(summ > othAcc.summ)
+            return 1;
+         elif (summ > othAcc.summ)
+            return -1;
+         else
+            return 0;
+         end;
+      end;
+   End;
+
+   Macro equals(othAcc)
+      return (CompareTo(othAcc) == 0);
+   End;
+End;
 
 Class (TestCase) TestStreamApi()
+   var str;
+
+   Macro test_string()
+      var str = "abcdef";
+      var streamObj = StreamOf(str);
+      var res = streamObj.map("StrUpr(it)")
+                         .collect(Collectors.toArray)
+                         .join();
+      AssertEquals("ABCDEF", res);
+   End;
+
+   Macro test_file()
+      var fl = TStreamDoc("../mac/extra/tests/Streams/testfile.txt");
+      var res = StreamOf(fl)
+                  .collect(Collectors.toArray);
+      AssertArrays(Ar("first", "second", "third"), res);
+   End;
 
    Macro test_int()
+      var list = ArrayList().AddItems(1, 2, 3, 4, 5);
+      str = StreamOf(list);
+      var res = str.filter("mod(it, 2) != 0")
+                  .map("it*2")
+                  //.peek("println(it)")
+                  .reduce(0, "i, j -> i + j");
+      AssertEquals(18, res);
+      res = StreamOf(list).map("it-1")
+               .collect(Collectors.toArray());
+      AssertArrays(ar(0, 1, 2, 3, 4), res);
 
+      res = list.toStream()
+                .limit(3)
+                .collect(Collectors.toArray);
+      AssertArrays(ar(1, 2, 3), res);
+
+      res = list.toStream()
+                .skip(3)
+                .collect(Collectors.toArray);
+      AssertArrays(ar(4, 5), res);
+
+      res = list.toStream()
+               .takeWhile("it<=3")
+               .collect(Collectors.toArray);
+      AssertArrays(ar(1, 2, 3), res);
+   End;
+
+   Macro test_agregate()
+      var list = ArrayList().AddItems(2, 1, 3, 5, 3);
+      var res = list.toStream()
+                .sorted()
+                .collect(Collectors.toArray);
+      AssertArrays(Ar(1,2,3,3,5), res);
+
+      list = ArrayList.AddItems(
+         Account("4081701", 100),
+         Account("4081702", 200),
+         Account("4081703", 300),
+         Account("4082001", 500),
+         Account("4082002", 600)
+         );
+      res = list.toStream()
+               .groupBy("it.acc")
+               .collect(Collectors.toArray);
+      AssertEquals(5, res.size);
+
+      res = list.toStream()
+               .groupBy("SubStr(it.acc, 1, 5)")
+               .collect(Collectors.toArray);
+      AssertEquals(2, res.size);
+      AssertEquals("40817", res[0].key);
+      AssertEquals("40820", res[1].key);
+      AssertEquals(600, res[0].value.sumBy("it.summ"));
+      AssertEquals(1100, res[1].value.sumBy("it.summ"));
+   End;
+
+   Macro test_dictinct()
+      var list = ArrayList().AddItems(2, 1, 3, 5, 3);
+      var res = list.toStream()
+                    .distinct()
+                    .collect(Collectors.toArray);
+      AssertEquals(4, res.size);
+      AssertArrays(ar(1, 2, 3, 5), res.sort());
+      list = ArrayList.AddItems(
+         Account("4081701", 100),
+         Account("4081701", 200),
+         Account("4081701", 300),
+         Account("4082001", 500),
+         Account("4082002", 600)
+         );
+      res = list.toStream()
+                .distinctBy("it.acc")
+                .collect(Collectors.toArray);
+      AssertEquals("4081701", res[0].acc);
+      AssertEquals(100, res[0].summ);
+      AssertEquals("4082001", res[1].acc);
+      AssertEquals("4082002", res[2].acc);
+
+      res = list.toStream()
+                .distinctByString("it.acc")
+                .collect(Collectors.toArray);
+      AssertEquals("4081701", res[0].acc);
+      AssertEquals(100, res[0].summ);
+      AssertEquals("4082001", res[1].acc);
+      AssertEquals("4082002", res[2].acc);
+
+      res = list.toStream()
+                .distinctByInt("it.summ")
+                .collect(Collectors.toArray);
+      AssertEquals(5, res.size);
+   End;
+
+   Macro test_findfirst()
+      var arr = SArray();
+      var res = arr.toStream().findFirst(10);
+      AssertEquals(10, res);
+      arr = SArray(1, 2, 3, 4, 5);
+      res = arr.toStream().findFirst(10);
+      AssertEquals(1, res);
+   End;
+
+   Macro test_count()
+      var arr = SArray();
+      var res = arr.toStream().count();
+      AssertEquals(0, res);
+      arr = SArray(1, 2, 3, 4, 5);
+      res = arr.toStream().count();
+      AssertEquals(5, res);
+   End;
+
+   Macro test_anyMatch()
+      var arr = SArray();
+      var res = arr.toStream().anyMatch("it==3");
+      AssertFalse(res);
+      arr = SArray(1, 2, 3, 4, 5);
+      res = arr.toStream().anyMatch("it==3");
+      AssertTrue(res);
    End;
 
 
+   Macro test_allMatch()
+      var arr = SArray();
+      var res = arr.toStream().anyMatch("it>0");
+      AssertFalse(res);
+      arr = SArray(1, 2, 3, 4, 5);
+      res = arr.toStream().anyMatch("it>0");
+      AssertTrue(res);
+   End;
+
+
+   Macro test_noneMatch()
+      var arr = SArray();
+      var res = arr.toStream().noneMatch("it==1");
+      AssertTrue(res);
+      arr = SArray(1, 2, 3, 4, 5);
+      res = arr.toStream().noneMatch("it== 1");
+      AssertFalse(res);
+      res = arr.toStream().noneMatch("it==0");
+      AssertTrue(res);
+   End;
+
+   Macro test_min()
+      var str = "Thisisstring";
+      var streamObj = StreamOf(str);
+      var res = streamObj.min("a,b -> CodeFor(StrUpr(a)) - CodeFor(StrUpr(b))");
+      AssertEquals("g", res);
+      res = StreamOf(str).min();
+      AssertEquals("T", res);
+   End;
+
+   Macro test_max()
+      var arr = SArray();
+      var res = arr.toStream().max();
+      AssertNull(res);
+      arr = SArray(1, 5, 3, 2, -10, -3);
+      res = arr.toStream().max();
+      AssertEquals(5, res);
+      res = arr.toStream().max("a, b -> abs(a) - abs(b)");
+      AssertEquals(-10, res);
+   End;
+
+   Macro test_toArray()
+      var res = SArray().toStream().toArray();
+      AssertArrays(Ar(), res);
+      res = SArray(1, 2, 3).toStream().toArray();
+      AssertArrays(Ar(1, 2, 3), res);
+   End;
+
+   Macro test_flatMap()
+      var arr = SArray();
+      arr.push(Account("4081701", 100).addRefAcc(Account("4230601", 1000)));
+      arr.push(Account("4081702", 200).addRefAcc(Account("4230602", 2000)).addRefAcc(Account("4230702", 20000)));
+
+      var res = arr.toStream()
+               .map("it.refAccs")
+               .flatMap("it.toStream()")
+               .toArray();
+      assertEquals(3, res.size);
+      assertEquals(1000, res[0].summ);
+      assertEquals(2000, res[1].summ);
+      assertEquals(20000, res[2].summ);
+   End;
+
+   Macro test_zipStream()
+      var a1 = SArray(1, 2, 3);
+      var a2 = SArray(10, 20, 30, 40, 50);
+      var res = zipStreams(a1.toStream, a2.toStream, "a, b -> Pair(a,b)").toArray;
+      assertEquals(3, res.size);
+      assertTrue((res[0].key == 1) and (res[0].value == 10));
+      assertTrue((res[1].key == 2) and (res[1].value == 20));
+      assertTrue((res[2].key == 3) and (res[2].value == 30));
+   End;
+
+   Macro test_zipWithIndex()
+      var a = SArray(10, 20, 30, 40);
+      var res = a.toStream().zipWithIndex().toArray;
+      AssertEquals(4, res.size);
+      AssertEquals(Tuple2(0, 10), res[0]);
+      AssertEquals(Tuple2(1, 20), res[1]);
+      AssertEquals(Tuple2(2, 30), res[2]);
+      AssertEquals(Tuple2(3, 40), res[3]);
+   End;
 
 End;
+
+TestStreamApi;
