@@ -219,3 +219,62 @@ Class Any()
       return res;
    End;
 End;
+
+
+
+Class Tuple()
+
+   Macro hash()
+      var h = 0;
+      for(var i, 0, GenNumProps(this) - 1, 1)
+         var p = this[i];
+         if ((ValType(p) != V_UNDEF) and (ValType(p) <= V_TIME))
+            h = h + StringHashCode(String(p));
+         end;
+      end;
+      return abs(h);
+   End;
+
+   Macro equals(tup) : Bool
+      return CF_objectEquals(this, tup);
+   End;
+
+   Macro toString() : String
+      var res = GenClassName(this) + " [";
+      var propnames = GetObjProps(this, true);
+      for (var i, 0, propnames.size - 1, 1)
+         res = res + propnames[i] + " : " + String(this[i]);
+         if (i != propnames.size-1)
+            res = res + ", ";
+         end;
+      end;
+      res = res + "]";
+      return res;
+   End;
+End;
+
+Class (Tuple) Tuple2(__1, __2)
+   var _1 = __1;
+   var _2 = __2;
+End;
+
+Class (Tuple) Tuple3(__1, __2, __3)
+   var _1 = __1;
+   var _2 = __2;
+   var _3 = __3;
+End;
+
+Class (Tuple) Tuple4(__1, __2, __3, __4)
+   var _1 = __1;
+   var _2 = __2;
+   var _3 = __3;
+   var _4 = __4;
+End;
+
+Class (Tuple) Tuple5(__1, __2, __3, __4, __5)
+   var _1 = __1;
+   var _2 = __2;
+   var _3 = __3;
+   var _4 = __4;
+   var _5 = __5;
+End;
