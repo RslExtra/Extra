@@ -110,3 +110,9 @@ End;
 Macro IntHashSet(_InitialCapacity, _LoadFactor)
    return HashSet(_InitialCapacity, _LoadFactor).setType(V_INTEGER);
 End;
+
+
+/** Возвращает [HashSet] уникальных String */
+Macro StringHashSet(_InitialCapacity, _LoadFactor)
+   return HashSet(_InitialCapacity, _LoadFactor).setType(V_INTEGER);
+End;
