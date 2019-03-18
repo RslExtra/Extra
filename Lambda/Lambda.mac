@@ -149,6 +149,7 @@ Private Class LambdaClass()
       ARROW = "->";
       DEFARG = "it";
       FILE_PREFIX = "lam_";
+      return this;
    End;
 
    Macro add(l)
