@@ -221,7 +221,9 @@ Class Any()
 End;
 
 
-
+/**
+   Tupple класс обертка, представлен от Tuple2 до Tuple5. Поля инициализируются конструктором и именуются _1, _2 и т.д.
+*/
 Class Tuple()
 
    Macro hash()
@@ -253,17 +255,26 @@ Class Tuple()
    End;
 End;
 
+/**
+   Tupple2.
+*/
 Class (Tuple) Tuple2(__1, __2)
    var _1 = __1;
    var _2 = __2;
 End;
 
+/**
+   Tupple3.
+*/
 Class (Tuple) Tuple3(__1, __2, __3)
    var _1 = __1;
    var _2 = __2;
    var _3 = __3;
 End;
 
+/**
+   Tupple4.
+*/
 Class (Tuple) Tuple4(__1, __2, __3, __4)
    var _1 = __1;
    var _2 = __2;
@@ -271,6 +282,9 @@ Class (Tuple) Tuple4(__1, __2, __3, __4)
    var _4 = __4;
 End;
 
+/**
+   Tupple5.
+*/
 Class (Tuple) Tuple5(__1, __2, __3, __4, __5)
    var _1 = __1;
    var _2 = __2;

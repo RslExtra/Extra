@@ -17,6 +17,9 @@ import "..\\Mac\\Extra\\Lambda\\lambda.mac";
 
 import rcw;
 
+/**
+   Объект для Map.
+*/
 Class Pair(k, v)
    var key = k;
    var value = v;
@@ -44,11 +47,8 @@ Private Class EmptyObj()
    End;
 End;
 
-/** Нулевой объект-загулшка для HashSet*/
+/** Нулевой объект-загулшка для [Collections.HashSet]*/
 Const PRESENT = EmptyObj();  //
-
-/** Видимость до и после текущего значения итератора в отладчике */
-Const NVIS = 2;  //
 
 /**
    Интерфейс базового итератора для всех коллекций,
@@ -80,6 +80,9 @@ Class IteratorInterface(collectionInstance)
    End;
 End;
 
+/**
+   Обратный итератор.
+*/
 Class DescendingIterator(collectionInstance, ind : Integer)
    private var inst = collectionInstance;
    private var itr = null;
@@ -185,33 +188,29 @@ Class Iterable()
    /**
       Возвращает копию исходной коллекции. Каждый базовый элемент передается 'copyFunction', которая возвращает копию элемента.Если 'copyFunction' не задана - объекты копируются по ссылке, примитивы по значению.
    */
-   Macro copy(copyFunction) : Iterable
-      var newCl = newInstance();
+   Macro copy() : Iterable
+      var result = newInstance();
       var itr = newIterator;
-      if (ValType(copyFunction) == V_UNDEF)
-         while (itr.hasnext)
-            newCl.append(itr.next);
-         end;
-      else
-         while (itr.hasnext)
-            newCl.append(ExecMacro2(copyFunction, itr.next));
-         end;
+      while (itr.hasnext)
+         result.append(itr.next);
       end;
-      return newCl;
+      return result;
    End;
 
    // Chain - функции
 
-   /** Возвращает объект того же типа коллекции с элементами подходящими под условия функции
-      @param _func - ссылка на функцию - предикат вида Macro func(el : Variant) : Bool
+   /**
+      Возвращает объект того же типа коллекции с элементами отфильтрованными согласно функции предикату 'predicate'
+
+      @param predicate - ссылка на функцию-предикат вида Macro func(el : Variant) : Bool
+
    */
-   Macro filter(_func) : Iterable
-      var func = Lambdas.getFunc(_func);
+   Macro filter(predicate) : Iterable
+      var func = Lambdas.getFunc(predicate);
       var result = newInstance();
-      var el;
       var itr = newIterator();
       while (itr.hasNext)
-         el = itr.next;
+         var el = itr.next;
          if (ExecMacro2(func, el))
             result.append(el);
          end;
@@ -219,10 +218,12 @@ Class Iterable()
       return result;
    End;
 
-   // Возвращает объект того же типа коллекции с элементами преобразованными функцией
-   // _func - ссылка на функцию вида Macro func(el : Variant) : Variant
-   Macro map(_func) : Iterable
-      var func = Lambdas.getFunc(_func);
+   /*
+      Возвращает объект того же типа коллекции с элементами преобразованными функцией 'mapfunc'.
+      @param mapfunc - ссылка на функцию вида Macro func(el : Variant) : Variant
+   */
+   Macro map(mapfunc) : Iterable
+      var func = Lambdas.getFunc(mapfunc);
       var result = newInstance();
       var el, outEl;
       var itr = newIterator();
@@ -234,8 +235,10 @@ Class Iterable()
       return result;
    End;
 
-   // Возвращает сумму элементов коллекции (только для примитивной)
-   Macro sum() : Numeric
+   /**
+      Возвращает сумму элементов коллекции (только для примитивов)
+   */
+   Macro sum()
       var sum = 0;
       var itr = newIterator();
       while (itr.hasnext())
@@ -244,12 +247,13 @@ Class Iterable()
       return sum;
    end;
 
-   // Возвращает сумму элементов коллекции по свойству объектов (для объектной)
-   // propname - имя свойство объекта
+   /**
+      Возвращает сумму элементов коллекции по свойству объектов (для объектнов)
+      _propName - имя свойство объекта
+   */
    Macro sumByProp(_propName) : Numeric
-      var sum : Numeric = 0;
       var itr = newIterator();
-      var v,p;
+      var v, p, sum = 0;
       while (itr.hasnext())
          v = itr.next();
          p = GenGetProp(v, _propName);
@@ -258,11 +262,13 @@ Class Iterable()
       return sum;
    End;
 
-   // Возвращает сумму элементов коллекции(для объектной и примитивной)
-   // _func - ссылка на функцию - преобразователь вида Macro func(el : Variant) : Numeric
+   /**
+      Возвращает сумму преобразованных элементов. Аналог `.map(@func).sum();`
+      @param _func - ссылка на функцию - преобразователь вида Macro func(el : Variant) : Numeric
+   */
    Macro sumBy(_func)
       var func = Lambdas.getFunc(_func);
-      var sum : Numeric = 0;
+      var sum = 0;
       var itr = newIterator();
       var p;
       while (itr.hasnext())
@@ -272,72 +278,6 @@ Class Iterable()
       return sum;
    End;
 
-   /** Возвращает максимальное значение коллекции.
-      oparam _func = @CF_ComparePrimitive ссылка на функцию компаратор.
-   */
-   Macro max(func) : Variant
-      if(ValType(func) == V_UNDEF)
-         func = @CF_ComparePrimitive;
-      end;
-      var v;
-      var itr = newIterator();
-      var maxV = itr.next();
-      while(itr.hasNext())
-         v = itr.next();
-         if(ExecMacro2(func, v, maxV) > 0)
-            maxV = v;
-         end;
-      end;
-      return maxV;
-   End;
-
-   /** Возвращает максимальное значение объекта в порядке величины его полей заданных как String [varargs]*/
-   Macro maxByProp(varargs) : Variant
-      var pc = ParmCount();
-      var i,p;
-      var parmArr = TArray;
-      for(i, 1, pc - 1,1)
-         GetParm(i,p);
-         parmArr[parmArr.size] = p;
-      end;
-      var comparator = CF_ObjectComparator(parmArr);
-      var func = R2M(comparator, "compare");
-      return this.max(func);
-   End;
-
-   /** Возвращает минимальное значение коллекции.
-      oparam _func = @CF_ComparePrimitive ссылка на функцию компаратор.
-   */
-   Macro min(_func) : Variant
-      var func = _func;
-      if(ValType(func) == V_UNDEF)
-         func = @CF_ComparePrimitive;
-      end;
-      var itr = newIterator();
-      var v;
-      var minV = itr.next();
-      while(itr.hasNext())
-         v = itr.next();
-         if(ExecMacro2(func, v, minV) < 0)
-            minV = v;
-         end;
-      end;
-      return minV;
-   End;
-
-   /** Возвращает минимальное значение объекта в порядке величины его полей заданных как String [varargs]*/
-   Macro minByProp(varargs) : Variant
-      var pc = ParmCount();
-      var i,p;
-      var parmArr = TArray;
-      for(i, 1, pc - 1,1)
-         GetParm(i,p);
-         parmArr[parmArr.size] = p;
-      end;
-      var comparator = CF_ObjectComparator(parmArr);
-      var func = R2M(comparator, "compare");
-      return this.min(func);
-   End;
 
    /** Возвращает строку из элементов коллекции, разделенных '_delim', начинается с '_prefix' заканчивается '_postfix'*/
    Macro join(_delim, _prefix, _postfix) : String
@@ -373,13 +313,18 @@ Class Iterable()
       // Inherited implementation
    End;
 
+   Macro toStream()
+      var streamObj = ExecMacro2("StreamOf", this);
+      if (streamObj == null)
+         Throw(ModuleNotImportedException("Stream"));
+      end;
+      return streamObj;
+   End;
+
    // Метод для возможности перечисления нативным for(el, collection)
    Macro createEnum()
       return NativeIterator(newIterator());
    End;
-
-
-
 End;
 
 /**
@@ -562,6 +507,54 @@ Class (Iterable) ListInterface()
       Возвращает массив типа [Utils.SArray SArray] состоящий из элементов исходного списка.
    */
    Macro toArray() : SArray
+   End;
+
+   /**
+      Возвращает максимальное значение коллекции.
+      @oparam _func ссылка на функцию компаратор.
+   */
+   Macro max(_comparator) : Variant
+      if(ValType(_comparator) == V_UNDEF)
+         _comparator = comparator;
+      else
+         _comparator = Lambdas.getFunc(_comparator);
+      end;
+      var itr = newIterator();
+      if (itr.hasNext() == false)
+         return null;
+      end;
+      var maxV = itr.next();
+      while (itr.hasNext())
+         var v = itr.next();
+         if (ExecMacro2(_comparator, v, maxV) > 0)
+            maxV = v;
+         end;
+      end;
+      return maxV;
+   End;
+
+   /**
+      Возвращает минимальное значение коллекции.
+      @oparam _comparator ссылка на функцию компаратор.
+   */
+   Macro min(_comparator) : Variant
+      if(ValType(_comparator) == V_UNDEF)
+         _comparator = comparator;
+      else
+         _comparator = Lambdas.getFunc(_comparator);
+      end;;
+      var itr = newIterator();
+      if (itr.hasNext == false)
+         return null;
+      end;
+      var minV = itr.next();
+      while(itr.hasNext())
+         var v = itr.next();
+         if(ExecMacro2(_comparator, v, minV) < 0)
+            minV = v;
+         end;
+      end;
+      return minV;
    End;
 
    /** Возвращает новый убывающий итератор. */
