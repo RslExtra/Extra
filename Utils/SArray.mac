@@ -709,7 +709,11 @@ Class (TArray) SArray()
       Создает [StreamApi.Stream Stream] объект.
    */
    Macro toStream()
-
+      if (ValType(ExecMacro2("StreamLoadedMarker")) != V_UNDEF)
+         return ExecMacro2("StreamOf", this);
+      else
+         RunError("Module is not loaded: Stream");
+      end;
    End;
 
    Macro hash() : Integer
