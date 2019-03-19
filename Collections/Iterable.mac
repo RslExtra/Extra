@@ -248,10 +248,10 @@ Class Iterable()
    end;
 
    /**
-      Возвращает сумму элементов коллекции по свойству объектов (для объектнов)
+      Возвращает сумму элементов коллекции по имени свойства объектов.
       _propName - имя свойство объекта
    */
-   Macro sumByProp(_propName) : Numeric
+   Macro sumByProp(_propName : String) : Numeric
       var itr = newIterator();
       var v, p, sum = 0;
       while (itr.hasnext())
@@ -330,8 +330,8 @@ End;
 /**
    Базовый интерфейс для списков.
 
-   @see [Collection.ArrayList]
-   @see [Collection.LinkedList]
+   @see [Collections.ArrayList]
+   @see [Collections.LinkedList]
 */
 Class (Iterable) ListInterface()
 
@@ -511,7 +511,7 @@ Class (Iterable) ListInterface()
 
    /**
       Возвращает максимальное значение коллекции.
-      @oparam _func ссылка на функцию компаратор.
+      @oparam _comparator ссылка на функцию компаратор.
    */
    Macro max(_comparator) : Variant
       if(ValType(_comparator) == V_UNDEF)
@@ -584,9 +584,9 @@ End;
 /**
    Базовый интерфейс для коллекций пар "ключ-значение".
 
-   @see [Collection.HashMap]
-   @see [Collection.TreeMap]
-   @see [Collection.ArrayMap]
+   @see [Collections.HashMap]
+   @see [Collections.TreeMap]
+   @see [Collections.ArrayMap]
 */
 Class (Iterable) MapInterface()
 
@@ -719,8 +719,8 @@ End;
 /**
    Базовый интерфейс для коллекций уникальных значений.
 
-   @see [Collection.HashSet]
-   @see [Collection.TreeSet]
+   @see [Collections.HashSet]
+   @see [Collections.TreeSet]
 */
 Class (Iterable) SetInterface()
 

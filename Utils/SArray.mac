@@ -479,7 +479,7 @@ Class (TArray) SArray()
 
       @sample [samples.sArray.map]
 
-      @see [Definitions.SampleMap map-функция]
+      @see [Definitions.SampleMapFunction map-функция]
       @tag chain
    */
    Macro map(mapFunc) : SArray
@@ -706,7 +706,7 @@ Class (TArray) SArray()
    End;
 
    /**
-      Создает [StreamApi.Stream Stream] объект.
+      Создает [StreamApi.StreamInterface Stream] объект.
    */
    Macro toStream()
       if (ValType(ExecMacro2("StreamLoadedMarker")) != V_UNDEF)

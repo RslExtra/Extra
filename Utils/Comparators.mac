@@ -117,8 +117,9 @@ End;
 
 
 private var tmpArr = TArray();
+
 /**
-   Объект-компаратор генерирует метод-компаратор и предоставляет ссылку на него методом [CF_ObjectComparator.getfunc getFunc()].
+   Объект-компаратор генерирует метод-компаратор и предоставляет ссылку на него методом [getFunc].
    Инициализируется списком имен свойств объекта для сравнения, от более весомого к более низкому (как ключ в базе).
    Если порядок должен быть обратным, необходимо указать знак '-' перед именем свойства.
    Поля должны быть примитивного типа. Сравнение полей проходит в натуральном порядке. Поля могут быть `null`, при этом
@@ -141,6 +142,10 @@ Class CF_ObjectComparator()
       end;
    end;
    tmpArr[tmpArr.size] = this;
+
+   /**
+      Возвращает результат сравнения двух объектов.
+   */
    Macro compare(o1, o2) : Integer
       for (var i, 0, propsName.size-1, 1)
          var p  = propsName[i];
@@ -160,13 +165,16 @@ Class CF_ObjectComparator()
       return 0;
    End;
 
+   /**
+      Возвращает ссылку на метод [compare].
+   */
    Macro getFunc()
       return (R2M(this, "compare"));
    End;
 End;
 
 /**
-   Объект-компаратор генерирует метод-компаратор и предоставляет ссылку на него методом [CF_ObjectComparator2.getfunc getFunc()].
+   Объект-компаратор генерирует метод-компаратор и предоставляет ссылку на него методом [getFunc].
    Схож с [CF_ObjectComparator], однако сравнивает объекты одного класса, в конструктор он передается первым параметром 'obj'. Далее следуют имена полей, в т.ч и приватных! Если поля с таким именем не найдено у объекта будет брошена ошибка.
 */
 Class CF_ObjectComparator2(obj)
@@ -199,6 +207,10 @@ Class CF_ObjectComparator2(obj)
       end;
    end;
    tmpArr[tmpArr.size] = this;
+
+   /**
+      Возвращает результат сравнения двух объектов.
+   */
    Macro compare(o1, o2) : Integer
       for (var i, 0, propsId.size-1, 1)
          var ind  = propsId[i];
@@ -218,6 +230,9 @@ Class CF_ObjectComparator2(obj)
       return 0;
    End;
 
+   /**
+      Возвращает ссылку на метод [compare].
+   */
    Macro getFunc()
       return (R2M(this, "compare"));
    End;

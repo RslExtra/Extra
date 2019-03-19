@@ -13,7 +13,7 @@
    - 0  - если аргументы равны
    Используется в массивах и коллекциях для установления порядка элементов, например при сортировке.
    @sample [Samples.Definitions.Comparator]
-   @see [CompareFunc]
+   @see [Utils.#Comparators]
 
 */
 Macro SampleComparator(o1, o2) : Integer
@@ -22,7 +22,7 @@ End;
 
 /**
     Функция перобразователь (mapFunction). Представляет из себя макрос с одним аргументом, возвращает результат произвольного типа.
-    Используется в [Stream], [Utils.SArray], [Collections]
+    Используется в [StreamApi], [Utils.SArray], [Collections]
     @sample [Samples.Definitions.MapFunction]
 */
 Macro SampleMapFunction(o) : Variant

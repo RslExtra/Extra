@@ -126,7 +126,7 @@ Class StringJoiner(_delim : String, _prefix : String, _posfix : String)
 End;
 
 /**
-   Класс строковых утилит, представлен инстансом [Strings].
+   Класс строковых утилит, представлен инстансом [StringUtils].
 */
 Private Class StringUtilsClass()
 

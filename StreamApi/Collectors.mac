@@ -114,7 +114,9 @@ Private Class HashMapCollector(_keyMapper, _valueMapper)
    End;
 End;
 
-
+/**
+   Предоставляет часто используемые коллекторы, представлен singleton [Collectors].
+*/
 Private Class CollectorsClass()
 
    /**
@@ -129,28 +131,28 @@ Private Class CollectorsClass()
    End;
 
    /**
-      Возвращает коллектор в массив [SArray]
+      Возвращает коллектор в массив [Utils.SArray]
    */
    Macro toArray()
       return SArrayCollector();
    End;
 
    /**
-      Возвращает коллектор в список [ArrayList]
+      Возвращает коллектор в список [Collections.ArrayList]
    */
    Macro toList()
       return ArrayListCollector();
    End;
 
    /**
-      Возвращает коллектор в список [LinkedList]
+      Возвращает коллектор в список [Collections.LinkedList]
    */
    Macro toLinkedList()
       return LinkedListCollector();
    End;
 
    /**
-      Возвращает коллектор в карту [HashMap] согласно преобразованию ключей через функцию 'keyMapper' и значений 'valueMapper'. Аргументы могут быть ссылками на функции или лямбда выражениями.
+      Возвращает коллектор в карту [Collections.HashMap] согласно преобразованию ключей через функцию 'keyMapper' и значений 'valueMapper'. Аргументы могут быть ссылками на функции или лямбда выражениями.
    */
    Macro toMap(keyMapper, valueMapper)
       keyMapper = Lambdas.getFunc(keyMapper);

@@ -5,7 +5,9 @@
 
 import "..\\Mac\\Extra\\Collections\\TreeMap.mac";
 
-
+/**
+   Упорядоченная коллекция уникальных значений согласно функции '_keyComparator'. Реализована на основе [TreeMap].
+*/
 Class (SetInterface) TreeSet(_keyComparator)
    size = 0;
    private var inMap = TreeMap(_keyComparator);

@@ -439,7 +439,7 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    End;
 
    /**
-      Возвращает массив 'SArray' пар.
+      Возвращает массив [SArray] пар.
    */
    Macro toArray() : SArray
       var resArr = SArray();
@@ -492,7 +492,7 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    End;
 
    /**
-      Возвращает массив 'SArray' значений.
+      Возвращает массив [SArray] значений.
    */
    Macro values() : SArray
       var resArr = SArray();
@@ -660,14 +660,14 @@ Private Class (HashIterator) EntryIterator(_map)
 End;
 
 /**
-   Создаёт и возращает [HashMap] для работы с ключами типа [String].
+   Создаёт и возращает [HashMap] для работы с ключами типа 'String'.
 */
 Macro StringHashMap(_InitialCapacity : Integer, _LoadFactor : Double) : HashMap
    return HashMap(_InitialCapacity, _LoadFactor).setKeyType(V_STRING);
 End;
 
 /**
-   Создаёт и возращает [HashMap] для работы с ключами типа [Integer].
+   Создаёт и возращает [HashMap] для работы с ключами типа 'Integer'.
 */
 Macro IntHashMap(_InitialCapacity : Integer, _LoadFactor : Double) : HashMap
    return HashMap(_InitialCapacity, _LoadFactor).setKeyType(V_INTEGER);

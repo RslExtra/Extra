@@ -115,7 +115,9 @@ Private Class LambdaGen()
    End;
 End;
 
-
+/**
+   Основной класс библиотеки, содержит в себе настройки и методы для создания функций из текстовых выражений; представлен singleton [Lambdas].
+*/
 Private Class LambdaClass()
 
    /**

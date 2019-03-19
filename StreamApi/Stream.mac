@@ -9,8 +9,8 @@
 
    Создать Stream можно следующими способами
    - методом '.toStream()', если он реализован у класса объекта например ([SArray], [Iterable Collections]).
-   - вызовом функции StreamOf(obj). Obj может быть массивом [TArray], [Iterable Collections], объектом [TStreamDoc], строкой [String], объектом таблицы бд [TbFile].
-   - Реализовав итератор для любого класса с методами (next() : Variant, hasNext() : Bool) и передав его инстанс в конструктор класса [BornStream].
+   - вызовом функции StreamOf(obj). Obj может быть массивом [TArray], [Collections.Iterable], объектом [TStreamDoc], строкой 'String', объектом таблицы бд [TbFile].
+   - реализовав итератор для любого класса с методами (next() : Variant, hasNext() : Bool) и передав его инстанс в конструктор класса [BornStream].
 
    После создания объекта, как обычно, через точку пишем конвеерные методы (тэг 'chain'), агрегирующие методы (тэг 'agregate') и заверщаем цепочку одним терминальным методом ('terminal'), который вернет или `null` или соответствующий результат.
 
@@ -31,6 +31,9 @@ Private Macro callLambda(obj,_func, parm1, parm2) : Variant
    return res;
 End;
 
+/**
+   Базовый класс для всех стримов, описывает методы доступные для всех наследников.
+*/
 Private Class StreamInterface(_func)
    var upstream;
    var downstream;
@@ -152,7 +155,7 @@ Private Class StreamInterface(_func)
    End;
 
    /**
-      Передает только уникальные элементы по параметру типа [String] возвращаемой функцией 'parmFunc'.
+      Передает только уникальные элементы по параметру типа 'String' возвращаемой функцией 'parmFunc'.
 
       @tag chain
    */
@@ -162,7 +165,7 @@ Private Class StreamInterface(_func)
    End;
 
    /**
-      Передает только уникальные элементы по параметру типа [Int] возвращаемой функцией 'parmFunc'.
+      Передает только уникальные элементы по параметру типа 'Integer' возвращаемой функцией 'parmFunc'.
 
       @tag chain
    */
@@ -240,7 +243,7 @@ Private Class StreamInterface(_func)
    End;
 
    /**
-      Собирает элементы согласно 'collectorObj'. Заготовленные коллекторы можно посмотреть [Utils.Collectors]
+      Собирает элементы согласно 'collectorObj'. Заготовленные коллекторы можно посмотреть [Utils.#Collectors]
 
       @tag terminal
    */
@@ -332,6 +335,8 @@ Private Class StreamInterface(_func)
 
    /**
       Возвращает `true` если функция 'predicate' для всех элементов вернет `true`.
+
+      @tag terminal
    */
    Macro allMatch(predicate) : Bool
       var streamObj = GenObject("AllMatchStream", predicate);
@@ -340,6 +345,8 @@ Private Class StreamInterface(_func)
 
    /**
       Возвращает минимальное значение согласно 'comparator'.
+
+      @tag terminal
    */
    Macro min(comparator) : Variant
       var streamObj = GenObject("MinStream", comparator);
@@ -348,6 +355,8 @@ Private Class StreamInterface(_func)
 
    /**
       Возвращает максимальное значение согласно 'comparator'.
+
+      @tag terminal
    */
    Macro max(comparator) : Variant
       var streamObj = GenObject("MaxStream", comparator);
@@ -356,6 +365,8 @@ Private Class StreamInterface(_func)
 
    /**
       Возвращает массив из элементов.
+
+      @tag terminal
    */
    Macro toArray() : SArray
       var streamObj = GenObject("ToArrayStream");
@@ -364,6 +375,8 @@ Private Class StreamInterface(_func)
 
    /**
       Позволяет использовать кастомный объект Stream. Для этого необходимо унаследоваться от [BornStream] , [ChainStream], [AgregateStream] или [TerminalStream] переопределить необходимые методы и передать экземпляр класса в функцию как 'streamObj'.
+
+      @tags chain, agregate, terminal
    */
    Macro custom(streamObj)
       return accept(streamObj);

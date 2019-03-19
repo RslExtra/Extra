@@ -60,7 +60,7 @@ Private Class ArrayUtilsClass()
    End;
 
    /**
-      Возвращает итератор подобный [Collections.BaseIterator] для работы с массивом 'arr'
+      Возвращает итератор подобный [Collections.IteratorInterface] для работы с массивом 'arr'
    */
    Macro newIterator(arr)
       if(ValType(arr) == V_UNDEF)
@@ -112,7 +112,7 @@ Private Class ArrayUtilsClass()
    End;
 
    /**
-      Метод аналогичен [ArrayUtil.indexOf indexOf]; но возвращает индекс 'последнего' элемента или -1;
+      Метод аналогичен [indexOf]; но возвращает индекс 'последнего' элемента или -1;
    */
    Macro lastIndexOf(arr, element, compfunc)
       if(ValType(arr) == V_UNDEF) return -1; end;
