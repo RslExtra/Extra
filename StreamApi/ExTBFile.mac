@@ -1,5 +1,11 @@
+/**
+   @Package StreamApi
 
-Class TbIterator(_file)
+   Реализация класса обертки для [TBFile] для возможности использования в [StreamApi].
+*/
+
+
+Private Class TbIterator(_file)
    var extb = _file;
    var asc = true;
    var firstPos = 0;
@@ -22,7 +28,7 @@ Class TbIterator(_file)
    End;
 
    Macro previous()
-      hp = (extb.prev and(extb.inFile.GetPos() != firstPos));
+      hp = (extb.prev and (extb.inFile.GetPos() != firstPos));
       return extb.rec;
    End;
 
@@ -84,6 +90,7 @@ Class EXTBFile(_tbfile, _fixed : Bool)
    Macro NRecords() : Integer
       return inFile.NRecords();
    End;
+
    Macro getCurKeys(_KN : Integer)
       var THandl = TRecHandler(filename, dicName);
       var i = 0;

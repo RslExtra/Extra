@@ -1,31 +1,17 @@
 /**
    @Package LogR
+   @Ancestor Extra
+
+   Текстовые логгеры в файл.
 */
 
-/*********************************************************
-@FILE         :     Logger.mac
-@COPYRIGHT    :
-@DESCRIPTION  :     Логгеры.
-                    Logger        - для записи в файлы для каждого пользователя.
-                    SingleLogger  - для записи в один файл.
-@AUTHOR       :     Джаныбаев М.П. (maratkhv@mail.ru)
-@CREATION DATE:     10.01.2018
-@Update       :
-************************************************************/
-
-// Logger(fullname : String, [isOn : Bool]) - класс для логирования в текстовый файл
-// fullname - обязательный параметр, указывается полный путь до файла лога относительно папки на сервере н.р "..\\WorkFiles\\Logs\\myprog.log" - Тогда созданный лог-файл будет выглядеть например %RS-BankDir%\WorkFiles\Logs\myprog_9999_2.log
-// Все вложенные папки в случае отстутствия создаются автоматически
-// isOn  - необязательный параметр. По умолчанию - true. Включение/отключения логирования.
-
-// Методы:
-// d(MessageText : String) - вывод в лог с префиксом [DEBUG]
-// e(MessageText : String) - вывод в лог с префиксом [ERROR]
-// i(MessageText : String) - вывод в лог с префиксом [INFO ]
-
-// import BankInter;
 import rsexts;
 
+/**
+   Класс для логирования в текстовый файл. Пишет лог каждого пользователя RS-BANK в свои файлы, при том если будет исполняться программа одного пользователяб но с разных треминалок одновременно, коллизии записи не произойдет, т.к создастся отдельный файл.
+   @param fullname - обязательный параметр, указывается полный путь до файла лога относительно папки на сервере н.р "..\\WorkFiles\\Logs\\myprog.log" - Тогда созданный лог-файл будет выглядеть например %RS-BankDir%\WorkFiles\Logs\myprog_9999_2.log.
+   @oparam isOn = true Включение/отключения логирования.
+*/
 Class Logger(fullname : String, isOn : Bool)
    var on       : Bool    = true;                  // Флаг работы логгера
    var showD    : Bool    = true;                  // Флаг печати log.d
@@ -64,18 +50,27 @@ Class Logger(fullname : String, isOn : Bool)
       end;
    End;
 
+   /**
+      вывод в лог с префиксом (INFO ).
+   */
    Macro i(MessageText : String)
       if(showI)
          writeStr("INFO ", MessageText);
       end;
    End;
 
+   /**
+      Вывод в лог с префиксом (ERROR).
+   */
    Macro e(MessageText : String)
       if(showE)
          writeStr("ERROR", MessageText);
       end;
    End;
 
+   /**
+      Вывод в лог с префиксом (DEBUG).
+   */
    Macro d(MessageText : String)
       if(showD)
          writeStr("DEBUG", MessageText);
@@ -130,10 +125,10 @@ Class Logger(fullname : String, isOn : Bool)
    ini(fullname);
 End;
 
-/*
+/**
    При необходимости писать логи всех юзеров в один файл используем SingleLogger
-   Приспособлен к конкурентной записи, однако работает на порядок медленней, т.к для записи каждой строки открывает файл заново
-   Поэтому не рекомендуется выводить подробные логи
+   Приспособлен к конкурентной записи, однако работает на порядок медленней чем [Logger], т.к для записи каждой строки файл открывается заново
+   Поэтому не рекомендуется выводить подробные логи через данный класс.
 */
 Class (Logger) SingleLogger(fullname : String, isOn : Bool)
    initLogger(fullname, isOn);

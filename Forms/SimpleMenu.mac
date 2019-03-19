@@ -1,59 +1,81 @@
+/**
+   @Package Forms
 
-Class SimpleScroll()
+   Реализация простого и удобного меню.
+*/
+Class SimpleMenu()
    Const prefix   =  " ";
    Const postfix  =  " ";
    Const divider  =  " | ";
 
-   var size  = 0;
-   var title = "Меню";
-   var mess  = "Выберите";
-   var x;
-   var y;
-   var n = 0;
-   var LineArr= TArray();
-   var ObjArr = TArray();
-   var ColumnProps = TArray();
-   var ColumnSizes = TArray();
+   private var size  = 0;
+   private var title = "Меню";
+   private var mess  = "Выберите";
+   private var x;
+   private var y;
+   private var n = 0;
+   private var LineArr= TArray();
+   private var ObjArr = TArray();
+   private var ColumnProps = TArray();
+   private var ColumnSizes = TArray();
 
+   /**
+      Устанавливает заголовок меню '_Title'
+   */
    Macro setTitle(_Title : String)
       this.title = _Title;
       return this;
    End;
 
-   Macro setMessage(_Message)
+   /**
+      Устанавливает сообщение внизу экрана  '_Message'.
+   */
+   Macro setMessage(_Message : String)
       this.mess = _Message;
       return this;
    End;
 
+   /**
+      Устанавливает координаты.
+   */
    Macro setCoord(_x, _y)
       this.x = _x;
       this.y = _y;
       return this;
    End;
 
+   /**
+      Устанавливает активную строку.
+   */
    Macro setActiveLine(_n)
       this.n = _n;
       return this;
    End;
 
+   /**
+      Устанавливает активной строку с объектом равным 'obj'. Obj должен реализовывать метод `equals(other) : bool`.
+   */
    Macro setActiveObject(obj)
       if(ValType(obj) == V_UNDEF)
          return setActiveLine(0);
       end;
       var i = ObjArr.size - 1;
-      while((i > 0) and (obj.CompareTo(ObjArr[i])!=0))
+      while ((i > 0) and (obj.equals(ObjArr[i]) == false))
          i = i - 1;
       end;
       return setActiveLine(i);
    End;
 
+   /**
+      Устанавливает колонку; 'propName' задает имя поля объекта, откуда будет браться значение, 'ssize' устанавливает размер колонки в символах.
+   */
    Macro setCol(propName : String, ssize : Integer)
       ColumnProps[ColumnProps.size] = propName;
       ColumnSizes[ColumnSizes.size] = ssize;
       return this;
    End;
 
-   Macro processStr(str : String, ns : Integer) : String
+   Private Macro processStr(str : String, ns : Integer) : String
       var res = "";
       var ln = StrLen(str);
       if(ln>=ns)
@@ -87,7 +109,7 @@ Class SimpleScroll()
       LineArr[LineArr.size] = s;
    End;
 
-   Macro processLines()
+   Private Macro processLines()
       var i = 0;
       while(i < ObjArr.size)
          addline(ObjArr[i]);
@@ -118,7 +140,7 @@ Class SimpleScroll()
 
    Macro valueOf() : Variant
       var ind = indexOf();
-      if(ind>=0)
+      if(ind >= 0)
          return ObjArr[ind];
       end;
    End;
