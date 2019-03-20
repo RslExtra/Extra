@@ -401,8 +401,6 @@ Class (ContinuedStream) BornStream(iterator)
          return stopStream();
       end;
       var res = iter.next();
-      inc = inc + 1;
-      Message(inc);
       return res;
    End;
 End;
@@ -719,16 +717,15 @@ End;
 Private Macro reverseReplacement(tbStr)
    var hp = tbStr.inFile.prev();
    if (not(hp)) return tbStr.stopStream(); end;
-   if (not(tbStr.Fix))
+   if (not(tbStr.isFixed))
       return tbStr.inFile.rec;
    else
-      return tbStr.getCopyRec();
+      return tbStr.getCopyRec().rec;
    end;
 End;
 
-Private Class (BornStream) TBFileStream(tbFile)
+Class (BornStream) TBFileStream(tbFile)
    var inFile = tbFile;
-   private var extb = EXTBFile(tbFile);
    private var front = true;
    private var fix = false;
    private var thandl = TRecHandler(inFile.TblName, inFile.DicName);
@@ -760,13 +757,17 @@ Private Class (BornStream) TBFileStream(tbFile)
       return handl;
    End;
 
+   Macro isFixed()
+      return fix;
+   End;
+
    Macro next()
       var hn = inFile.next();
       if (not(hn)) return stopStream(); end;
       if (not(Fix))
          return inFile.rec;
       else
-         return getCopyRec();
+         return getCopyRec().rec;
       end;
    End;
 
@@ -782,7 +783,7 @@ Private Class (BornStream) TBFileStream(tbFile)
       Курсор бд будет бежать в обратном направлении.
    */
    Macro reverse() : TBFileStream
-      GenAttach(this, "next", reverseReplacement);
+      GenAttach(this, "next", @reverseReplacement);
       return this;
    End;
 
@@ -902,6 +903,24 @@ Private Class (BornStream) TBFileStream(tbFile)
    ini();
 End;
 
+Class (TBFileStream) MemDBFileStream(tbFile)
+   inFile = tbFile;
+   front = true;
+   fix = false;
+   thandl = TRecHandler(inFile.TblName, inFile.getFldInfo);
+
+   arrKeys     = TArray();
+   arrKeysType = TArray();
+   arrKeysSize = 0;
+
+   Macro getCopyRec()
+      var handl = TRecHandler(inFile.TblName, inFile.getFldInfo);
+      copy(handl, inFile.buff);
+      return handl;
+   End;
+
+   ini();
+End;
 
 Private Class (TerminalStream) ForEachStream(_func)
    var func = _func;
@@ -1158,6 +1177,8 @@ Macro StreamOf(obj)
          return BornStream(GenObject("FileIterator", obj));
       elif (isEqClass("TbFile", obj))
          return TBFileStream(obj);
+      elif (isEqClass("MemDb", obj))
+         return MemDbFileStream(obj);
       else
          return Throw(IllegalArgumentException("Не возможно создать Stream из объекта типа " + GenClassName(obj)));
       end;
@@ -1167,23 +1188,6 @@ Macro StreamOf(obj)
       return Throw(IllegalArgumentException("Не возможно создать Stream из объекта типа " + GenClassName(obj)));
    end;
 End;
-
-/*
-Class StreamFactory()
-   Macro getInstanceByName(name : String, parm1, parm2, parm3)
-      var fun = Lambdas.getFunc(parm1);
-      var streamObj = GenObject(name + "Stream", fun, parm2, parm3);
-
-      var clName = GenClassName(fun);
-      if(clName == "METHODREF")
-         GenAttach(streamObj, "callFunc", @callLambda);
-      end;
-
-      return streamObj;
-   End;
-End;
-*/
-//factory = StreamFactory();
 
 Macro StreamLoadedMarker()
    return 1;

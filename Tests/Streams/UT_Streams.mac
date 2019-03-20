@@ -1,8 +1,9 @@
 import "..\\mac\\extra\\RUnit\\RUnit.mac";
+import "..\\mac\\extra\\RUnit\\MemDb.mac";
 import "..\\mac\\extra\\StreamApi\\Stream.mac";
 import "..\\mac\\extra\\Collections\\Collections.mac";
 
-Private Class Account(_acc : String, _summ : Integer)
+ Class Account(_acc : String, _summ )
    var acc = _acc;
    var summ = _summ;
    var refAccs = SArray();
@@ -259,7 +260,85 @@ Class (TestCase) TestStreamApi()
 
 End;
 
-TestStreamApi;
-var v;
-defVal(V_MONEY, v);
-println(v);
+Class (TestCase) TestStreamDb()
+   var str;
+   var db;
+
+   Macro beforeClass()
+      var struct = StructureBuilder("MyDb")
+                  .addField("referenc", V_INTEGER, 4)
+                  .addField("codClient", V_INTEGER, 4)
+                  .addField("account", V_STRING, 20)
+                  .addField("open_date", V_DATE)
+                  .addField("close_date", V_DATE)
+                  .addField("sumRest", V_MONEY)
+                  .build();
+      db = MemDB(struct)
+                  .addKey(8, "referenc")
+                  .addKey(12, "Close_date", "Referenc");
+
+      db.addRow(200000, 200001, "40817000000000132", date(01,03,2019), date(21,03,2019), $1500);
+      db.addRow(100001, 300002, "40817000000000133", date(01,03,2019), date(21,03,2019), $1600);
+      db.addRow(100002, 200001, "40817000000000134", date(02,01,2019), date(10,02,2019), $1700);
+      db.addRow(100003, 123132, "40817000000000135", date(02,01,2019), date(10,02,2019), $1800);
+      db.addRow(100004, 420528, "40817000000000136", date(03,01,2019), date(10,02,2019), $1800);
+   End;
+
+   Macro beforeTest()
+      db.keyNum = -1;
+      db.rewind();
+      db.clear();
+      str = streamOf(db);
+   End;
+
+   Macro test_collect()
+      var res = str.fixed().collect(Collectors.toArray);
+      AssertEquals("40817000000000132", res[0].account);
+      AssertEquals("40817000000000133", res[1].account);
+      AssertEquals("40817000000000134", res[2].account);
+      AssertEquals("40817000000000135", res[3].account);
+      AssertEquals("40817000000000136", res[4].account);
+
+      db.KeyNum = 8;
+      db.rewind();
+      res = StreamOf(db).fixed().collect(Collectors.toArray);
+      AssertEquals("40817000000000133", res[0].account);
+      AssertEquals("40817000000000134", res[1].account);
+      AssertEquals("40817000000000135", res[2].account);
+      AssertEquals("40817000000000136", res[3].account);
+      AssertEquals("40817000000000132", res[4].account);
+   End;
+
+   Macro test_map()
+      var res = str
+         .map("Account(it.account, it.sumRest)")
+         .toArray();
+      AssertEquals(5, res.size);
+   End;
+
+   Macro test_filter()
+      var res = str.fixed()
+         .filter("it.sumRest < $1700")
+         .toArray();
+      AssertEquals(2, res.size);
+   End;
+
+   Macro test_reverse()
+      var res = str.fixed()
+            .reverse()
+            .collect(Collectors.toArray);
+      AssertEquals("40817000000000136", res[0].account);
+      AssertEquals("40817000000000135", res[1].account);
+      AssertEquals("40817000000000134", res[2].account);
+      AssertEquals("40817000000000133", res[3].account);
+      AssertEquals("40817000000000132", res[4].account);
+   End;
+
+
+
+End;
+
+
+
+//TestStreamApi;
+TestStreamDb;

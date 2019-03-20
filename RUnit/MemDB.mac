@@ -1,0 +1,576 @@
+import rcw;
+import "..\\mac\\Extra\\Collections\\ArrayList.mac";
+import "..\\mac\\Extra\\Utils\\StringUtils.mac";
+import "..\\mac\\Extra\\Utils\\SArray.mac";
+
+private var tmpArr = TArray;
+private const dbfilePath = "..\\dbfile\\";
+
+Private Class (TRecHandler) MockTRecHandler(strName, altDic, _file, _index, _offs, isFixed)
+   initTRecHandler(strName, altDic, _file, _index, _offs, isFixed);
+   var __pos = -1;
+
+End;
+
+Private Macro naturalOrderCompare(rh1, rh2)
+   return (rh1.__pos - rh2.__pos);
+end;
+
+Private Class RecComparator()
+   private var propsId  = TArray();
+   private var order    = TArray();
+
+   tmpArr[tmpArr.size] = this;
+
+   Macro addProp(ind : Integer, asc : Bool)
+      propsId[propsId.size] = ind;
+      if (asc)
+         order[order.size] = 1;
+      else
+         order[order.size] = -1;
+      end;
+   End;
+
+   Macro compare(o1, o2) : Integer
+      for (var i, 0, propsId.size-1, 1)
+         var id  = propsId[i];
+         var p1 = o1.rec[id];
+         var p2 = o2.rec[id];
+         var resCompare = 0;
+         if (p1 > p2)
+            resCompare = order[i];
+         elif (p1 < p2)
+            resCompare = -order[i];
+         end;
+         if (resCompare != 0)
+            return resCompare;
+         end;
+      end;
+      return 0;
+   End;
+
+   Macro compareWithPos(o1, o2)
+      var c = compare(o1, o2);
+      if (c != 0) return c; end;
+      return naturalOrderCompare(o1, o2);
+   End;
+
+   Macro getFunc()
+      return (R2M(this, "compare"));
+   End;
+
+   Macro getAddingFunc()
+      return (R2M(this, "compareWithPos"));
+   End;
+End;
+
+Private Class DBKey(_num)
+   var comparatorBuilder = RecComparator();
+   var comparator = null;
+   var addComparator = null;
+   var num = _num;
+   var keyInfo = SArray();
+
+   Macro addProp(id, asc)
+      var ord = 1;
+      if (not(asc)) ord = 0; end;
+      keyInfo.addItems(num, Int(keyInfo.size/5), id, ord, 0);
+      comparatorBuilder.addProp(id, asc);
+   End;
+
+   Macro build()
+      comparator = comparatorBuilder.getFunc();
+      addComparator = comparatorBuilder.getAddingFunc();
+      return this;
+   End;
+End;
+
+
+Class StructureBuilder(_name : String)
+   var name = _name;
+   var fieldsDef = SArray();
+
+   Macro setName(_name : String)
+      name = _name;
+      return this;
+   End;
+
+   Macro addField(_name : String, _type : Integer, _size : Integer, _float : Integer)
+      if (ValType(_name) != V_STRING)
+         RunError("Параметр name должен быть строкой");
+      end;
+      if (ValType(_type) != V_INTEGER)
+         RunError("Параметр name должен быть числовой константой типа.");
+      end;
+      fieldsDef.addItems(_name, _type, _size, _float, 0);
+      return this;
+   End;
+
+   Macro build()
+      var handler = MockTRecHandler(name, fieldsDef);
+      var a = handler.getFldInfo;
+      return handler;
+   End;
+End;
+
+Private Macro binarySearchMap(arr : TArray, el : Variant,  comp) : Integer
+   var high = arr.size, low = 0, mid = 0, x;
+   var i = -1;
+   while(low < high)
+      mid = (low + high) / 2;
+      x = arr[mid];
+      if (ExecMacro2(comp, el, x) == 0)
+         return mid;
+      elif (ExecMacro2(comp, el, x) < 0)
+         high = mid;
+         i = -mid-1;
+      else
+         low = mid + 1;
+         i = -low-1;
+      end;
+   end;
+   return i;
+End;
+
+Private Macro binarySearchFirst(arr : TArray, el : Variant,  comp) : Integer
+   var s = binarySearchMap(arr, el, comp);
+   if (s <= 0)
+      return s;
+   end;
+   while (s > 0)
+      if (ExecMacro2(comp, arr[s], arr[s-1]) != 0)
+         break;
+      end;
+      s = s - 1;
+   end;
+   return s;
+End;
+
+Private Macro binarySearchLast(arr : TArray, el : Variant,  comp) : Integer
+   var s = binarySearchMap(arr, el, comp);
+   if (s == (arr.size) or (s < 0))
+      return s;
+   end;
+   while (s < arr.size-1)
+      if (ExecMacro2(comp, arr[s], arr[s+1]) != 0)
+         return s;
+      end;
+      s = s + 1;
+   end;
+   return arr.size;
+End;
+
+
+
+Class MemDB(_struct)
+   var rec = _struct.rec;
+   var keyNum = -1;
+   var TblName = _struct.TblName;
+   var DicName = "";
+   var OpenMode = "R";
+
+   private var natural = SArray();
+   private var lastKeyNum    = -1;
+   private var curDataSet    = natural;
+   private var curComparator = @naturalOrderCompare;
+   private var struct = _struct;
+   var buff = null;
+   private var cursor = -1;
+   private var dataSets = SArray();
+   private var keys = SArray();
+   private var curIndex = 0;
+   private var lastGetPos = -1;
+
+   Private Macro addInDataSet(k, rh)
+      var d = dataSets[k];
+      var comp = keys[k].addComparator;
+      var pl = binarySearchLast(d, rh, comp);
+      if (pl >= 0)
+         d.add(rh, pl);
+      else
+         d.add(rh, -(pl+1));
+      end;
+   End;
+
+   Private Macro addInAllDataSet(rh)
+      natural.push(rh);
+      for(var i, 0, dataSets.size-1, 1)
+         if (dataSets[i] != null)
+            addInDataSet(i, rh);
+         end;
+      end;
+   End;
+
+   Private Macro removeInDataSet(k, rh)
+      var d = dataSets[k];
+      for (var i, 0, d.size-1, 1)
+         if (d[i].__pos == rh.__pos)
+            d.remove(i);
+            break;
+         end;
+      end;
+   End;
+
+   Private Macro RemoveInAllDataSet(rh)
+      var ns = binarySearchMap(natural, rh, @naturalOrderCompare);
+      if (ns >= 0)
+         natural.remove(ns);
+      end;
+      for(var i, 0, dataSets.size-1, 1)
+         if (dataSets[i] != null)
+            removeInDataSet(i, rh);
+         end;
+      end;
+   End;
+
+   Private Macro newRec() : MockTRecHandler
+      var r = MockTRecHandler(buff.TblName, buff.getFldInfo);
+      r.__pos = curIndex;
+      curIndex = curIndex + 1;
+      return r;
+   End;
+
+   Macro addRow()
+      var newRow = newRec();
+      var i = 0, v;
+      while(getParm(i+1, v))
+         newRow.rec[i] = v;
+         i = i + 1;
+      end;
+      addInAllDataSet(newRow);
+      return this;
+   End;
+
+   Private macro dataSetCopy(k)
+      var datas = dataSets[k];
+      datas.addArray(natural);
+      datas.sort(keys[k].addComparator);
+   End;
+
+   Macro addKey(num : Integer)
+      var kb = DBKey(num);
+      var i = 0, asc = true, v;
+      while (GetParm(i+2, v))
+         if (SubStr(v, 1, 1) == "-")
+            asc = false;
+            v = SubStr(v, 2);
+         end;
+         kb.addProp(GenPropId(rec, v), asc);
+         i = i + 1;
+      end;
+      kb.build();
+      keys[num] = kb;
+      dataSets[num] = SArray;
+      dataSetCopy(num);
+      return this;
+   End;
+
+   Private Macro copyBuff()
+      Copy(buff, curDataSet[cursor]);
+      buff.__pos = curDataSet[cursor].__pos;
+   End;
+
+
+   Private Macro restoreCursor()
+      if (cursor == -1) return; end;
+      var s = binarySearchMap(curDataSet, buff, @naturalOrderCompare);
+      cursor = s;
+   End;
+
+   Macro checkKeyNum()
+      if (lastKeyNum != keyNum)
+         if (keyNum == -1)
+            curDataSet = natural;
+            curComparator = @naturalOrderCompare;
+            restoreCursor();
+         else
+            if ((keys.size-1 < keyNum) or (keys[keyNum] == null))
+               RunError("Ключ БД не определен " + keyNum);
+            end;
+            curDataSet = dataSets[keyNum];
+            curComparator = keys[keyNum].comparator;
+            restoreCursor();
+         end;
+      end;
+      lastKeyNum = keyNum;
+   End;
+
+   Macro NRecords() : Integer
+      return natural.size;
+   End;
+
+   Macro clear()
+      for (var i, 0, GenNumProps(buff.rec)-1, 1)
+         buff.clear;
+      end;
+   End;
+
+   Macro rewind()
+      cursor = -1;
+      checkKeyNum();
+   End;
+
+   Macro getPos() : Integer
+      lastGetPos = buff.__pos;
+      return lastGetPos;
+   End;
+
+   Macro getDirect(pos) : Bool
+      if (ValType(pos) == V_UNDEF)
+         pos = lastGetPos;
+      end;
+      buff.rec.__pos = pos;
+      var sn = binarySearchMap(natural, buff, @naturalOrderCompare);
+      if (sn < 0) return false; end;
+      var s = binarySearchMap(curDataSet, natural[sn], @curComparator);
+      if (s < 0) return false; end;
+      cursor = s;
+      copyBuff();
+   End;
+
+   Macro item(ni)
+
+   End;
+
+   Macro next() : Bool
+      checkKeyNum();
+      if (cursor >= (natural.size-1))
+         return false;
+      end;
+      cursor = cursor + 1;
+      copyBuff();
+      return true;
+   End;
+
+   Macro prev()
+      checkKeyNum();
+      if ((cursor == 0) or (natural.size == 0))
+         return false;
+      end;
+      if (cursor == -1)
+         cursor = natural.size;
+      end;
+      cursor = cursor - 1;
+      copyBuff();
+      return true;
+   End;
+
+   Macro insert()
+      var newRow = newRec();
+      for (var i, 0, GenNumProps(buff.rec)-1, 1)
+         newRow[i] = buff[i];
+      end;
+      addInAllDataSet(newRow);
+   End;
+
+   Macro update() : Bool
+      if (cursor >= 0)
+         copy(curDataSet[cursor], buff);
+      end;
+      return false;
+   End;
+
+   Macro delete() : Bool
+      if (cursor >= 0)
+         RemoveInAllDataSet(curDataSet[cursor]);
+         cursor = cursor - 1;
+         return true;
+      end;
+      return false;
+   End;
+
+   Macro getEQ() : Bool
+      checkKeyNum();
+      var r = binarySearchFirst(curDataSet, buff, curComparator);
+      if (r < 0)
+         return false;
+      end;
+      cursor = r;
+      copyBuff();
+      return true;
+   End;
+
+   Macro getGE() : Bool
+      checkKeyNum();
+      var r = binarySearchFirst(curDataSet, buff, curComparator);
+      if (r < 0)
+         r = (-r-1);
+      end;
+      if (r == natural.size)
+         return false;
+      end;
+
+      cursor = r;
+      copyBuff();
+      return true;
+   End;
+
+   Macro getGT() : Bool
+      checkKeyNum();
+      var r = binarySearchFirst(curDataSet, buff, curComparator);
+      if (r < 0)
+         r = (-r-1);
+      else
+         r = r + 1;
+      end;
+      if (r == natural.size)
+         return false;
+      end;
+
+      cursor = r;
+      copyBuff();
+      return true;
+   End;
+
+   Macro getLE() : Bool
+      checkKeyNum();
+      var r = binarySearchLast(curDataSet, buff, curComparator);
+      if (r == -1)
+         return false;
+      end;
+      if (r < 0)
+         r = -r - 2;
+      end;
+      cursor = r;
+      copyBuff();
+      return true;
+   End;
+
+   Macro getLT() : Bool
+      checkKeyNum();
+      var r = binarySearchLast(curDataSet, buff, curComparator);
+      if ((r == -1) or (r == 0))
+         return false;
+      elif (r < 0)
+         r = -r - 2;
+      else
+         r = r - 1;
+      end;
+      cursor = r;
+      copyBuff();
+      return true;
+   End;
+
+   Macro getFldInfo()
+      return struct.getFldInfo();
+   End;
+
+   Macro getKeyInfo()
+      if (IsEqClass("TBFile", struct))
+         return struct.getKeyInfo();
+      end;
+      var res = SArray();
+      for (var k, keys)
+         res.addArray(k.KeyInfo);
+      end;
+      return res;
+   End;
+
+   Macro createKeysFromTB(kinf)
+      var n, s, f, o, k;
+      var curK = -1;
+      for (var i, 0, kinf.size - 1, 5)
+         n = kinf[i];
+         s = kinf[i+1];
+         f = kinf[i+2];
+         o = kinf[i+3];
+         if (n != curK)
+            if (k != null)
+               k.build();
+               keys[curK] = k;
+               dataSets[curK] = SArray();
+               dataSetCopy(curK);
+            end;
+            k = DbKey(n);
+            curK = n;
+         else
+            k.addProp(f, (o == 1));
+         end;
+      end;
+   End;
+
+   Macro ini()
+      if (IsEqClass("TRecHandler", struct))
+         buff = struct;
+      elif (IsEqClass("TBFile", struct))
+         buff = MockTRecHandler(struct.TblName, struct.getFldInfo);
+         createKeysFromTB(struct.getKeyInfo);
+      end;
+   end;
+
+   ini();
+End;
+
+return;
+
+var struct = StructureBuilder("MyDb")
+                  .addField("referenc", V_STRING, 10)
+                  .addField("codClient", V_INTEGER, 4)
+                  .addField("account", V_STRING, 20)
+                  .addField("open_date", V_DATE)
+                  .addField("close_date", V_DATE)
+                  .addField("sumRest", V_MONEY)
+                  .build();
+var db = MemDB(struct);
+/*
+         .addKey(0, "referenc")
+         .addKey(5, "-open_date", "account");
+*/
+db.addRow("100000", 420526, "40817000000000132", date(01,03,2019), date(21,03,2019), $150000);
+db.addRow("100001", 420526, "40817000000000133", date(01,03,2019), date(21,03,2019), $160000);
+db.addRow("100002", 420527, "40817000000000134", date(02,01,2019), date(10,02,2019), $170000);
+db.addRow("100003", 420527, "40817000000000135", date(02,01,2019), date(10,02,2019), $180000);
+db.addRow("100004", 420528, "40817000000000136", date(03,01,2019), date(10,02,2019), $180000);
+debugbreak;
+
+var t0 = time;
+/*
+for (var i, 1, 1000)
+   db.addRow(Random + "", Random, Random + "" +Random, date, date, Random);
+end;
+*/
+db.addKey(0, "referenc");
+db.addKey(1, "referenc" , "codClient");
+  //.addKey(5, "-open_date", "account");
+
+var t1 = time;
+
+println(String((t1-t0):m));
+
+db.keyNum = 1;
+while(db.next)
+   println(db.rec.referenc);
+end;
+debugbreak;
+db.clear();
+db.rewind();
+db.rec.referenc  = "100005";
+db.rec.codClient = 4205276;
+if (db.getLT())
+   Println(db.rec.account);
+end;
+
+var fnew  = "../mac/Extra/Tests/CsvDb/depositr2.csv";
+
+
+
+// var db = DBEmul(fnew, "R", 8, null, null);
+
+/*
+for(var i, 1, 1000)
+   db.addRec(DepositrRec.generateRandom());
+end;
+
+db.saveAsCsv(fnew);
+*/
+/*
+db.addKey(8, "Referenc");
+db.rec.Referenc = 100;
+var res = db.getGT();
+*/
+//println(String(res) + " " + db.rec.referenc);
+/*
+var a = @Int;
+
+Println(ExecMacro2(a, "234"));
+*/

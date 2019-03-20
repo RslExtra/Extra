@@ -1,0 +1,137 @@
+import "..\\mac\\extra\\RUnit\\RUnit.mac";
+import "..\\mac\\extra\\RUnit\\MemDb.mac";
+
+
+Class (TestCase) TestMemDb()
+   var db;
+
+   Macro beforeTest()
+      var struct = StructureBuilder("MyDb")
+                  .addField("referenc", V_INTEGER, 4)
+                  .addField("codClient", V_INTEGER, 4)
+                  .addField("account", V_STRING, 20)
+                  .addField("open_date", V_DATE)
+                  .addField("close_date", V_DATE)
+                  .addField("sumRest", V_MONEY)
+                  .build();
+      db = MemDB(struct)
+                  .addKey(8, "referenc")
+                  .addKey(12, "Close_date", "Referenc");
+
+      db.addRow(200000, 200001, "40817000000000132", date(01,03,2019), date(20,03,2019), $1500);
+      db.addRow(100001, 300002, "40817000000000133", date(01,03,2019), date(21,03,2019), $1600);
+      db.addRow(100002, 200001, "40817000000000134", date(02,01,2019), date(10,02,2019), $1700);
+      db.addRow(100003, 123132, "40817000000000135", date(02,01,2019), date(0,0,0)     , $1800);
+      db.addRow(100004, 420528, "40817000000000136", date(03,01,2019), date(10,02,2019), $1800);
+   End;
+
+
+   Macro test_methods()
+      assertEquals(5, db.nrecords);
+      assertEquals(-1, db.getPos);
+   End;
+
+   Macro test_next()
+      assertTrue(db.next);
+      assertEquals(200000, db.rec.Referenc);
+      assertTrue(db.next);
+      assertEquals(100001, db.rec.Referenc);
+      assertTrue(db.next);
+      assertEquals(100002, db.rec.Referenc);
+      assertTrue(db.next);
+      assertEquals(100003, db.rec.Referenc);
+      assertTrue(db.next);
+      assertEquals(100004, db.rec.Referenc);
+      assertFalse(db.next);
+      assertFalse(db.next);
+      assertFalse(db.next);
+      assertEquals(100004, db.rec.Referenc);
+      assertTrue(db.prev);
+      assertEquals(100003, db.rec.Referenc);
+   End;
+
+   Macro test_prev()
+      assertTrue(db.prev);
+      assertEquals(100004, db.rec.Referenc);
+      assertTrue(db.prev);
+      assertEquals(100003, db.rec.Referenc);
+      assertTrue(db.prev);
+      assertEquals(100002, db.rec.Referenc);
+      assertTrue(db.prev);
+      assertEquals(100001, db.rec.Referenc);
+      assertTrue(db.prev);
+      assertEquals(200000, db.rec.Referenc);
+      assertFalse(db.prev);
+      assertFalse(db.prev);
+      assertFalse(db.prev);
+   End;
+
+   Macro test_getEQ()
+      db.keyNum = 12;
+      db.rewind();
+      db.rec.Close_date = date(0,0,0);
+      db.rec.Referenc   = 100003;
+      assertTrue(db.getEQ);
+      assertEquals("40817000000000135", db.rec.account);
+      db.rec.Close_date = date(10,10,10);
+      db.rec.Referenc   = 100003;
+      assertFalse(db.getEQ());
+      db.rec.Close_date = date(0,0,0);
+      db.rec.Referenc   = 100003;
+      assertTrue(db.getEQ);
+      assertEquals("40817000000000135", db.rec.account);
+   End;
+
+   Macro test_GetGE()
+      db.keyNum = 12;
+      db.rewind();
+      db.rec.Close_date = date(20,03,2019);
+      db.rec.Referenc   = 200000;
+      assertTrue(db.getGE);
+      assertEquals("40817000000000132", db.rec.Account);
+      assertTrue(db.next);
+      assertEquals("40817000000000133", db.rec.Account);
+      assertFalse(db.next);
+
+      db.rec.Close_date = date(21,03,2019);
+      db.rec.Referenc   = 200000;
+      assertFalse(db.getGE());
+   End;
+
+   Macro test_Insert()
+      db.keyNum = 8;
+      db.rec.Referenc = 100002;
+      assertTrue(db.getEQ());
+      db.rec.sumRest = $100;
+      db.update();
+      db.rewind();
+      db.rec.Referenc = 100002;
+      db.getEQ();
+      assertEquals($100, db.rec.sumRest);
+   End;
+
+   Macro test_Delete()
+      db.keyNum = 8;
+      db.rec.Referenc = 100002;
+      assertTrue(db.getEQ());
+      assertTrue(db.delete());
+      assertEquals(4, db.NRecords);
+      db.keyNum = -1;
+      db.rewind();
+      assertTrue(db.next());
+
+      assertTrue(db.delete());
+      assertTrue(db.next());
+      assertTrue(db.delete());
+      assertTrue(db.next());
+      assertTrue(db.delete());
+      assertTrue(db.next());
+      assertEquals(100004, db.rec.Referenc);
+
+   End;
+
+
+End;
+
+
+TestMemDb;

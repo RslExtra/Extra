@@ -364,12 +364,13 @@ Class (ListInterface) ArrayList()
    End;
 
    Macro toArray() : SArray
-      var retArr = SArray();
-      retArr[size - 1] = null;
+      var res = SArray();
+      if (size == 0) return res; end;
+      res[size - 1] = null;
       for (var i, 0, size - 1, 1)
-         retArr[i] = items[i];
+         res[i] = items[i];
       end;
-      return retArr;
+      return res;
    End;
 
    Macro sort(compareFun)
