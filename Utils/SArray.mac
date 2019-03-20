@@ -166,13 +166,26 @@ Class (TArray) SArray()
    end;
 
    /**
-      Добавляет в исходный массив множество элементов.
+      Добавляет в исходный массив множество элементов из 'enumerable'.
       @sample [samples.sArray.addAll]
+
+      @tag builder
+   */
+   Macro addAll(enumerable)
+      for (var el, enumerable)
+         value(size) = el;
+      end;
+      return this;
+   End;
+
+   /**
+      Добавляет в исходный массив множество элементов.
+      @sample [samples.sArray.addItems]
 
       @tag builder
       @oparam varargs
    */
-   Macro addAll()
+   Macro addItems()
       var p;
       for (var i, 1, Parmcount-1, 1)
          GetParm(i, p);
