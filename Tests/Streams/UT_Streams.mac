@@ -230,6 +230,7 @@ Class (TestCase) TestStreamApi()
                .map("it.refAccs")
                .flatMap("it.toStream()")
                .toArray();
+
       assertEquals(3, res.size);
       assertEquals(1000, res[0].summ);
       assertEquals(2000, res[1].summ);
@@ -259,3 +260,6 @@ Class (TestCase) TestStreamApi()
 End;
 
 TestStreamApi;
+var v;
+defVal(V_MONEY, v);
+println(v);

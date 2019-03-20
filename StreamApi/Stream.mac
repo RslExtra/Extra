@@ -19,28 +19,28 @@
    Использование библиотеки помогает существенно сократить время написания аналитических отчетов, однако при использовании "на постоянку" желательно не использовать лямбды, чтобы не насиловать HDD. Так же помните, что при передаче метода объекта класса, сам объект должен существовать в момент вызова метода. Т.е объект необходимо поместить в память, например в переменную или массив, чтобы его не уничтожил GC.
 */
 
-
 import "..\\Mac\\Extra\\Collections\\Collections.mac";
 import "..\\Mac\\Extra\\Utils\\ArrayUtils.mac";
 import "..\\Mac\\Extra\\StreamApi\\EXTbfile.mac";
 import "..\\Mac\\Extra\\StreamApi\\Collectors.mac";
-
 
 Private Macro callLambda(obj,_func, parm1, parm2) : Variant
    var res = CallR2M(_func, parm1, parm2);
    return res;
 End;
 
-/**
-   Базовый класс для всех стримов, описывает методы доступные для всех наследников.
-*/
-Private Class StreamInterface(_func)
+Private Class StreamInterface()
    var upstream;
    var downstream;
    var needStop = false;
 
-   Macro getSize()
-      return 0;
+   Private Macro accept(FunClass : StreamInterface)
+      this.downstream = FunClass;
+      FunClass.upstream = this;
+      if (isEqClass("TerminalStream", FunClass))
+         return FunClass.apply();
+      end;
+      return FunClass;
    End;
 
    Macro stopStream()
@@ -50,6 +50,20 @@ Private Class StreamInterface(_func)
       end;
    End;
 
+   Macro next() : Variant
+      return upstream.next();
+   End;
+End;
+
+/**
+   Базовый класс для всех стримов, описывает методы доступные для всех наследников.
+*/
+Private Class (StreamInterface) ContinuedStream()
+
+   Macro getSize()
+      return 0;
+   End;
+
    Macro hasnext() : Bool
       if (needStop)
          return false;
@@ -57,21 +71,8 @@ Private Class StreamInterface(_func)
       return upstream.hasnext();
    end;
 
-   Macro next() : Variant
-      return upstream.next();
-   End;
-
    Macro apply(parm)
       // Implemented
-   End;
-
-   Private Macro accept(FunClass : StreamInterface)
-      this.downstream = FunClass;
-      FunClass.upstream = this;
-      if (isEqClass("TerminalStream", FunClass))
-         return FunClass.apply();
-      end;
-      return FunClass;
    End;
 
    /**
@@ -386,8 +387,8 @@ End;
 /**
    Базовый класс для стримов рождающих потоки. На вход принимает 'iterator', объект класса реализующий методы Macro hasNext() : Bool, Macro next() : Variant.
 */
-Class (StreamInterface) BornStream(iterator)
-   initStreamInterface();
+Class (ContinuedStream) BornStream(iterator)
+   initContinuedStream();
    private var iter = iterator;
    private var inc = 0;
 
@@ -410,7 +411,7 @@ End;
    Базовый класс для конвеерных методов. Если будете писать свой конвеерный класс, унаследуйтесь от этого класса и переопределите метод apply(el).
 
 */
-Class (StreamInterface) ChainStream()
+Class (ContinuedStream) ChainStream()
 
    Macro apply(el)
       // implemented
@@ -418,7 +419,7 @@ Class (StreamInterface) ChainStream()
 
    Macro next()
       var el = upstream.next();
-      if(needStop) return stopStream(); end;
+      if (needStop) return stopStream(); end;
       return this.apply(el);
    End;
 End;
@@ -426,8 +427,8 @@ End;
 /**
    Базовый класс для агрегатных стримов. Жадно собирает данные у предыдущих стримов, азатем запускается на выполнение как будто является [BornStream].
 */
-Class (StreamInterface) AgregateStream(_func)
-   initStreamInterface(_func);
+Class (ContinuedStream) AgregateStream(_func)
+   initContinuedStream(_func);
    private var isReadyToGive = false;
    private var iter;
 
@@ -462,14 +463,10 @@ End;
    Базовый класс для терминальных стримов (запускающих и завершающих). Если будете писать свой терминальный класс, унаследуйтесь от этого класса и переопределите метод apply(el).
 */
 Class (StreamInterface) TerminalStream()
-   var countPass = 0;
-   Macro inc()
-      countPass = countPass + 1;
-   End;
 
-   Macro showProgress(msg)
-      Message(msg);
-   End;
+   Macro apply()
+
+   end;
 End;
 
 Private Class (ChainStream) MapStream(_mapfunc)
@@ -481,8 +478,8 @@ Private Class (ChainStream) MapStream(_mapfunc)
 End;
 
 Private Class (ChainStream) FlatMapStream(_mapfunc)
-   var mapFunc = Lambdas.getFunc(_mapfunc);
-   var curSubStream = null;
+   private var mapFunc = Lambdas.getFunc(_mapfunc);
+   private var curSubStream = null;
 
    Macro getNextSubStream() : Bool
       var el = upstream.next();
@@ -495,15 +492,14 @@ Private Class (ChainStream) FlatMapStream(_mapfunc)
    End;
 
    Macro next()
-      if((Valtype(curSubStream) == V_UNDEF))
+      if ((Valtype(curSubStream) == V_UNDEF))
          if (getNextSubStream == False)
             return stopStream;
          end;
       end;
-      var el;
       while(true)
-         el = curSubStream.next();
-         if(curSubStream.needStop == false)
+         var el = curSubStream.next();
+         if (not(curSubStream.needStop))
             return el;
          else
             if (getNextSubStream == False)
@@ -531,7 +527,6 @@ Private Class (ChainStream) FilterStream(_predicate)
 End;
 
 Private Class (ChainStream) LimitStream(_count : Integer)
-   initStreamInterface();
    var needCount = _count;
    var curCount = 0;
 
@@ -547,7 +542,6 @@ Private Class (ChainStream) LimitStream(_count : Integer)
 End;
 
 Private Class (ChainStream) SkipStream(_count : Integer)
-   initStreamInterface();
    private var needCount = _count;
    private var curCount = 0;
    private var skipped = false;
@@ -569,7 +563,6 @@ Private Class (ChainStream) SkipStream(_count : Integer)
 End;
 
 Private Class (ChainStream) ProgrStream()
-   initStreamInterface();
    private var isInit = false;
    private var cnt = 0;
    private var curCount = 0;
@@ -649,7 +642,7 @@ Private Class (DistinctByStream) distinctByStringStream(_funcParm)
    set = StringHashSet(10000, 0.1);
 End;
 
-Private Class (StreamInterface) PeekStream(_func)
+Private Class (ContinuedStream) PeekStream(_func)
    private var func = _func;
 
    Macro next()
@@ -723,90 +716,190 @@ End;
 
 // Borning
 
+Private Macro reverseReplacement(tbStr)
+   var hp = tbStr.inFile.prev();
+   if (not(hp)) return tbStr.stopStream(); end;
+   if (not(tbStr.Fix))
+      return tbStr.inFile.rec;
+   else
+      return tbStr.getCopyRec();
+   end;
+End;
+
 Private Class (BornStream) TBFileStream(tbFile)
+   var inFile = tbFile;
    private var extb = EXTBFile(tbFile);
    private var front = true;
-   initBornStream(extb.iter);
+   private var fix = false;
+   private var thandl = TRecHandler(inFile.TblName, inFile.DicName);
 
-   Macro getGE()
-      var props = TArray();
-      var curProp;
-      var i = 0;
-      while(true)
-         if(GetParm(i+1, curProp))
-            props(i) = curProp;
-            i = i + 1;
-         else
+   private var arrKeys     = TArray();
+   private var arrKeysType = TArray();
+   private var arrKeysSize = 0;
+
+   Macro ini()
+      var i = 0, k = 0;
+      var kInfo = THandl.GetKeyInfo();
+      var fInfo = THandl.GetFldInfo();
+      while (i < kInfo.size)
+         if (kInfo[i] == inFile.keyNum)
+            var pos = kInfo[i+2];
+            arrKeys[k] = pos;
+            arrKeysType[k]  = fInfo[(pos * 5) + 1];
+            k = k + 1;
             break;
          end;
+         i = i + 5;
       end;
-      var hn = extb.getGE(props);
+      arrKeysSize = k;
+   End;
+
+   Macro getCopyRec()
+      var handl = TRecHandler(inFile.TblName, inFile.DicName);
+      copy(handl, inFile);
+      return handl;
+   End;
+
+   Macro next()
+      var hn = inFile.next();
+      if (not(hn)) return stopStream(); end;
+      if (not(Fix))
+         return inFile.rec;
+      else
+         return getCopyRec();
+      end;
+   End;
+
+   /**
+      Устанавливает флаг fix в значение `true`; каждая итерация стрима будет возвращать копию буфера таблицу в [TRecHandler]. Накладная по скорости и памяти операция, поэтому желательно избегать использование этой опции, предпочитая мапить rec в ваш POJO объект.
+   */
+   Macro fixed() : TBFileStream
+      fix = true;
       return this;
    End;
 
-   Macro getGT()
-      var props = TArray();
-      var curProp;
-      var i = 0;
-      while(true)
-         if(GetParm(i+1, curProp))
-            props(i) = curProp;
-            i = i + 1;
-         else
-            break;
-         end;
-      end;
-      var hn = extb.getGT(props);
+   /**
+      Курсор бд будет бежать в обратном направлении.
+   */
+   Macro reverse() : TBFileStream
+      GenAttach(this, "next", reverseReplacement);
       return this;
    End;
 
-    Macro getLE()
-      var props = TArray();
-      var curProp;
-      var i = 0;
-      while(true)
-         if(GetParm(i+1, curProp))
-            props(i) = curProp;
-            i = i + 1;
-         else
-            break;
-         end;
-      end;
-      var hn = extb.getLE(props);
+   /**
+      Метод аналогичен методу [TBFile.rewind].
+   */
+   Macro rewind() : TBFileStream
+      inFile.rewind;
       return this;
    End;
 
-   Macro getLT()
-      var props = TArray();
-      var curProp;
-      var i = 0;
-      while(true)
-         if(GetParm(i+1, curProp))
-            props(i) = curProp;
-            i = i + 1;
-         else
-            break;
-         end;
-      end;
-      var hn = extb.getLT(props);
+   /**
+      Устанавливает новый ключ 'kn'.
+   */
+   Macro setKey(kn : Integer) : TBFileStream
+      inFile.keyNum = kn;
+      inFile.rewind();
+      ini();
       return this;
    End;
 
-   Macro getEQ()
-      var props = TArray();
-      var curProp;
-      var i = 0;
-      while(true)
-         if(GetParm(i+1, curProp))
-            props(i) = curProp;
-            i = i + 1;
-         else
-            break;
+   /**
+      Метод аналогичен методу [TBFile.getGE]. Параметры пеерчисляют для текущего ключа базы в 'varargs'.
+
+      @oparam varargs - значения полей ключа
+   */
+   Macro getGE() : TBFileStream
+      inFile.clear();
+      var i = 0, v, p;
+      while (GetParm(i+1, v))
+         p = arrKeys[i];
+         if (ValType(v) == V_UNDEF)
+            defVal(arrKeysType[i], v);
          end;
+         inFile.rec[p] = v;
       end;
-      var hn = extb.getEQ(props);
+      inFile.getGE();
       return this;
    End;
+
+   /**
+      Метод аналогичен методу [TBFile.getGT]. Параметры пеерчисляют для текущего ключа базы в 'varargs'.
+
+      @oparam varargs - значения полей ключа
+   */
+   Macro getGT() : TBFileStream
+      inFile.clear();
+      var i = 0, v, p;
+      while (GetParm(i+1, v))
+         p = arrKeys[i];
+         if (ValType(v) == V_UNDEF)
+            defVal(arrKeysType[i], v);
+         end;
+         inFile.rec[p] = v;
+      end;
+      inFile.getGT();
+      return this;
+   End;
+
+   /**
+      Метод аналогичен методу [TBFile.getLE]. Параметры пеерчисляют для текущего ключа базы в 'varargs'.
+
+      @oparam varargs - значения полей ключа
+   */
+   Macro getLE() : TBFileStream
+      inFile.clear();
+      var i = 0, v, p;
+      while (GetParm(i+1, v))
+         p = arrKeys[i];
+         if (ValType(v) == V_UNDEF)
+            defVal(arrKeysType[i], v);
+         end;
+         inFile.rec[p] = v;
+      end;
+      inFile.getLE();
+      return this;
+   End;
+
+   /**
+      Метод аналогичен методу [TBFile.getLT]. Параметры пеерчисляют для текущего ключа базы в 'varargs'.
+
+      @oparam varargs - значения полей ключа
+   */
+   Macro getLT() : TBFileStream
+      inFile.clear();
+      var i = 0, v, p;
+      while (GetParm(i+1, v))
+         p = arrKeys[i];
+         if (ValType(v) == V_UNDEF)
+            defVal(arrKeysType[i], v);
+         end;
+         inFile.rec[p] = v;
+      end;
+      inFile.getLT();
+      return this;
+   End;
+
+   /**
+      Метод аналогичен методу [TBFile.getEQ]. Параметры пеерчисляют для текущего ключа базы в 'varargs'.
+
+      @oparam varargs - значения полей ключа
+   */
+   Macro getEQ() : TBFileStream
+      inFile.clear();
+      var i = 0, v, p;
+      while (GetParm(i+1, v))
+         p = arrKeys[i];
+         if (ValType(v) == V_UNDEF)
+            defVal(arrKeysType[i], v);
+         end;
+         inFile.rec[p] = v;
+      end;
+      inFile.getEQ();
+      return this;
+   End;
+
+   ini();
 End;
 
 
@@ -829,7 +922,7 @@ Private Class (ForEachStream) toScreenStream()
    End;
 End;
 
-Private Class (StreamInterface) ZipStream(_s1, _s2, _bifunc)
+Private Class (ContinuedStream) ZipStream(_s1, _s2, _bifunc)
    private var bifunc = Lambdas.getFunc(_bifunc);
    private var s1 = _s1;
    private var s2 = _s2;
@@ -837,14 +930,14 @@ Private Class (StreamInterface) ZipStream(_s1, _s2, _bifunc)
    Macro next()
       var e1 = s1.next;
       var e2 = s2.next;
-      if(s1.needStop or s2.needStop) return stopStream(); end;
+      if (s1.needStop or s2.needStop) return stopStream(); end;
       var res = ExecMacro2(bifunc, e1, e2);
       return res;
    End;
 End;
 
 
-Private Class (StreamInterface) zipWithIndexStream()
+Private Class (ContinuedStream) zipWithIndexStream()
    private var ind = -1;
 
    Macro next()
@@ -858,7 +951,7 @@ End;
 /**
    Создает стрим из двух стримов 's1' и 's2' и объединяет их элементы согласно функции 'bifunc'.
 */
-Macro zipStreams(s1 : StreamInterface, s2 : StreamInterface, bifunc)
+Macro zipStreams(s1 : ContinuedStream, s2 : ContinuedStream, bifunc)
    return ZipStream(s1, s2, bifunc);
 End;
 
@@ -1063,13 +1156,15 @@ Macro StreamOf(obj)
          return BornStream(obj.newIterator());
       elif (IsEqClass("TStreamDoc", obj))
          return BornStream(GenObject("FileIterator", obj));
+      elif (isEqClass("TbFile", obj))
+         return TBFileStream(obj);
       else
-         return Throm(IllegalArgumentException("Не возможно создать Stream из объекта типа " + GenClassName(obj)));
+         return Throw(IllegalArgumentException("Не возможно создать Stream из объекта типа " + GenClassName(obj)));
       end;
    elif (ValType(obj) == V_STRING)
       return BornStream(GenObject("StringIterator", obj));
    else
-      return Throm(IllegalArgumentException("Не возможно создать Stream из объекта типа " + GenClassName(obj)));
+      return Throw(IllegalArgumentException("Не возможно создать Stream из объекта типа " + GenClassName(obj)));
    end;
 End;
 
