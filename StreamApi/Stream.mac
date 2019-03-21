@@ -2,21 +2,27 @@
    @Package StreamApi
    @Alias StreamApi
    @Ancestor Extra
-   @Version 0.7
+   @Version 0.8
 
-   Реализация ленивых коллекций. В большинстве своём схожа с 'Java.Stream'. Реализует самые полезные методы для создания цепочек ленивых вычислений.
-   Однако в виду того, что RSL - слаботипизирован, рекомендуется потренироваться в использовании на строготипизированом языке (Java, Scala, Kotlin).
+   Реализация Stream Api. В большинстве своём схожа с 'Java Stream Api'. Реализует самые полезные методы для создания цепочек ленивых вычислений.
 
    Создать Stream можно следующими способами
    - методом '.toStream()', если он реализован у класса объекта например ([SArray], [Iterable Collections]).
    - вызовом функции StreamOf(obj). Obj может быть массивом [TArray], [Collections.Iterable], объектом [TStreamDoc], строкой 'String', объектом таблицы бд [TbFile].
    - реализовав итератор для любого класса с методами (next() : Variant, hasNext() : Bool) и передав его инстанс в конструктор класса [BornStream].
 
-   После создания объекта, как обычно, через точку пишем конвеерные методы (тэг 'chain'), агрегирующие методы (тэг 'agregate') и заверщаем цепочку одним терминальным методом ('terminal'), который вернет или `null` или соответствующий результат.
+   После создания объекта, как обычно, через точку пишем конвеерные методы (тэг 'Conveyor'), агрегирующие методы (тэг 'Agregate') и заверщаем цепочку одним терминальным методом ('Terminal'), который вернет или `null` или соответствующий результат.
 
    Во всех методах где необходимо передать ссылку на функцию, можно использовать лямбды, имя функции с '@' перед именем, ссылкой на метод [R2M] или ссылку на функцию через '@'.
 
-   Использование библиотеки помогает существенно сократить время написания аналитических отчетов, однако при использовании "на постоянку" желательно не использовать лямбды, чтобы не насиловать HDD. Так же помните, что при передаче метода объекта класса, сам объект должен существовать в момент вызова метода. Т.е объект необходимо поместить в память, например в переменную или массив, чтобы его не уничтожил GC.
+   О чем следует помнить:
+   - Стрим не запускает конвеер вычислений до добавление в цепочку терминального метода.
+   - После того как стрим завершил работу, повторно запустить его не получится. Нужно создать заново.
+   - При передаче параметра как ссылки метода объекта класса (через [R2M]), следует помнить, что объект должен существовать в момент вызова метода. Т.е объект необходимо поместить в память, например в переменную или массив, чтобы его не уничтожил GC.
+
+   Использование библиотеки помогает существенно сократить время написания аналитических отчетов (время исполнения чаще всего тоже), однако при использовании "на постоянку" желательно не использовать лямбды, чтобы не использовать HDD (все лямбды можно описать как маленькие функции).
+
+   В виду того, что RSL - динамически типизирован, рекомендуется потренироваться в использовании на языке со статической типизацией (Java, Scala, Kotlin, C#).
 */
 
 import "..\\Mac\\Extra\\Collections\\Collections.mac";
@@ -46,56 +52,57 @@ Private Macro defVal(codType)
    end;
 end;
 
+/**
+   Базовый класс для всех стримов, описывает методы доступные для всех наследников.
+*/
 Private Class StreamInterface()
    var upstream;
    var downstream;
    var needStop = false;
 
-   Private Macro accept(FunClass : StreamInterface)
-      this.downstream = FunClass;
-      FunClass.upstream = this;
-      if (isEqClass("TerminalStream", FunClass))
-         return FunClass.apply();
+   /*
+      Связывает стрим с верхним и нижним. Запускает на выполнение если стрим терминальный.
+   */
+   Private Macro accept(streamObj : StreamInterface)
+      downstream = streamObj;
+      streamObj.upstream = this;
+      if (isEqClass("TerminalStream", streamObj))
+         return streamObj.apply();
       end;
-      return FunClass;
+      return streamObj;
    End;
 
+   /*
+      Останавливает стрим и сообщает об остановке другим конвеерным классам.
+   */
    Macro stopStream()
       needStop = true;
-      if(Valtype(downstream) != V_UNDEF)
+      if (downstream != null)
          downstream.stopStream();
       end;
    End;
 
+   /*
+      Возвращает следующий элемент.
+   */
    Macro next() : Variant
       return upstream.next();
    End;
 End;
 
 /**
-   Базовый класс для всех стримов, описывает методы доступные для всех наследников.
+   Базовый класс для агрегатных и конвеерных стримов.
 */
 Private Class (StreamInterface) ContinuedStream()
 
-   Macro getSize()
-      return 0;
-   End;
-
-   Macro hasnext() : Bool
-      if (needStop)
-         return false;
-      end;
-      return upstream.hasnext();
-   end;
-
-   Macro apply(parm)
-      // Implemented
-   End;
-
    /**
-      Преобразует каждый элемент стрима согласно 'mapfunc'.
-
-      @tag chain
+      Преобразует каждый элемент стрима согласно 'mapfunc'. Если используются лямбды, вернет последнюю инструкцию н.р
+      ```
+         var arr = SArray(1, 2, 3).toStream()
+                  .map("i -> println(i); i*2")  // Выведет на экран каждое число и вернёт каждое удвоенным
+                  .toArray();
+      ```
+      @tag Conveyor
    */
    Macro map(mapfunc)
       var streamObj = GenObject("MapStream", mapfunc);
@@ -105,7 +112,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Разворачивает вложенные stream  в один.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro flatMap(mapfunc)
       var streamObj = GenObject("FlatMapStream", mapfunc);
@@ -115,7 +122,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Фильтрует записи согласно функции 'predicate', т.е передает дальше только те элементы для которых вызов 'predicate' вернет `true`.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro filter(predicate)
       var streamObj = GenObject("FilterStream", predicate);
@@ -125,7 +132,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Ограничивает переданное количество элементов параметром '_count'.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro limit(_count : Integer)
       var streamObj = GenObject("LimitStream", _count);
@@ -135,7 +142,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Пропускает первые 'cnt' элементов.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro skip(_count  : Integer)
       var streamObj = GenObject("SkipStream", _count);
@@ -145,7 +152,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Передает элементы дальше пока 'predicate' возвращает 'true'; как только 'predicate' вернет 'false' стрим закончится.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro takeWhile(predicate)
       var streamObj = GenObject("TakeWhileStream", predicate);
@@ -155,7 +162,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Передает только уникальные элементы. Если это объектный тип, должны быть реализованы методы hash и equals.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro distinct()
       var streamObj = GenObject("DistinctStream");
@@ -165,7 +172,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Передает только уникальные элементы по параметру возвращаемой функцией 'parmfunc'.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro distinctBy(parmfunc)
       var streamObj = GenObject("DistinctByStream", parmfunc);
@@ -175,7 +182,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Передает только уникальные элементы по параметру типа 'String' возвращаемой функцией 'parmFunc'.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro distinctByString(parmFunc)
       var streamObj = GenObject("DistinctByStringStream", parmfunc);
@@ -185,7 +192,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Передает только уникальные элементы по параметру типа 'Integer' возвращаемой функцией 'parmFunc'.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro distinctByInt(parmfunc)
       var streamObj = GenObject("DistinctByIntStream", parmfunc);
@@ -195,15 +202,30 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Вызывает для каждого элемента 'peekfunc' и возвращает неизмененный элемент.
 
-      @tag chain
+      @tag Conveyor
    */
    Macro peek(peekfunc)
       var streamObj = GenObject("PeekStream", peekfunc);
       return accept(streamObj);
    End;
 
-   Macro zipWithIndex()
-      var streamObj = GenObject("zipWithIndexStream");
+   /**
+      Вызывает функцию 'oncefunc' единожды и возвращает неизменненные элементы. Отлично подходит для того, чтобы понять входящий  тип элемента, для этого в интересующее место цепочки вставляем `.once("debugbreak")`.
+
+      @tag Conveyor
+   */
+   Macro once(oncefunc)
+      var streamObj = GenObject("OnceStream", oncefunc);
+      return accept(streamObj);
+   End;
+
+   /**
+      Объединяет каждый элемент с соответсвующим ему индексом в объект [Tuple]. Можно задать начальный индекс 'startIndex', по умолчанию нумеруется с 0.
+
+      @tag Conveyor
+   */
+   Macro zipWithIndex(startIndex)
+      var streamObj = GenObject("zipWithIndexStream", startIndex);
       return accept(streamObj);
    End;
 
@@ -211,7 +233,7 @@ Private Class (StreamInterface) ContinuedStream()
       Групирует элементы в структуру типа HashMap<key, List> где key вычисляется функцией parmfunc.
       Следующим элементом в цепочке будет объект типа [Collections.Pair].
 
-      @tag agregate
+      @tag Agregate
    */
    Macro groupBy(parmfunc)
       var streamObj = GenObject("GroupByStream", parmfunc);
@@ -222,7 +244,7 @@ Private Class (StreamInterface) ContinuedStream()
       Групирует элементы в структуру типа HashMap<key, List> где key вычисляется функцией parmfunc. Оптимизирован для Integer ключей.
       Следующим элементом в цепочке будет объект типа [Collections.Pair].
 
-      @tag agregate
+      @tag Agregate
    */
    Macro groupByInt(parmfunc)
       var streamObj = GenObject("GroupByIntStream", parmfunc);
@@ -233,7 +255,7 @@ Private Class (StreamInterface) ContinuedStream()
       Групирует элементы в структуру типа HashMap<key, List> где key вычисляется функцией parmfunc. Оптимизирован для String ключей.
       Следующим элементом в цепочке будет объект типа [Collections.Pair].
 
-      @tag agregate
+      @tag Agregate
    */
    Macro groupByString(parmfunc)
       var streamObj = GenObject("GroupByStringStream", parmfunc);
@@ -243,7 +265,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Сортирует элементы согласно функции 'comparator'.
 
-      @tag agregate
+      @tag Agregate
    */
    Macro sorted (comparator)
       var streamObj = GenObject("SortedStream", comparator);
@@ -253,7 +275,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Для каждого элемента выполняет 'func' и завершает стрим.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro forEach(func)
       var streamObj = GenObject("ForEachStream", func);
@@ -263,7 +285,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Собирает элементы согласно 'collectorObj'. Заготовленные коллекторы можно посмотреть [Utils.#Collectors]
 
-      @tag terminal
+      @tag Terminal
    */
    Macro collect(collectorObj)
       var streamObj = GenObject("CollectStream", collectorObj);
@@ -273,7 +295,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Выводит все элементы на экран и завершает стрим.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro toScreen()
       var streamObj = GenObject("toScreenStream");
@@ -281,9 +303,9 @@ Private Class (StreamInterface) ContinuedStream()
    End;
 
    /**
-      Выполняет агрегатную функцию 'accumulator' с начальным значением 'identity'.
+      Выполняет агрегатную функцию 'accumulator' с начальным значением 'identity' возвращает результат 'identity'.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro reduce(identity, accumulator)
       var streamObj = GenObject("ReduceStream", identity, accumulator);
@@ -293,7 +315,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает сумму для числового стрима.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro sum()
       var streamObj = GenObject("SumStream");
@@ -303,7 +325,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает сумму по параметру возвращаемого  'parmFunc'.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro sumBy(parmFunc)
       var streamObj = GenObject("SumByStream", parmFunc);
@@ -313,7 +335,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает первый элемент из стрима или 'OrElse' если стрим пустой.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro findFirst(OrElse : Variant)
       var streamObj = GenObject("FindFirstStream", OrElse);
@@ -323,7 +345,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает количество элементов в стриме.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro count() : Integer
       var streamObj = GenObject("CountStream");
@@ -333,7 +355,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает `true` если функция 'predicate' хотябы раз вернет `true`.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro anyMatch(predicate) : Bool
       var streamObj = GenObject("AnyMatchStream", predicate);
@@ -343,7 +365,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает `true` если функция 'predicate' для всех элементов вернет `false`.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro noneMatch(predicate) : Bool
       var streamObj = GenObject("NoneMatchStream", predicate);
@@ -354,7 +376,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает `true` если функция 'predicate' для всех элементов вернет `true`.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro allMatch(predicate) : Bool
       var streamObj = GenObject("AllMatchStream", predicate);
@@ -364,7 +386,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает минимальное значение согласно 'comparator'.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro min(comparator) : Variant
       var streamObj = GenObject("MinStream", comparator);
@@ -374,7 +396,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает максимальное значение согласно 'comparator'.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro max(comparator) : Variant
       var streamObj = GenObject("MaxStream", comparator);
@@ -384,7 +406,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Возвращает массив из элементов.
 
-      @tag terminal
+      @tag Terminal
    */
    Macro toArray() : SArray
       var streamObj = GenObject("ToArrayStream");
@@ -392,9 +414,9 @@ Private Class (StreamInterface) ContinuedStream()
    End;
 
    /**
-      Позволяет использовать кастомный объект Stream. Для этого необходимо унаследоваться от [BornStream] , [ChainStream], [AgregateStream] или [TerminalStream] переопределить необходимые методы и передать экземпляр класса в функцию как 'streamObj'.
+      Позволяет использовать кастомный объект Stream. Для этого необходимо унаследоваться от [ConveyorStream], [AgregateStream] или [TerminalStream] переопределить необходимые методы и передать экземпляр класса в функцию как 'streamObj'.
 
-      @tags chain, agregate, terminal
+      @tags Conveyor, agregate, terminal
    */
    Macro custom(streamObj)
       return accept(streamObj);
@@ -423,40 +445,34 @@ Class (ContinuedStream) BornStream(iterator)
 End;
 
 /**
-   Базовый класс для конвеерных методов. Если будете писать свой конвеерный класс, унаследуйтесь от этого класса и переопределите метод apply(el).
-
+   Базовый класс для конвеерных стримов. Если будете писать свой конвеерный класс, унаследуйтесь от этого класса и переопределите метод next () : Variant.
 */
-Class (ContinuedStream) ChainStream()
-
-   Macro apply(el)
-      // implemented
-   End;
+Class (ContinuedStream) ConveyorStream()
+   initContinuedStream();
 
    Macro next()
       var el = upstream.next();
       if (needStop) return stopStream(); end;
-      return this.apply(el);
+      return el;
    End;
 End;
 
 /**
    Базовый класс для агрегатных стримов. Жадно собирает данные у предыдущих стримов, азатем запускается на выполнение как будто является [BornStream].
 */
-Class (ContinuedStream) AgregateStream(_func)
-   initContinuedStream(_func);
+Class (ContinuedStream) AgregateStream()
    private var isReadyToGive = false;
    private var iter;
 
-   Macro getSize()
-   end;
-
    Macro stopStream()
       needStop = true;
-      if(isReadyToGive)
+      if (isReadyToGive)
          downstream.stopStream();
       end;
    End;
-
+   /**
+      Специфичный для 'AgregateStream' метод, собирает данные, прежде чем отдавать их. При переопределении, в конце метода необходимо определить итератор `iter`.
+   */
    Macro accumulate()
       // implement in child
    end;
@@ -466,7 +482,7 @@ Class (ContinuedStream) AgregateStream(_func)
          accumulate();
       end;
 
-      if(iter.hasNext() == false)
+      if (iter.hasNext() == false)
          return stopStream();
       end;
       var res = iter.next();
@@ -479,24 +495,29 @@ End;
 */
 Class (StreamInterface) TerminalStream()
 
+   /**
+      Специфичный для 'TerminalStream' метод. Вызывается сразу как стрим добавлен к цепочке.
+   */
    Macro apply()
 
    end;
 End;
 
-Private Class (ChainStream) MapStream(_mapfunc)
+Private Class (ConveyorStream) MapStream(_mapfunc)
    var mapFunc = Lambdas.getFunc(_mapFunc);
 
-   Macro apply(el)
+   Macro next()
+      var el = upstream.next();
+      if (needStop) return stopStream(); end;
       return ExecMacro2(mapFunc, el);
    End;
 End;
 
-Private Class (ChainStream) FlatMapStream(_mapfunc)
+Private Class (ConveyorStream) FlatMapStream(_mapfunc)
    private var mapFunc = Lambdas.getFunc(_mapfunc);
    private var curSubStream = null;
 
-   Macro getNextSubStream() : Bool
+   Private Macro nextSubStream() : Bool
       var el = upstream.next();
       if (needStop) return false; end;
       curSubStream = ExecMacro2(mapFunc, el);
@@ -508,8 +529,8 @@ Private Class (ChainStream) FlatMapStream(_mapfunc)
 
    Macro next()
       if ((Valtype(curSubStream) == V_UNDEF))
-         if (getNextSubStream == False)
-            return stopStream;
+         if (nextSubStream == False)
+            return stopStream();
          end;
       end;
       while(true)
@@ -517,7 +538,7 @@ Private Class (ChainStream) FlatMapStream(_mapfunc)
          if (not(curSubStream.needStop))
             return el;
          else
-            if (getNextSubStream == False)
+            if (nextSubStream == False)
                return stopStream;
             end;
          end;
@@ -526,8 +547,8 @@ Private Class (ChainStream) FlatMapStream(_mapfunc)
    End;
 End;
 
-Private Class (ChainStream) FilterStream(_predicate)
-   var predicate = Lambdas.getFunc(_predicate);
+Private Class (ConveyorStream) FilterStream(_predicate)
+   private var predicate = Lambdas.getFunc(_predicate);
 
    Macro next()
       while(true)
@@ -541,22 +562,22 @@ Private Class (ChainStream) FilterStream(_predicate)
    End;
 End;
 
-Private Class (ChainStream) LimitStream(_count : Integer)
-   var needCount = _count;
-   var curCount = 0;
+Private Class (ConveyorStream) LimitStream(_count : Integer)
+   private var needCount : Integer = _count;
+   private var curCount  : Integer = 0;
 
    Macro next()
-      var el = upstream.next();
-      if (needStop) return stopStream; end;
-      curCount = curCount + 1;
-      if (curCount > needCount)
+      if (curCount >= needCount)
          return stopStream();
       end;
+      var el = upstream.next();
+      if (needStop) return stopStream(); end;
+      curCount = curCount + 1;
       return el;
    End;
 End;
 
-Private Class (ChainStream) SkipStream(_count : Integer)
+Private Class (ConveyorStream) SkipStream(_count : Integer)
    private var needCount = _count;
    private var curCount = 0;
    private var skipped = false;
@@ -564,7 +585,7 @@ Private Class (ChainStream) SkipStream(_count : Integer)
    Macro next()
       var el;
       if (skipped == false)
-         while(curCount < needCount)
+         while (curCount < needCount)
             el = upstream.next();
             if (needStop) return stopStream(); end;
             curCount = curCount + 1;
@@ -577,33 +598,8 @@ Private Class (ChainStream) SkipStream(_count : Integer)
    End;
 End;
 
-Private Class (ChainStream) ProgrStream()
-   private var isInit = false;
-   private var cnt = 0;
-   private var curCount = 0;
-
-   Macro ini()
-      InitProgress(upstream.getSize());
-      isInit = true;
-   End;
-
-   Macro next()
-      var el = upstream.next();
-      if(Not(isInit))
-         ini();
-      end;
-      if(needStop)
-         RemProgress(curCount);
-         return stopStream;
-      end;
-      curCount = curCount + 1;
-      UseProgress(curCount);
-      return el;
-   End;
-End;
-
-Private Class (ChainStream) TakeWhileStream(_predicate)
-   var predicate = Lambdas.getFunc(_predicate);
+Private Class (ConveyorStream) TakeWhileStream(_predicate)
+   private var predicate = Lambdas.getFunc(_predicate);
 
    Macro next()
       var el = upstream.next();
@@ -615,7 +611,7 @@ Private Class (ChainStream) TakeWhileStream(_predicate)
    End;
 End;
 
-Private Class (ChainStream) DistinctStream()
+Private Class (ConveyorStream) DistinctStream()
    private var set = HashSet(10000, 0.1);
 
    Macro next()
@@ -630,14 +626,14 @@ Private Class (ChainStream) DistinctStream()
    End;
 End;
 
-Private Class (ChainStream) DistinctByStream(_funcParm)
+Private Class (ConveyorStream) DistinctByStream(_funcParm)
    private var funcParm =  Lambdas.getFunc(_funcParm);
    private var set = HashSet(10000, 0.1);;
 
    Macro next()
-      while(true)
+      while (true)
          var el = upstream.next();
-         if(needStop) return stopStream; end;
+         if (needStop) return stopStream; end;
          var parm = ExecMacro2(funcParm, el);
          if (set.add(parm))
             return el;
@@ -658,12 +654,27 @@ Private Class (DistinctByStream) distinctByStringStream(_funcParm)
 End;
 
 Private Class (ContinuedStream) PeekStream(_func)
-   private var func = _func;
+   private var func = Lambdas.getFunc(_func);
 
    Macro next()
       var el = upstream.next();
-      if(needStop) return stopStream; end;
+      if (needStop) return stopStream(); end;
       ExecMacro2(func, el);
+      return el;
+   End;
+End;
+
+Private Class (ContinuedStream) OnceStream(_func)
+   private var func = Lambdas.getFunc(_func);
+   private var trigger = false;
+
+   Macro next()
+      var el = upstream.next();
+      if (needStop) return stopStream(); end;
+      if (not(trigger))
+         ExecMacro2(func, el);
+         trigger = true;
+      end;
       return el;
    End;
 End;
@@ -675,14 +686,10 @@ Private Class (AgregateStream) GroupByStream(_groupByFunc)
    private var groupByFunc = Lambdas.getFunc(_groupByFunc);
    private var hmap = LinkedHashMap(10000, 0.1);
 
-   Macro getSize()
-      return hmap.size;
-   end;
-
    Macro accumulate()
-      while(true)
+      while (true)
          var el = upstream.next();
-         if(needStop) break; end;
+         if (needStop) break; end;
          var parm = ExecMacro2(groupByFunc, el);
          var list = hmap.get(parm);
          if (Valtype(list) == V_UNDEF)
@@ -741,7 +748,10 @@ Private Macro reverseReplacement(tbStr)
    end;
 End;
 
-Class (BornStream) TBFileStream(tbFile)
+/**
+   Класс для создания стрима из объекта [TBFile].
+*/
+Private Class (BornStream) TBFileStream(tbFile)
    var inFile = tbFile;
    private var front = true;
    private var fix = false;
@@ -920,7 +930,7 @@ Class (BornStream) TBFileStream(tbFile)
    ini();
 End;
 
-Class (TBFileStream) MemDBFileStream(tbFile)
+Private Class (TBFileStream) MemDBFileStream(tbFile)
    inFile = tbFile;
    front = true;
    fix = false;
@@ -972,9 +982,11 @@ Private Class (ContinuedStream) ZipStream(_s1, _s2, _bifunc)
    End;
 End;
 
-
-Private Class (ContinuedStream) zipWithIndexStream()
+Private Class (ContinuedStream) zipWithIndexStream(_stInd)
    private var ind = -1;
+   if (ValType(_StInd) == V_INTEGER)
+      ind = _stInd - 1;
+   end;
 
    Macro next()
       var el = upstream.next();
@@ -984,21 +996,14 @@ Private Class (ContinuedStream) zipWithIndexStream()
    End;
 End;
 
-/**
-   Создает стрим из двух стримов 's1' и 's2' и объединяет их элементы согласно функции 'bifunc'.
-*/
-Macro zipStreams(s1 : ContinuedStream, s2 : ContinuedStream, bifunc)
-   return ZipStream(s1, s2, bifunc);
-End;
-
 Private Class (TerminalStream) ReduceStream(_identity, _accumulator)
-   var identity = _identity;
-   var accumulator = Lambdas.getFunc(_accumulator);
+   private var identity    = _identity;
+   private var accumulator = Lambdas.getFunc(_accumulator);
 
    Macro apply(parm)
-      while(true)
+      while (true)
          var el = upstream.next();
-         if(needStop) break; end;
+         if (needStop) break; end;
          identity = ExecMacro2(accumulator, identity, el);
       End;
       return identity;
@@ -1015,7 +1020,7 @@ End;
 
 Private Class (ReduceStream) SumByStream(_funcParm)
    initReduceStream(0, R2M(this,"SumFunc"));
-   var funcParm = _funcParm;
+   private var funcParm = _funcParm;
 
    Macro SumFunc(x, y)
       return x + y;
@@ -1033,13 +1038,13 @@ Private Class (ReduceStream) SumByStream(_funcParm)
 End;
 
 Private Class (TerminalStream) CollectStream(collectorObj)
-   var collector = collectorObj;
+   private var collector = collectorObj;
 
    Macro apply()
       var coll = collector.create();
-      while(true)
+      while (true)
          var el = upstream.next();
-         if(needStop) break; end;
+         if (needStop) break; end;
          collector.accumulate(coll, el);
       end;
       return collector.finish(coll);
@@ -1047,7 +1052,7 @@ Private Class (TerminalStream) CollectStream(collectorObj)
 End;
 
 Private Class (TerminalStream) FindFirstStream(_orElse)
-   var orElse = _orElse;
+   private var orElse = _orElse;
 
    Macro apply()
       while(true)
@@ -1063,7 +1068,7 @@ Private Class (TerminalStream) CountStream()
 
    Macro apply()
       var i = 0;
-      while(true)
+      while (true)
          var el = upstream.next();
          if (needStop) break; end;
          i = i + 1;
@@ -1091,7 +1096,7 @@ Private Class (TerminalStream) NoneMatchStream(_predicate)
    private var predicate = Lambdas.getFunc(_predicate);
 
    Macro apply()
-      while(true)
+      while (true)
          var el = upstream.next();
          if (needStop) break; end;
          if (ExecMacro2(predicate, el))
@@ -1106,7 +1111,7 @@ Private Class (TerminalStream) AllMatchStream(_predicate)
    private var predicate = Lambdas.getFunc(_predicate);
 
    Macro apply()
-      while(true)
+      while (true)
          var el = upstream.next();
          if (needStop) break; end;
          if (ExecMacro2(predicate, el) == false)
@@ -1154,7 +1159,7 @@ Private Class (TerminalStream) MaxStream(_comparator)
    Macro apply()
       var result;
       var notFirst = false;
-      while(true)
+      while (true)
          var el = upstream.next();
          if (needStop) break; end;
          if (notFirst)
@@ -1174,7 +1179,7 @@ Private Class (TerminalStream) ToArrayStream()
    Macro apply()
       var result = SArray();
       var i = 0;
-      while(true)
+      while (true)
          var el = upstream.next();
          if (needStop) break; end;
          result[i] = el;
@@ -1184,6 +1189,19 @@ Private Class (TerminalStream) ToArrayStream()
    End;
 End;
 
+/**
+   Создает и возвращает Stream из объекта или примитива 'obj'. Если создать стрим не возможно бросается исключение [IllegalArgumentException].
+   В настоящий момент как передаваемый параметр 'obj' может выступать:
+   - Массив [TArray] или его наследники.
+   - Объект класса наследующего [Iterable], т.е. все коллекции из библиотеки [Collections].
+   - Объект таблицы БД [TBFile] и его наследники
+   - Объект БД в памяти [MemDb].
+   - Объект текстового файла типа [TStreamDoc]. В качестве передаваемых элементов - строки.
+   - Примитив типа 'String'. В качестве передаваемых элементов - символы.
+
+   Если ваш класс предполагает последовательность и вы хотите использовать стримы, реализуйте итератор и воспользуйтесь [BornStream].
+
+*/
 Macro StreamOf(obj)
    if (ValType(obj) == V_GENOBJ)
       if (IsEqClass("TArray", obj))
@@ -1191,7 +1209,9 @@ Macro StreamOf(obj)
       elif (IsEqClass("Iterable", obj))
          return BornStream(obj.newIterator());
       elif (IsEqClass("TStreamDoc", obj))
-         return BornStream(GenObject("FileIterator", obj));
+         return BornStream(GenObject("LineFileIterator", obj));
+       elif (IsEqClass("TStream", obj))
+         return BornStream(GenObject("ByteFileIterator", obj));
       elif (isEqClass("TbFile", obj))
          return TBFileStream(obj);
       elif (isEqClass("MemDb", obj))
@@ -1206,6 +1226,16 @@ Macro StreamOf(obj)
    end;
 End;
 
+/**
+   Создает стрим из двух стримов 's1' и 's2' и объединяет их элементы согласно функции 'bifunc'.
+*/
+Macro zipStreams(s1 : ContinuedStream, s2 : ContinuedStream, bifunc)
+   return ZipStream(s1, s2, bifunc);
+End;
+
+/**
+   Функция-маркер для проверки загрузки библиотеки [#Stream].
+*/
 Macro StreamLoadedMarker()
    return 1;
 End;
@@ -1226,7 +1256,7 @@ Private Class StringIterator(sourcestr)
    End;
 End;
 
-Private Class FileIterator(_inFile : TStreamDoc)
+Private Class LineFileIterator(_inFile : TStreamDoc)
    private var inFile = _inFile;
    private var nextLine = null;
 
@@ -1238,6 +1268,25 @@ Private Class FileIterator(_inFile : TStreamDoc)
       var res = nextLine;
       if (inFile.readLine(nextLine) == false)
          nextLine = null;
+      end;
+      return res;
+   End;
+
+   next();
+End;
+
+Private Class ByteFileIterator(_inFile : TStream)
+   private var inFile = _inFile;
+   private var nextByte = null;
+
+   Macro hasNext() : Bool
+      return (ValType(nextByte) != V_UNDEF);
+   End;
+
+   Macro next() : String
+      var res = nextByte;
+      if (inFile.read(nextByte, V_INTEGER, 1) == false)
+         nextByte = null;
       end;
       return res;
    End;

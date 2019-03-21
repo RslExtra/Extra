@@ -3,7 +3,7 @@ import "..\\mac\\extra\\RUnit\\MemDb.mac";
 import "..\\mac\\extra\\StreamApi\\Stream.mac";
 import "..\\mac\\extra\\Collections\\Collections.mac";
 
- Class Account(_acc : String, _summ )
+Class Account(_acc : String, _summ )
    var acc = _acc;
    var summ = _summ;
    var refAccs = SArray();
@@ -29,6 +29,10 @@ import "..\\mac\\extra\\Collections\\Collections.mac";
       end;
    End;
 
+   Macro filt(a)
+      return (mod(a, 2) == 0);
+   End;
+
    Macro equals(othAcc)
       return (CompareTo(othAcc) == 0);
    End;
@@ -47,7 +51,7 @@ Class (TestCase) TestStreamApi()
    End;
 
    Macro test_file()
-      var fl = TStreamDoc("../mac/extra/tests/Streams/testfile.txt");
+      var fl = TStreamDoc("../mac/extra/tests/StreamApi/testfile.txt");
       var res = StreamOf(fl)
                   .collect(Collectors.toArray);
       AssertArrays(Ar("first", "second", "third"), res);
@@ -79,6 +83,12 @@ Class (TestCase) TestStreamApi()
                .takeWhile("it<=3")
                .collect(Collectors.toArray);
       AssertArrays(ar(1, 2, 3), res);
+
+      res = list.toStream()
+               .filter(R2M(Account, "filt"))
+               .toArray();
+      AssertArrays(ar(2, 4), res);
+
    End;
 
    Macro test_agregate()
@@ -246,6 +256,13 @@ Class (TestCase) TestStreamApi()
       assertTrue((res[0].key == 1) and (res[0].value == 10));
       assertTrue((res[1].key == 2) and (res[1].value == 20));
       assertTrue((res[2].key == 3) and (res[2].value == 30));
+
+      a1 = SArray(1, 2, 3, 11, 22, 33).toStream()
+               .groupByInt("mod(it,10)");
+      a2 = SArray(10, 20, 30, 40, 50).toStream();
+
+      res = zipStreams(a1, a2, "a, b -> (a.key*a.value.sum + b)").limit(2).toArray();
+      assertArrays(ar(22, 68), res);
    End;
 
    Macro test_zipWithIndex()
@@ -256,6 +273,12 @@ Class (TestCase) TestStreamApi()
       AssertEquals(Tuple2(1, 20), res[1]);
       AssertEquals(Tuple2(2, 30), res[2]);
       AssertEquals(Tuple2(3, 40), res[3]);
+
+      res = a.toStream().zipWithIndex(1).toArray;
+      AssertEquals(Tuple2(1, 10), res[0]);
+      AssertEquals(Tuple2(2, 20), res[1]);
+      AssertEquals(Tuple2(3, 30), res[2]);
+      AssertEquals(Tuple2(4, 40), res[3]);
    End;
 
 End;
@@ -333,12 +356,26 @@ Class (TestCase) TestStreamDb()
       AssertEquals("40817000000000133", res[3].account);
       AssertEquals("40817000000000132", res[4].account);
    End;
+End;
 
+Class (TestCase) TestFileReader()
 
+   Macro test_symbols()
+      var fl = TStreamDoc("../mac/extra/tests/StreamApi/testfile.txt");
+      var res = StreamOf(fl)
+                  .flatMap("l -> StreamOf(l)")
+                  .groupBy("s -> s")
+                  .map("p -> p.key + ' - ' + p.value.size")
+                  .toArray().sort();
+
+      // "first", "second", "third"
+      AssertArrays(Ar("c - 1", "d - 2", "e - 1", "f - 1", "h - 1", "i - 2", "n - 1", "o - 1", "r - 2", "s - 2", "t - 2"), res);
+   End;
 
 End;
 
 
 
-//TestStreamApi;
+TestStreamApi;
 TestStreamDb;
+TestFileReader;
