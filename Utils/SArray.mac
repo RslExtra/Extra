@@ -721,7 +721,7 @@ Class (TArray) SArray()
    End;
 
    /**
-      Создает [StreamApi.StreamInterface Stream] объект.
+      Создает [Stream.BornStream Stream] объект.
    */
    Macro toStream()
       if (ValType(ExecMacro2("StreamLoadedMarker")) != V_UNDEF)

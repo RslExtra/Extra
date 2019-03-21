@@ -1,20 +1,17 @@
-import "..\\Mac\\Extra\\Stream\\Stream.mac";
+import "..\\Mac\\Extra\\StreamApi\\Stream.mac";
 import or_rep_h;
 
-/**/
-Class (ForEachStream) toReportStream(_fields : TArray, _headersOrStr : Variant)
-   initForEachStream(R2M(this, "funcAddToReport"));
-
+Class (TerminalStream) CMakeRepStream(_fields : TArray, _headersOrStr : Variant)
    var fields  = _fields;
    var headers = _headersOrStr;
-   var addAll  = false;
+   var addAll  =  (ValType(fields) == V_UNDEF);
    var rep = null;
 
-
-   Macro funcAddToReport(par : Object)
-      if(ValType(par) == V_UNDEF) return; end;
+   // Тут просто закидываем в отчет
+   Macro addObjToReport(par : Object)
+      if (ValType(par) == V_UNDEF) return; end;
       var i;
-      if(addAll)
+      if (addAll)
          for(i, 0, GenNumProps(par) - 1, 1)
             rep.addPrintCell(par[i], 0, 2, null, REP_ELEM_TABL);
          end;
@@ -26,40 +23,39 @@ Class (ForEachStream) toReportStream(_fields : TArray, _headersOrStr : Variant)
       rep.addStr();
    end;
 
-   Macro stopStream()
-      if(ValType(rep) != V_UNDEF)
+   // Переопределяем метод
+   Macro apply()
+      while(true)
+         var el = upstream.next();   // Получаем следующий объект
+         if (needStop) break; end;   // Если стрим сверху бросил флаг остановки выходим из цикла
+         addObjToReport(el);         // А если нет - добавляем в отчет
+      End;
+      if (ValType(rep) != V_UNDEF)   // Выводим отчет и подчищаем объекты
          Rep.SetWinRepOutPut(0, 0);
-         Rep.AddWinRepOutput( WINREP_OUTPUT_EXCEL, WINREP_FORMAT_XLS);
+         Rep.AddWinRepOutput(WINREP_OUTPUT_EXCEL, WINREP_FORMAT_XLS);
          Rep.PrintWinRep();
          Rep.ShowWinRep();
          Rep = null;
       end;
-      needStop = true;
-      if(Valtype(downstream) != V_UNDEF)
-         downstream.stopStream();
-      end;
    End;
 
-   addAll = (ValType(fields) == V_UNDEF);
+   // Конструктор
+   local var strHeader, hdr, i;
 
-   local var strHeader;
-   local var hdr;
-   local var i;
-
-   if(ValType(_headersOrStr) == V_STRING)
+   if (ValType(_headersOrStr) == V_STRING)   // Если шапка передана как строка с псевдографикой
       strHeader = _headersOrStr;
-   elif(IsEqClass("TArray", _headersOrStr))
+   elif (IsEqClass("TArray", _headersOrStr)) // Если шапка передана как массив заголовков
       hdr = CHeader();
-      for(i, 0, _headersOrStr.size - 1, 1)
+      for (i, 0, _headersOrStr.size - 1, 1)
          hdr.AddChild(_headersOrStr[i], 15);
       end;
       strHeader = hdr.CreateHeader(3, null);
    end;
 
-   if((ValType(hdr == V_UNDEF))and addAll)
+   if ((ValType(hdr == V_UNDEF)) and addAll)  // Если входных аргументов нет или неправильные
       hdr = CHeader();
-      for(i, 0, fields.size - 1, 1)
-         hdr.AddChild(fields[i]);
+      for (i, 0, fields.size - 1, 1)
+         hdr.AddChild(fields[i]);             // Назовем заголовки в честь имен полей
       end;
       strHeader = hdr.CreateHeader(3, null);
    end;
