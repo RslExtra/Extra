@@ -1,5 +1,5 @@
 import "..\\mac\\extra\\RUnit\\RUnit.Mac";
-import "..\\mac\\extra\\utils\\Comparators.Mac";
+import "..\\mac\\extra\\OOP\\Comparators.Mac";
 //RUnitTest.SHOW_SUCCEED_FUN = true;
 
 Private Class Account(_acc : String, _summ : Integer)

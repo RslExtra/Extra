@@ -21,13 +21,30 @@
 
 import "..\\Mac\\Extra\\Collections\\Collections.mac";
 import "..\\Mac\\Extra\\Utils\\ArrayUtils.mac";
-import "..\\Mac\\Extra\\StreamApi\\EXTbfile.mac";
 import "..\\Mac\\Extra\\StreamApi\\Collectors.mac";
 
 Private Macro callLambda(obj,_func, parm1, parm2) : Variant
    var res = CallR2M(_func, parm1, parm2);
    return res;
 End;
+
+Private Macro defVal(codType)
+   if (codType == V_STRING)
+      return "";
+   elif (codType == V_MONEY)
+      return $0;
+   elif (codType == V_INTEGER)
+      return 0;
+   elif (codType == V_DATE)
+      return Date(0, 0, 0);
+   elif (codType == V_TIME)
+      return Time(0, 0, 0);
+   elif (codType == V_BOOL)
+      return false;
+   else
+      return 0;
+   end;
+end;
 
 Private Class StreamInterface()
    var upstream;

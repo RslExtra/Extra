@@ -274,6 +274,7 @@ Private Class AllTestsResult()
    var printed = false;
    var logged  = false;
    var testResults = TArray();
+   var startTime = Time();
 
    Macro addTestResult(testResult : caseResult)
       testResults[testResults.size] = testResult;
@@ -298,6 +299,7 @@ Private Class AllTestsResult()
          st = "[FAILED]"
       end;
       println(st + " Testcases successful complete: " + pass_case + "/" + (pass_case+fail_case));
+      println("(" + getTimeDiffMillis(startTime, time) + " ms)");
       println("");
       for (var testRes, testResults)
          testRes.toScreen();

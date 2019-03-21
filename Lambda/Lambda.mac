@@ -12,7 +12,7 @@
 */
 
 import rsexts;
-import "..\\Mac\\Extra\\Utils\\Exceptions.mac";
+import "..\\Mac\\Extra\\OOP\\Exceptions.mac";
 
 /**
    Singleton instance [LambdaClass].
@@ -255,6 +255,12 @@ Private Class LambdaClass()
    End;
 End;
 
+/**
+   Делает тоже самое что и [LambdaClass.getFunc Lambdas.getFunc()].
+*/
+Macro GetLambdaFunc(candidate)
+   return Lambdas.getFunc(candidate);
+End;
 
 /**
    Функция-маркер для проверки загрузки библиотеки.

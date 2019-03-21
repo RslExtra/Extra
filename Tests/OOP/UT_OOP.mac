@@ -1,5 +1,5 @@
 import "..\\mac\\extra\\RUnit\\RUnit.Mac";
-import "..\\mac\\extra\\Utils\\OOP.Mac";
+import "..\\mac\\extra\\OOP\\OOP.Mac";
 import "..\\mac\\extra\\Utils\\SArray.Mac";
 
 
@@ -36,7 +36,7 @@ Class (TestCase) TestEquals()
    var a, b;
 
    Macro eq()
-      return AnyTypeEquals(a,b);
+      return VariantEquals(a,b);
    end;
 
    Macro Test_EqualsPrim()
@@ -97,13 +97,13 @@ Class (TestCase) TestCompare()
    var a, b;
 
    Macro comp()
-      return (AnyTypeCompare(a,b));
+      return (VariantCompare(a,b));
    End;
 
    Macro test_prim()
       a = 1; b = 2;
       AssertTrue(comp<0);
-      AssertTrue(AnyTypeCompare(b,a)>0);
+      AssertTrue(VariantCompare(b,a)>0);
       a = 2; b = 2;
       AssertTrue(comp==0);
       a = "A"; b = "b";
@@ -114,10 +114,10 @@ Class (TestCase) TestCompare()
       a = Clazz1(1, 3);
       b = null;
       assertTrue(comp>0);
-      assertTrue(AnyTypeCompare(b,a) < 0);
+      assertTrue(VariantCompare(b,a) < 0);
       b = Clazz2(2);
       assertTrue(comp<0);
-      assertTrue(AnyTypeCompare(b,a) > 0);
+      assertTrue(VariantCompare(b,a) > 0);
    End;
 End;
 
@@ -136,7 +136,7 @@ Macro testTime()
       var b = Random;
       a == b;
       //CF_ComparePrimitive(a, b);
-      //AnyTypeEquals(a, b);
+      //VariantEquals(a, b);
    end;
 
    te = time();

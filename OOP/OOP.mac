@@ -4,7 +4,7 @@
 
    Вспомогательные классы и функции для реализации ООП паттернов.
 */
-import "..\\Mac\\Extra\\Utils\\Comparators.mac";
+import "..\\Mac\\Extra\\OOP\\Comparators.mac";
 import rcw;
 
 /**

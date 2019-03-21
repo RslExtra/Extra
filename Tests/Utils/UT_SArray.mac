@@ -1,14 +1,11 @@
 
 import "..\\mac\\extra\\RUnit\\RUnit.Mac";//
-import "..\\mac\\extra\\utils\\functions.mac";
-import "..\\mac\\extra\\utils\\Comparators.mac";
+import "..\\mac\\extra\\OOP\\Functions.mac";
+import "..\\mac\\extra\\OOP\\Comparators.mac";
 import "..\\mac\\extra\\utils\\SArray.mac";
+import "..\\mac\\extra\\Lambda\\Lambda.mac";
 import bankinter;
 import rcw;
-
-
-
-//RUnitTest.SHOW_SUCCEED_FUN = false;
 
 // Тестовый класс для объектных коллекций
 Private Class Account(_acc : String, _summ : Integer)
@@ -103,6 +100,15 @@ Class (TestCase) TestSArray()
       assertEquals(100000, arr.size);
    End;
 
+   Macro test_addAll()
+      arr.clear();
+      var addArr = SArray(1, 2, 3);
+      arr.addAll(addArr);
+      assertArrays(Ar(1, 2, 3), arr);
+      arr.addAll(addArr);
+      assertArrays(Ar(1, 2, 3, 1, 2, 3), arr);
+   End;
+
    Macro test_get()
       arr = SArray(1, 2, 3);
       assertEquals(2, arr.get(1));
@@ -118,13 +124,13 @@ Class (TestCase) TestSArray()
 
    Macro test_peek()
       assertNull(arr.peek);
-      arr.addAll(1,2,3);
+      arr.addItems(1,2,3);
       assertEquals(3, arr.peek);
       assertEquals(3, arr.size);
    End;
 
    Macro test_pop()
-      arr.addAll(1, 2, 3);
+      arr.addItems(1, 2, 3);
       assertEquals(3, arr.pop);
       assertEquals(2, arr.pop);
       assertEquals(1, arr.pop);
@@ -133,7 +139,7 @@ Class (TestCase) TestSArray()
 
    Macro test_poll()
       assertNull(arr.poll);
-      arr.addAll(1, 2, 3);
+      arr.addItems(1, 2, 3);
       assertEquals(3, arr.poll);
       assertEquals(2, arr.poll);
       assertEquals(1, arr.poll);
@@ -146,7 +152,7 @@ Class (TestCase) TestSArray()
       assertEquals(0, arr.indexof());
       arr.push(null);
       assertEquals(0, arr.indexof());
-      arr.addAll(1, 2, 1, 4);
+      arr.addItems(1, 2, 1, 4);
       assertEquals(2, arr.indexof(1));
       assertEquals(3, arr.indexof(2));
    End;
@@ -157,14 +163,14 @@ Class (TestCase) TestSArray()
       assertEquals(0, arr.lastIndexof(null));
       arr.push(null);
       assertEquals(1, arr.lastIndexof());
-      arr.addAll(1, 2, 1, 4);
+      arr.addItems(1, 2, 1, 4);
       assertEquals(4, arr.lastIndexof(1));
       assertEquals(3, arr.lastIndexof(2));
    End;
 
    Macro test_slice()
       assertEquals(0, arr.slice().size);
-      arr.addAll(1, 2, 3);
+      arr.addItems(1, 2, 3);
       assertArrays(Ar(1, 2, 3), arr.slice);
       assertArrays(Ar(1, 2), arr.slice(0, 2));
       assertArrays(Ar(2, 3), arr.slice(1));
@@ -173,7 +179,7 @@ Class (TestCase) TestSArray()
 
    Macro test_reverse()
       assertEquals(0, arr.reverse().size);
-      arr.addAll(1, 2, 3);
+      arr.addItems(1, 2, 3);
       assertArrays(Ar(3, 2, 1), arr.reverse);
       assertArrays(Ar(1, 2, 3), arr.reverse);
       arr.add(4);
@@ -181,7 +187,7 @@ Class (TestCase) TestSArray()
    End;
 
    Macro test_distinct()
-      arr.addAll(1, 2, -1, 2, 3, -4, 4, 3, 0);
+      arr.addItems(1, 2, -1, 2, 3, -4, 4, 3, 0);
       assertArrays(Ar(1, 2, -1, 3, -4, 4, 0), arr.distinct);
       assertArrays(Ar(1, 2, 3, -4, 0), arr.distinct(@equalAbs));
 
@@ -193,14 +199,14 @@ Class (TestCase) TestSArray()
 
 
    Macro test_clear()
-      arr.addAll(1, 2, 3);
+      arr.addItems(1, 2, 3);
       assertEquals(3, arr.size);
       arr.clear();
       assertEquals(0, arr.size);
    End;
 
    Macro test_concat()
-      arr.addAll(1, 2, 3);
+      arr.addItems(1, 2, 3);
       var arr2 = SArray(4, 5, 6, 7);
       var arrc = arr.concat(arr2);
       assertArrays(Ar(1, 2, 3, 4, 5, 6, 7), arrc);
@@ -231,7 +237,7 @@ Class (TestCase) TestSArray()
       s = arr.join(",", "[", "]");
       assertEquals("[]", s);
 
-      arr.addAll(1, 2, 3);
+      arr.addItems(1, 2, 3);
       s = arr.join();
       assertEquals("123", s);
       s = arr.join(", ");
@@ -241,19 +247,28 @@ Class (TestCase) TestSArray()
    End;
 
    Macro test_filter()
-
+      arr = SArray(1, 2, 3, 4);
+      var res = arr.filter("mod(it, 2) == 0");
+      assertArrays(ar(2,4), res);
    End;
 
    Macro test_map()
-
+      arr = SArray(1, 2, 3, 4);
+      var res = arr.map("i->i+1");
+      assertArrays(ar(2, 3, 4, 5), res);
    End;
 
    Macro test_reduce()
-
+      arr = SArray(1, 2, 3, 4);
+      var res = arr.reduce(0, "s, i -> s + i");
+      assertEquals(10, res);
    End;
 
    Macro test_foreach()
-
+      arr = SArray(1, 2, 3, 4);
+      var res = arr.forEach("it * 2");
+      assertArrays(ar(1, 2, 3, 4), arr);
+      assertNull(res);
    End;
 
    Macro test_sort()
@@ -275,7 +290,7 @@ Class (TestCase) TestSArray()
    End;
 
    Macro test_iterator()
-      arr.addAll(1, 2, 3, 4, 5, 6);
+      arr.addItems(1, 2, 3, 4, 5, 6);
       var itr = arr.newIterator();
       var a = itr.next();
       assertEquals(1, a);

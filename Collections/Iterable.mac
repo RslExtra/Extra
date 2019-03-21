@@ -6,14 +6,13 @@
  *  Базовые классы и функции коллекций.
 */
 
-import "..\\Mac\\Extra\\Utils\\Common.mac";      // ifNull
 import "..\\Mac\\Extra\\OOP\\OOP.mac";           // Any
+import "..\\Mac\\Extra\\OOP\\Comparators.mac";
+import "..\\Mac\\Extra\\OOP\\SortingFunc.mac";
+import "..\\Mac\\Extra\\OOP\\Exceptions.mac";
 import "..\\Mac\\Extra\\Utils\\StringUtils.mac";  // StringJoiner
 import "..\\Mac\\Extra\\Utils\\SArray.mac";
-import "..\\Mac\\Extra\\Utils\\Comparators.mac";
-import "..\\Mac\\Extra\\Utils\\SortingFunc.mac";
-import "..\\Mac\\Extra\\Utils\\Exceptions.mac";
-import "..\\Mac\\Extra\\Lambda\\lambda.mac";
+import "..\\Mac\\Extra\\Lambda\\Lambda.mac";
 
 import rcw;
 
@@ -28,6 +27,12 @@ Class Pair(k, v)
    End;
 End;
 
+Private Macro ifNull(val : Variant, replace : Variant) : Variant
+   if(Valtype(val) == V_UNDEF)
+      return replace;
+   end;
+   return val;
+End;
 
 Private Class EmptyObj()
    Macro equals() : Bool

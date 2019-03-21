@@ -17,6 +17,8 @@ Private Macro isBankInterLoaded()
    return (ValType(ExecMacro2("isAlpha", "a")) != V_UNDEF);
 End;
 
+Private const CREATE_LAMBDA_FUNC_NAME = "GetLambdaFunc";
+
 Private Class SAIterator(_arr)
    private var arr  = _arr;
    private var nextIndex = 0;
@@ -473,7 +475,7 @@ Class (TArray) SArray()
       if (ValType(predicFunc) == V_UNDEF)
          RunError("Не указана функция-предикат");
       elif ((ValType(predicFunc) == V_STRING) and isLambdaLoaded)
-         predicFunc = ExecMacro2("GetFunOrLambda", predicFunc);
+         predicFunc = ExecMacro2(CREATE_LAMBDA_FUNC_NAME, predicFunc);
       end;
       var resArr = SArray();
       for (var el, this)
@@ -499,7 +501,7 @@ Class (TArray) SArray()
       if (ValType(mapFunc) == V_UNDEF)
          RunError("Не указана функция-преобразования");
       elif ((ValType(mapFunc) == V_STRING) and isLambdaLoaded)
-         mapFunc = ExecMacro2("GetFunOrLambda", mapFunc);
+         mapFunc = ExecMacro2(CREATE_LAMBDA_FUNC_NAME, mapFunc);
       end;
       var resArr = SArray();
       if (size != 0)
@@ -528,7 +530,7 @@ Class (TArray) SArray()
       if (ValType(accumulator) == V_UNDEF)
          RunError("Не указана функция-редюсер");
       elif ((ValType(accumulator) == V_STRING) and isLambdaLoaded)
-         accumulator = ExecMacro2("GetFunOrLambda", accumulator);
+         accumulator = ExecMacro2(CREATE_LAMBDA_FUNC_NAME, accumulator);
       end;
       for (var el, this)
          identity = ExecMacro2(accumulator, identity, el);
@@ -546,7 +548,7 @@ Class (TArray) SArray()
       if (ValType(func) == V_UNDEF)
          RunError("Не указана функция forEach");
       elif ((ValType(func) == V_STRING) and isLambdaLoaded)
-         func = ExecMacro2("GetFunOrLambda", func);
+         func = ExecMacro2(CREATE_LAMBDA_FUNC_NAME, func);
       end;
       for (var el, this)
          ExecMacro(func, el);
@@ -570,7 +572,7 @@ Class (TArray) SArray()
       if (ValType(compfunc) == V_UNDEF)
          compfunc = @CF_ComparePrimitive;
       elif ((ValType(compfunc) == V_STRING) and isLambdaLoaded)
-         compfunc = ExecMacro2("GetFunOrLambda", compfunc);
+         compfunc = ExecMacro2(CREATE_LAMBDA_FUNC_NAME, compfunc);
       end;
       ExecMacro2("QSort", this, compfunc);
       return this;
@@ -649,7 +651,7 @@ Class (TArray) SArray()
       if (ValType(compfunc) == V_UNDEF)
          compfunc = @CF_ComparePrimitive;
       elif ((ValType(compfunc) == V_STRING) and isLambdaLoaded)
-         compfunc = ExecMacro2("GetFunOrLambda", compfunc);
+         compfunc = ExecMacro2(CREATE_LAMBDA_FUNC_NAME, compfunc);
       end;
       var copyArr = slice().sort(compfunc);
       var resArr = SArray();

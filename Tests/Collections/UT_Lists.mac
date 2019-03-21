@@ -23,15 +23,15 @@ Private Class (Any) Account(_acc : String, _summ : Integer)
    End;
 End;
 
-Macro otherCompFun(a1,a2)
+Private Macro otherCompFun(a1,a2)
    return CF_ComparePrimitive(a1.acc,a2.acc);
 end;
 
-Macro otherCompFun2(a1,a2)
+Private Macro otherCompFun2(a1,a2)
    return CF_ComparePrimitive(a1.summ, a2.summ);
 end;
 
-Macro otherEqualFun(a1,a2)
+Private Macro otherEqualFun(a1,a2)
    return (otherCompFun(a1,a2) == 0);
 End;
 
@@ -308,7 +308,7 @@ Class (TestList) TestArrayList()
    End;
 
    Macro beforeTest()
-      list = ArrayList().setPrimitive();
+      list = ArrayList().setType(V_INTEGER);
       objList = ArrayList();
       fillList();
    End;
@@ -350,7 +350,7 @@ Class (TestList) TestLinkedList()
    End;
 
    Macro beforeTest()
-      list = LinkedList().setPrimitive();
+      list = LinkedList().setType(V_INTEGER);
       objList = LinkedList();
       fillList();
    End;
@@ -401,7 +401,7 @@ Class (TestCase) TestSortedLinkedList()
    var objList;
 
    Macro beforeTest()
-      list = SortedLinkedlist().setPrimitive();
+      list = SortedLinkedlist().setType(V_INTEGER);
       objList = SortedLinkedlist();
    End;
 
@@ -446,3 +446,4 @@ SetThrowMode(2);
 TestArrayList;
 TestLinkedList;
 TestSortedLinkedList;
+SetThrowMode(0);

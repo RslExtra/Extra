@@ -42,6 +42,10 @@ Class (TestCase) TestLambda()
       func = Lambdas.create("_+3");
       assertEquals(5, do(2));
    End;
+
+   Macro AfterClass()
+      Lambdas.reset();
+   End;
 End;
 
 SetThrowMode(2);
