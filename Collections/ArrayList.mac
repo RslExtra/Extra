@@ -374,8 +374,11 @@ Class (ListInterface) ArrayList()
    End;
 
    Macro sort(compareFun)
+
       if (ValType(compareFun) == V_UNDEF)
          compareFun = comparator;
+      elif (ValType(comparefun) == V_STRING)
+         compareFun = Lambdas.getFunc(compareFun)
       end;
       var arr = toArray();
       ExQSort(arr, compareFun);
