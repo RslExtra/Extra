@@ -1,13 +1,14 @@
 import "..\\Mac\\Extra\\StreamApi\\Stream.mac";
 import or_rep_h;
 
+
 Class (TerminalStream) CMakeRepStream(_fields : TArray, _headersOrStr : Variant)
    var fields  = _fields;
    var headers = _headersOrStr;
    var addAll  =  (ValType(fields) == V_UNDEF);
    var rep = null;
 
-   // ╨в╤Г╤В ╨┐╤А╨╛╤Б╤В╨╛ ╨╖╨░╨║╨╕╨┤╤Л╨▓╨░╨╡╨╝ ╨▓ ╨╛╤В╤З╨╡╤В
+   // Тут просто закидываем в отчет
    Macro addObjToReport(par : Object)
       if (ValType(par) == V_UNDEF) return; end;
       var i;
@@ -23,14 +24,14 @@ Class (TerminalStream) CMakeRepStream(_fields : TArray, _headersOrStr : Variant)
       rep.addStr();
    end;
 
-   // ╨Я╨╡╤А╨╡╨╛╨┐╤А╨╡╨┤╨╡╨╗╤П╨╡╨╝ ╨╝╨╡╤В╨╛╨┤
+   // Переопределяем метод
    Macro apply()
       while(true)
-         var el = upstream.next();   // ╨Я╨╛╨╗╤Г╤З╨░╨╡╨╝ ╤Б╨╗╨╡╨┤╤Г╤О╤Й╨╕╨╣ ╨╛╨▒╤К╨╡╨║╤В
-         if (needStop) break; end;   // ╨Х╤Б╨╗╨╕ ╤Б╤В╤А╨╕╨╝ ╤Б╨▓╨╡╤А╤Е╤Г ╨▒╤А╨╛╤Б╨╕╨╗ ╤Д╨╗╨░╨│ ╨╛╤Б╤В╨░╨╜╨╛╨▓╨║╨╕ ╨▓╤Л╤Е╨╛╨┤╨╕╨╝ ╨╕╨╖ ╤Ж╨╕╨║╨╗╨░
-         addObjToReport(el);         // ╨Р ╨╡╤Б╨╗╨╕ ╨╜╨╡╤В - ╨┤╨╛╨▒╨░╨▓╨╗╤П╨╡╨╝ ╨▓ ╨╛╤В╤З╨╡╤В
+         var el = upstream.next();   // Получаем следующий объект
+         if (needStop) break; end;   // Если стрим сверху бросил флаг остановки выходим из цикла
+         addObjToReport(el);         // А если нет - добавляем в отчет
       End;
-      if (ValType(rep) != V_UNDEF)   // ╨Т╤Л╨▓╨╛╨┤╨╕╨╝ ╨╛╤В╤З╨╡╤В ╨╕ ╨┐╨╛╨┤╤З╨╕╤Й╨░╨╡╨╝ ╨╛╨▒╤К╨╡╨║╤В╤Л
+      if (ValType(rep) != V_UNDEF)   // Выводим отчет и подчищаем объекты
          Rep.SetWinRepOutPut(0, 0);
          Rep.AddWinRepOutput(WINREP_OUTPUT_EXCEL, WINREP_FORMAT_XLS);
          Rep.PrintWinRep();
@@ -39,12 +40,11 @@ Class (TerminalStream) CMakeRepStream(_fields : TArray, _headersOrStr : Variant)
       end;
    End;
 
-   // ╨Ъ╨╛╨╜╤Б╤В╤А╤Г╨║╤В╨╛╤А
+   // Конструктор
    local var strHeader, hdr, i;
-
-   if (ValType(_headersOrStr) == V_STRING)   // ╨Х╤Б╨╗╨╕ ╤И╨░╨┐╨║╨░ ╨┐╨╡╤А╨╡╨┤╨░╨╜╨░ ╨║╨░╨║ ╤Б╤В╤А╨╛╨║╨░ ╤Б ╨┐╤Б╨╡╨▓╨┤╨╛╨│╤А╨░╤Д╨╕╨║╨╛╨╣
+   if (ValType(_headersOrStr) == V_STRING)   // Если шапка передана как строка с псевдографикой
       strHeader = _headersOrStr;
-   elif (IsEqClass("TArray", _headersOrStr)) // ╨Х╤Б╨╗╨╕ ╤И╨░╨┐╨║╨░ ╨┐╨╡╤А╨╡╨┤╨░╨╜╨░ ╨║╨░╨║ ╨╝╨░╤Б╤Б╨╕╨▓ ╨╖╨░╨│╨╛╨╗╨╛╨▓╨║╨╛╨▓
+   elif (IsEqClass("TArray", _headersOrStr)) // Если шапка передана как массив заголовков
       hdr = CHeader();
       for (i, 0, _headersOrStr.size - 1, 1)
          hdr.AddChild(_headersOrStr[i], 15);
@@ -52,10 +52,10 @@ Class (TerminalStream) CMakeRepStream(_fields : TArray, _headersOrStr : Variant)
       strHeader = hdr.CreateHeader(3, null);
    end;
 
-   if ((ValType(hdr == V_UNDEF)) and addAll)  // ╨Х╤Б╨╗╨╕ ╨▓╤Е╨╛╨┤╨╜╤Л╤Е ╨░╤А╨│╤Г╨╝╨╡╨╜╤В╨╛╨▓ ╨╜╨╡╤В ╨╕╨╗╨╕ ╨╜╨╡╨┐╤А╨░╨▓╨╕╨╗╤М╨╜╤Л╨╡
+   if ((ValType(hdr) == V_UNDEF)  and (ValType(fields) != V_UNDEF))  // Если входных аргументов нет или неправильные
       hdr = CHeader();
       for (i, 0, fields.size - 1, 1)
-         hdr.AddChild(fields[i]);             // ╨Э╨░╨╖╨╛╨▓╨╡╨╝ ╨╖╨░╨│╨╛╨╗╨╛╨▓╨║╨╕ ╨▓ ╤З╨╡╤Б╤В╤М ╨╕╨╝╨╡╨╜ ╨┐╨╛╨╗╨╡╨╣
+         hdr.AddChild(fields[i]);             // Назовем заголовки в честь имен полей
       end;
       strHeader = hdr.CreateHeader(3, null);
    end;

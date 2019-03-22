@@ -739,8 +739,13 @@ End;
 // Borning
 
 Private Macro reverseReplacement(tbStr)
-   var hp = tbStr.inFile.prev();
-   if (not(hp)) return tbStr.stopStream(); end;
+   var hp;
+   if ( not(tbStr._getit))
+      hp = tbStr.inFile.prev();
+   else
+      hp = (tbStr.inFile.getPos > 0);
+   end;
+   if (not(hp) or tbStr.needStop) return tbStr.stopStream(); end;
    if (not(tbStr.isFixed))
       return tbStr.inFile.rec;
    else
@@ -760,6 +765,7 @@ Private Class (BornStream) TBFileStream(tbFile)
    private var arrKeys     = TArray();
    private var arrKeysType = TArray();
    private var arrKeysSize = 0;
+   var _getit = (inFile.getPos > 0);
 
    Macro ini()
       var i = 0, k = 0;
@@ -789,8 +795,14 @@ Private Class (BornStream) TBFileStream(tbFile)
    End;
 
    Macro next()
-      var hn = inFile.next();
-      if (not(hn)) return stopStream(); end;
+      var hn;
+      if (not(_getit))
+         hn = inFile.next();
+      else
+         hn = (inFile.getPos > 0);
+         _getit = false;
+      end;
+      if (not(hn) or needStop) return stopStream(); end;
       if (not(Fix))
          return inFile.rec;
       else
@@ -818,7 +830,8 @@ Private Class (BornStream) TBFileStream(tbFile)
       Метод аналогичен методу [TBFile.rewind].
    */
    Macro rewind() : TBFileStream
-      inFile.rewind;
+      inFile.rewind();
+      _getit = false;
       return this;
    End;
 
@@ -827,7 +840,7 @@ Private Class (BornStream) TBFileStream(tbFile)
    */
    Macro setKey(kn : Integer) : TBFileStream
       inFile.keyNum = kn;
-      inFile.rewind();
+      rewind();
       ini();
       return this;
    End;
@@ -846,8 +859,13 @@ Private Class (BornStream) TBFileStream(tbFile)
             defVal(arrKeysType[i], v);
          end;
          inFile.rec[p] = v;
+         i = i + 1;
       end;
-      inFile.getGE();
+      if (inFile.getGE())
+         _getit = true;
+      else
+         needStop = true;
+      end;
       return this;
    End;
 
@@ -865,8 +883,13 @@ Private Class (BornStream) TBFileStream(tbFile)
             defVal(arrKeysType[i], v);
          end;
          inFile.rec[p] = v;
+         i = i + 1;
       end;
-      inFile.getGT();
+      if (inFile.getGT())
+         _getit = true;
+      else
+         needStop = true;
+      end;
       return this;
    End;
 
@@ -884,8 +907,13 @@ Private Class (BornStream) TBFileStream(tbFile)
             defVal(arrKeysType[i], v);
          end;
          inFile.rec[p] = v;
+         i = i + 1;
       end;
-      inFile.getLE();
+      if (inFile.getLE())
+         _getit = true;
+      else
+         needStop = true;
+      end;
       return this;
    End;
 
@@ -903,8 +931,13 @@ Private Class (BornStream) TBFileStream(tbFile)
             defVal(arrKeysType[i], v);
          end;
          inFile.rec[p] = v;
+         i = i + 1;
       end;
-      inFile.getLT();
+      if (inFile.getLT())
+         _getit = true;
+      else
+         needStop = true;
+      end;
       return this;
    End;
 
@@ -922,6 +955,7 @@ Private Class (BornStream) TBFileStream(tbFile)
             defVal(arrKeysType[i], v);
          end;
          inFile.rec[p] = v;
+         i = i + 1;
       end;
       inFile.getEQ();
       return this;
@@ -935,6 +969,7 @@ Private Class (TBFileStream) MemDBFileStream(tbFile)
    front = true;
    fix = false;
    thandl = TRecHandler(inFile.TblName, inFile.getFldInfo);
+   _getit = false;
 
    arrKeys     = TArray();
    arrKeysType = TArray();
@@ -946,11 +981,28 @@ Private Class (TBFileStream) MemDBFileStream(tbFile)
       return handl;
    End;
 
+   Macro ini()
+      var i = 0, k = 0;
+      var kInfo = inFile.GetKeyInfo();
+      var fInfo = inFile.GetFldInfo();
+      while (i < kInfo.size)
+         if (kInfo[i] == inFile.keyNum)
+            var pos = kInfo[i+2];
+            arrKeys[k] = pos;
+            arrKeysType[k]  = fInfo[(pos * 5) + 1];
+            k = k + 1;
+            break;
+         end;
+         i = i + 5;
+      end;
+      arrKeysSize = k;
+   End;
+
    ini();
 End;
 
 Private Class (TerminalStream) ForEachStream(_func)
-   var func = _func;
+   var func = Lambdas.getFunc(_func);
 
    Macro apply(parm)
       while(true)

@@ -178,7 +178,7 @@ Class MemDB(_struct)
    private var cursor = -1;
    private var dataSets = SArray();
    private var keys = SArray();
-   private var curIndex = 0;
+   private var curIndex = 1;
    private var lastGetPos = -1;
 
    Private Macro addInDataSet(k, rh)
@@ -461,7 +461,9 @@ Class MemDB(_struct)
       end;
       var res = SArray();
       for (var k, keys)
-         res.addArray(k.KeyInfo);
+         if (k != null)
+            res.addArray(k.KeyInfo);
+         end;
       end;
       return res;
    End;
