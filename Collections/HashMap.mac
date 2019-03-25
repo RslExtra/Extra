@@ -201,14 +201,12 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    End;
 
    Private Macro resize ()
-   //println("resize, my size is " + this.size);
       var oldTab = table;
       var oldCap = oldTab.size;
       var newCap = oldCap * 2;
       var newTr  = treshold * 2;
       var i = 0;
-      var curE;
-      var nxtE;
+      var curE, nxtE;
       table = TArray(newCap);
       treshold = newTr;
       capacity = newCap;

@@ -77,6 +77,14 @@ Class (TestCase) TestList()
       assertEquals(1, ind);
    End;
 
+   Macro test_AddItems()
+      list.clear();
+      list.addItems(1, 2, 3);
+      assertArrays(Ar(1, 2, 3), list.toArray);
+      list.addItems(4).addItems(5).addItems();
+      assertArrays(Ar(1, 2, 3, 4, 5), list.toArray);
+   End;
+
    Macro test_get()
       var g;
       assertArrays(Ar(0, 1, 2, 3), list.toArray);
@@ -439,6 +447,69 @@ Class (TestCase) TestSortedLinkedList()
       assertEquals(200, objList.get(1).summ);
       assertEquals(300, objList.get(2).summ);
       assertEquals(300, objList.get(3).summ);
+   End;
+
+   Macro test_AddItems()
+      list.clear();
+      list.addItems();
+      assertTrue(list.isEmpty);
+      list.addItems(3, 2, 1);
+      assertArrays(Ar(1, 2, 3), list.toArray);
+      list.addItems(2, 1, 3);
+      assertArrays(Ar(1, 1, 2, 2, 3, 3), list.toArray);
+   End;
+
+   Macro test_iterator()
+      list.clear();
+      list.addItems(1, 2, 3);
+      var itr = list.newIterator(1);
+      var a  = itr.next;
+      assertEquals(2, a);
+
+      itr = list.newIterator();
+      a = itr.next();
+      assertEquals(1, a);
+      assertTrue(itr.hasnext);
+      a = itr.next();
+      assertEquals(2, a);
+      assertTrue(itr.hasnext);
+      a = itr.next();
+      assertEquals(3, a);
+      assertFalse(itr.hasnext);
+      a = itr.add(4);
+      assertFalse(itr.hasnext);
+      assertTrue(itr.hasPrev);
+      a = itr.prev();
+      assertEquals(4, a);
+      a = itr.prev();
+      assertEquals(3, a);
+      a = itr.prev();
+      assertEquals(2, a);
+      a = itr.prev();
+      assertEquals(1, a);
+      assertFalse(itr.hasprev);
+      itr.set(10);
+      a = itr.next();
+      assertEquals(10, a);
+      a = itr.prev();
+      assertEquals(10, a);
+      a = itr.remove();
+      assertEquals(10, a);
+      assertEquals(3, list.size);
+   End;
+
+   Macro test_DescIterator()
+      list.clear();
+      list.addItems(1, 2, 3);
+      var itr = list.newDescIterator();
+      AssertFalse(itr.hasprev);
+      var a = itr.next();
+      AssertEquals(3, a);
+      a = itr.next();
+      AssertEquals(2, a);
+      a = itr.next();
+      AssertEquals(1, a);
+      AssertFalse(itr.hasNext);
    End;
 End;
 

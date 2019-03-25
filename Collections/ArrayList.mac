@@ -128,13 +128,6 @@ Class (ListInterface) ArrayList()
       items[capacity-1] = null;
    end;
 
-   Macro setPrimitive()
-      comparator  = @CF_ComparePrimitive;
-      equalsfunc  = @CF_EqualsPrimitive;
-      return this;
-   End;
-
-
    Macro newInstance()
       return ArrayList()
             .setComparator(comparator)
@@ -292,7 +285,9 @@ Class (ListInterface) ArrayList()
    End;
 
 
-   /** Бинарный поиск по списку элемента `el`. Возвращает индекс найденного элемента или отрицательное значение равное подходящему индексу вставки умноженное на -1 и с вычетом 1.*/
+   /**
+      Бинарный поиск по списку элемента `el`. Возвращает индекс найденного элемента или отрицательное значение равное подходящему индексу вставки умноженное на -1 и отнять 1.
+   */
    Macro binarySearch(el) : Integer
       var high = size, low = 0, mid, x;
       var i = -1;
@@ -374,10 +369,9 @@ Class (ListInterface) ArrayList()
    End;
 
    Macro sort(compareFun)
-
       if (ValType(compareFun) == V_UNDEF)
          compareFun = comparator;
-      elif (ValType(comparefun) == V_STRING)
+      else
          compareFun = Lambdas.getFunc(compareFun)
       end;
       var arr = toArray();
@@ -394,6 +388,8 @@ Class (ListInterface) ArrayList()
    Macro isSorted(compareFun) : Bool
       if (ValType(compareFun) == V_UNDEF)
          compareFun = comparator;
+      else
+         compareFun = Lambdas.getFunc(compareFun)
       end;
       for (var i, 1, size-1, 1)
          if (ExecMacro2(compareFun, items[i-1], items[i]) > 0)

@@ -162,11 +162,11 @@ Class Iterable()
    /** Размер коллекции.*/
    var size;
 
-   /** Возвращает новый экземпляр текущей коллекции */
+   /** Возвращает новый экземпляр текущей коллекции с теми  же компараторами и функциями проверки на равенство. */
    Macro newInstance()
    End;
 
-   /** Удаляет все элементы коллекции*/
+   /** Удаляет все элементы коллекции. */
    Macro clear()
    End;
 
@@ -181,7 +181,7 @@ Class Iterable()
    Macro toArray() : SArray
    End;
 
-   /** Дефалтное добавление (для chain - функций) */
+   /** Дефолтное добавление базовых элементов коллекции, для [ListInterface списков] и [SetInterface множеств] это Variant элементы, для [MapInterface карт] это объект типа [Pair] с полями key и value. */
    Macro append(baseCollectionElement)
    End;
 
@@ -191,12 +191,12 @@ Class Iterable()
    End;
 
    /**
-      Возвращает копию исходной коллекции. Каждый базовый элемент передается 'copyFunction', которая возвращает копию элемента.Если 'copyFunction' не задана - объекты копируются по ссылке, примитивы по значению.
+      Возвращает быструю копию исходной коллекции. Каждый базовый элемент коллекции копируется по значению если примитив и по ссылке если объектного типа.
    */
    Macro copy() : Iterable
       var result = newInstance();
-      var itr = newIterator;
-      while (itr.hasnext)
+      var itr = newIterator();
+      while (itr.hasNext())
          result.append(itr.next);
       end;
       return result;
@@ -214,7 +214,7 @@ Class Iterable()
       var func = Lambdas.getFunc(predicate);
       var result = newInstance();
       var itr = newIterator();
-      while (itr.hasNext)
+      while (itr.hasNext())
          var el = itr.next;
          if (ExecMacro2(func, el))
             result.append(el);
@@ -223,8 +223,9 @@ Class Iterable()
       return result;
    End;
 
-   /*
+   /**
       Возвращает объект того же типа коллекции с элементами преобразованными функцией 'mapfunc'.
+
       @param mapfunc - ссылка на функцию вида Macro func(el : Variant) : Variant
    */
    Macro map(mapfunc) : Iterable
@@ -232,12 +233,40 @@ Class Iterable()
       var result = newInstance();
       var el, outEl;
       var itr = newIterator();
-      while (itr.hasNext)
+      while (itr.hasNext())
          el = itr.next;
          outEl = ExecMacro2(func, el);
          result.append(outEl);
       end;
       return result;
+   End;
+
+   /**
+      Вызывает 'func' для каждого элемента массива, возвращает `null`.
+      Пример:
+
+      @sample [samples.sArray.forEach]
+   */
+   Macro forEach(func)
+      func = Lambdas.getFunc(func);
+      var itr = newIterator();
+      while (itr.hasNext)
+         ExecMacro(func, itr.next());
+      end;
+   End;
+
+   /**
+      Возвращает результат агрегатной функции 'accumulator' на элементы исходного массива.
+      'identity' - начальное значение.
+
+   */
+   Macro reduce(identity, accumulator) : Variant
+      var func = Lambdas.getFunc(accumulator);
+      var itr = newIterator();
+      while (itr.hasNext)
+         identity = ExecMacro2(accumulator, identity, itr.next());
+      end;
+      return identity;
    End;
 
    /**
@@ -284,16 +313,19 @@ Class Iterable()
    End;
 
 
-   /** Возвращает строку из элементов коллекции, разделенных '_delim', начинается с '_prefix' заканчивается '_postfix'*/
+   /**
+      Возвращает строку из элементов коллекции, разделенных '_delim', начинается с '_prefix' заканчивается '_postfix'.
+
+      @oparam _delim = ", " разделитель
+      @oparam _prefix = "[" префикс вывода
+      @oparam _postfix = "]" постфикс вывода
+
+   */
    Macro join(_delim, _prefix, _postfix) : String
       var delim   = ifNull(_delim, ", ");
       var prefix  = ifNull(_prefix, "[");
       var postfix = ifNull(_postfix,"]");
       return StringJoiner(delim, prefix, postfix).joinToString(this);
-   End;
-
-   Macro toStr() : String
-      return join();
    End;
 
    /** Выводит коллекцию на экран без переноса строк*/
@@ -306,6 +338,9 @@ Class Iterable()
       StrJoinerML.joinToPrint(this);
    End;
 
+   /**
+      Метод для расчета хэша коллекции. Хотя он и реализован, не рекомендуется использовать коллекцию как ключ в [MapInterface].
+   */
    Macro hash() : Integer
       var h = 1;
       for (var el, this)
@@ -314,10 +349,17 @@ Class Iterable()
       return abs(h);
    End;
 
+   /**
+      Метод для проверки на равенство текущей коллекции и 'otherIterable'. Две коллекции будут равны, если они одного типа, размера и попарно равны все их элементы.
+   */
    Macro equals(otherIterable) : Bool
       // Inherited implementation
    End;
 
+
+   /**
+      Создает [StreamApi.BornStream Stream] коллекции.
+   */
    Macro toStream()
       var streamObj = ExecMacro2("StreamOf", this);
       if (streamObj == null)
@@ -337,6 +379,7 @@ End;
 
    @see [Collections.ArrayList]
    @see [Collections.LinkedList]
+   @see [Collections.SortedLinkedList]
 */
 Class (Iterable) ListInterface()
 
@@ -346,17 +389,17 @@ Class (Iterable) ListInterface()
    private var equalsfunc ;
 
    /**
-      Устанавливает необходимые для работы с примитивными типами 'comparator' и 'equalsFunc' и возвращает текущий экземпляр списка.
+      Устанавливает необходимые для работы с конкретным 'rslType' типом RSL 'comparator' и 'equalsFunc' и возвращает текущий экземпляр списка.
    */
-   Macro setType(type) : ListInterface
-      if ((type > V_UNDEF) and (type < V_TIME))
+   Macro setType(rslType) : ListInterface
+      if ((rslType > V_UNDEF) and (rslType <= V_TIME))
          comparator = @CF_ComparePrimitive;
          equalsfunc = @CF_EqualsPrimitive;
-      elif (type == V_GENOBJ)
+      elif (rslType == V_GENOBJ)
          comparator = @CF_CompareToImpl;
          equalsfunc = @CF_EqualsImpl;
       else
-         return Throw(IllegalArgumentException("Данный тип не предусмотрен реализацией." + type));
+         return Throw(IllegalArgumentException("Данный тип не предусмотрен реализацией." + rslType));
       end;
       return this;
    End;
@@ -365,17 +408,23 @@ Class (Iterable) ListInterface()
       Устанавливает функцию-компаратор 'comparefun' и возвращает текущий список.
    */
    Macro setComparator(comparefun) : ListInterface
-      comparator = comparefun;
+      if (ValType(compareFun) == V_STRING)
+         comparator = Lambdas.getFunc(compareFun);
+      end;
       return this;
    End;
 
    /**
-      Устанавливает функцию м 'equalsfun' и возвращает текущий список.
+      Устанавливает функцию проверки на равенство элементов списка 'equalsfun' и возвращает текущий список.
    */
    Macro setEqualsFunc(equalsfun) : ListInterface
+      if (ValType(equalsfun) == V_STRING)
+         equalsfunc = Lambdas.getFunc(equalsfun);
+      end;
       equalsfunc = equalsfun;
       return this;
    End;
+
    /**
       Добавляет 'element' в список на позицию 'ind'. Если 'ind' не указан или равен `null`, добавляет элемент в конец списка.
    */
@@ -387,7 +436,6 @@ Class (Iterable) ListInterface()
    */
    Macro addItems(varargs )
    End;
-
 
    /**
       Добавляет 'element' в начало списка.
@@ -468,36 +516,37 @@ Class (Iterable) ListInterface()
    End;
 
    /**
-      Возвращает `true`, если коллекция содержит элемент равный 'element' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через '=='.
+      Возвращает `true`, если коллекция содержит элемент равный 'element' согласно функции 'equalsFun'. Можно не указывать 'equalsFun' если она определена для текущего списка.
    */
    Macro contains(element, equalsFun) : Bool
    End;
 
    /**
-      Возвращает `true`, если коллекция содержит все элементы из 'enumerable' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через '=='.
+      Возвращает `true`, если коллекция содержит все элементы из 'enumerable' согласно функции 'equalsFun'. Можно не указывать 'equalsFun' если она определена для текущего списка.
    */
    Macro containsAll(enumerable, equalsFun) : Bool
-      var res = true;
       for(var el, enumerable)
-         res = (res and (contains(el, equalsFun)));
+         if (not(contains(el, equalsFun)))
+            return false;
+         end;
       end;
-      return res;
+      return true;
    End;
 
    /**
-      Возвращает `true`, если коллекция отсортирована согласно функции-компаратору 'compareFun'.
+      Возвращает `true`, если коллекция отсортирована согласно функции-компаратору 'compareFun'. Можно не указывать 'compareFun' если она определена для текущего списка.
    */
    Macro isSorted(compareFun) : Bool
    End;
 
    /**
-      Сортирует исходный список согласно функции-компаратору 'compareFun' и возвращает ссылку на него.
+      Сортирует исходный список согласно функции-компаратору 'compareFun' и возвращает ссылку на него. Можно не указывать 'compareFun' если она определена для текущего списка.
    */
    Macro sort(compareFun) : ListInterface
    End;
 
    /**
-      Разворачивает исходный список и возращает ссылку на него.
+      Разворачивает исходный список и возращает ссылку на него. ожно не указывать 'compareFun' если она определена для текущего списка.
    */
    Macro reverse() : ListInterface
    End;
@@ -515,7 +564,8 @@ Class (Iterable) ListInterface()
    End;
 
    /**
-      Возвращает максимальное значение коллекции.
+      Возвращает максимальное значение коллекции. Можно не указывать 'compareFun' если она определена для текущего списка.
+
       @oparam _comparator ссылка на функцию компаратор.
    */
    Macro max(_comparator) : Variant
@@ -539,7 +589,7 @@ Class (Iterable) ListInterface()
    End;
 
    /**
-      Возвращает минимальное значение коллекции.
+      Возвращает минимальное значение коллекции. Можно не указывать 'compareFun' если она определена для текущего списка.
       @oparam _comparator ссылка на функцию компаратор.
    */
    Macro min(_comparator) : Variant
@@ -590,6 +640,7 @@ End;
    Базовый интерфейс для коллекций пар "ключ-значение".
 
    @see [Collections.HashMap]
+   @see [Collections.LinkedHashMap]
    @see [Collections.TreeMap]
    @see [Collections.ArrayMap]
 */
@@ -657,6 +708,19 @@ Class (Iterable) MapInterface()
    End;
 
    /**
+      Помещает в коллекцию все аргументы и возвращает текущую карту. Нечетным аргументам соответсвуют ключи, четным - значения.
+   */
+   Macro putItems()
+      var i, k, v;
+      for (i, 1, Parmcount-1, 2)
+         GetParm(i, k);
+         GetParm(i+1, v);
+         put(k, v);
+      end;
+      return this;
+   End;
+
+   /**
       Возвращает значение соответствующее ключу 'key', если такого ключа не найдено возвращает `null`.
    */
    Macro get(key) : Variant
@@ -681,9 +745,9 @@ Class (Iterable) MapInterface()
    End;
 
    /**
-      Возвращает `true`, если коллекция содержит пару со значением равным 'value' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через '=='.
+      Возвращает `true`, если коллекция содержит пару со значением равным 'value'
    */
-   Macro containsValue(value, equalsFun) : Bool
+   Macro containsValue(value) : Bool
    End;
 
    /**
@@ -726,29 +790,33 @@ End;
 
    @see [Collections.HashSet]
    @see [Collections.TreeSet]
+   @see [Collections.LinkedHashSet]
 */
 Class (Iterable) SetInterface()
 
+   /**
+      Устанавливает необходимые для работы с конкретным 'rslType' типом RSL  'comparator' и 'equalsFunc'
+   */
    Macro setType(rslType : Integer) : SetInterface
 
    End;
 
    /**
-      Добавляет 'element' в сэт и возвразает `true`, если элемент добавляется впервые.
+      Добавляет 'element' в множество и возвразает `true`, если элемент добавляется впервые.
    */
    Macro add(element) : Bool
    End;
 
    /**
-      Добавляет все элементы 'enumerable' в конец сэта. Возвращает `true` если был добавлен хотя бы один элемент.
+      Добавляет все элементы 'enumerable' в конец множества. Возвращает `true` если был добавлен хотя бы один элемент.
    */
    Macro addAll(enumerable) : Bool
    End;
 
    /**
-      Добавляет все аргументы в сэт и возвращает текущий экземпляр.
+      Добавляет все аргументы в множество и возвращает текущий экземпляр.
    */
-   Macro addItems(varargs)
+   Macro addItems()
    End;
 
    /**
@@ -758,7 +826,7 @@ Class (Iterable) SetInterface()
    End;
 
    /**
-      Ищет и удаляет все элементы иcходного сэта, которые содержаться в 'enumerable', который может являться списком, сэтом или массивом. Вовзращает `true` если был найден или удален хотя бы один элемент.
+      Ищет и удаляет все элементы иcходного множества, которые содержаться в 'enumerable', который может являться списком, множеством или массивом. Вовзращает `true` если был найден или удален хотя бы один элемент.
    */
    Macro removeAll(enumerable) : Bool
    End;
@@ -772,7 +840,13 @@ Class (Iterable) SetInterface()
    /**
       Возвращает `true`, если сэт содержит все элементы из 'enumerable'.
    */
-   Macro containsAll(enumerable) : Bool
+   Macro containsAll(enumerable, equalsFun) : Bool
+      for(var el, enumerable)
+         if (not(contains(el, equalsFun)))
+            return false;
+         end;
+      end;
+      return true;
    End;
 
    Macro equals(oth)

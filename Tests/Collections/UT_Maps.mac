@@ -74,6 +74,18 @@ Class (TestCase) TestMap()
       assertEquals(finded, 1000);
    End;
 
+   Macro test_putItems()
+      map.clear();
+      map.putItems("key1", 1, "key2", 2);
+      var r = map.get("key1");
+      assertEquals(1, r);
+      r = map.get("key2");
+      assertEquals(2, r);
+      map.putItems("key3");
+      assertNull(map.get("key3"));
+      assertTrue(map.containsKey("key3"));
+   End;
+
    Macro test_putMapEntries()
       var addedMap = ArrayMap();
       for(var i, 1, 100)
@@ -217,6 +229,21 @@ Class (TestMap) TestTreeMap()
    Macro beforeTest()
       map = TreeMap();
       objmap = TreeMap();
+   End;
+
+   Macro test_order()
+      map.put(1, 1);
+      map.put(2, 2);
+      map.put(0, 0);
+      map.put(5, 5);
+      map.put(3, 3);
+      assertArrays(Ar(0, 1, 2, 3, 5), map.keys());
+      assertArrays(Ar(0, 1, 2, 3, 5), map.values());
+      map.put("str", "s3");
+      map.put($100, "money100");
+      map.put(null, "undef");
+      assertArrays(Ar(null, 0, 1, 2, 3, 5, $100, "str"), map.keys());
+      assertArrays(Ar("undef", 0, 1, 2, 3, 5, "money100", "s3"), map.values());
    End;
 End;
 

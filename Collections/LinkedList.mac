@@ -665,7 +665,7 @@ Class (ListInterface) LinkedList()
       var i, p;
       for (i, 1, Parmcount-1, 1)
          GetParm(i, p);
-         linkLast(p);
+         addLast(p);
       end;
       return this;
    End;

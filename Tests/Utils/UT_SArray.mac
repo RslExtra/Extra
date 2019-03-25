@@ -197,6 +197,24 @@ Class (TestCase) TestSArray()
       assertArrays(Ar(1,2,3), a);
    End;
 
+   Macro test_contains()
+      arr = SArray(1, 2, 3, 4);
+      assertTrue(arr.contains(1));
+      assertFalse(arr.contains(0));
+      assertFalse(arr.containsAll(ar(2, 3, 1, 5)));
+      assertTrue(arr.containsAll(ar(2, 3, 1, 4)));
+      assertTrue(arr.contains(-1, "i, j -> abs(i)==abs(j)"));
+      assertFalse(arr.contains(-5, "i, j -> abs(i)==abs(j)"));
+   End;
+
+   Macro test_isSorted()
+      arr = SArray(1, 2, 3, 4);
+      AssertTrue(arr.isSorted());
+      arr = SArray(1, 2, 3, -4);
+      assertFalse(arr.isSorted);
+      assertTrue(arr.isSorted("i, j -> abs(i)-abs(j)" ));
+   End;
+
 
    Macro test_clear()
       arr.addItems(1, 2, 3);

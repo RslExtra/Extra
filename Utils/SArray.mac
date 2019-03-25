@@ -9,7 +9,7 @@
    - Имеются методы-цепочки (помечены тегом 'chain') и методы-билдеры (помечены тегом 'builder'), позволяющие выстраивать цепочки вызовов методов без сохранения промежуточного результата.
    - Переопределен метод [SArray.sort sort()], для улучшения производительности и чистоты функции-компаратора.
 
-   @version 0.91
+   @version 0.93
    @author Dzhanybaev M.P.
 */
 
@@ -128,6 +128,16 @@ Class (TArray) SArray()
    end;
 
    // -----------------------
+
+   private macro getFunc(candidate)
+      if (ValType(candidate) == V_UNDEF)
+         return null;
+      elif ((ValType(candidate) == V_STRING) and isLambdaLoaded)
+         return ExecMacro2(CREATE_LAMBDA_FUNC_NAME, candidate);
+      else
+         return candidate;
+      end;
+   End;
    /**
       Возвращает `true` если массив е содержит элементов, `false` в противном случае.
    */
@@ -372,19 +382,20 @@ Class (TArray) SArray()
       Пример:
       @sample [samples.sArray.indexOf]
    */
-   Macro indexOf(element, equalfunc) : Integer
+   Macro indexOf(element, equalsfunc) : Integer
       var i;
-      if (ValType(equalfunc) != V_UNDEF)
+      if (ValType(equalsfunc) != V_UNDEF)
+         equalsfunc = getFunc(equalsfunc);
          if (ValType(element) == 19)
             var clName = GenClassName(element);
             for (i, 0, size-1, 1)
-               if (isEqClass(clName, value(i)) and (ExecMacro2(equalfunc, element, value(i))))
+               if (isEqClass(clName, value(i)) and (ExecMacro2(equalsfunc, element, value(i))))
                   return i;
                end;
             end;
          else
             for (i, 0, size-1, 1)
-               if (ExecMacro2(equalfunc, element, value(i)))
+               if (ExecMacro2(equalsfunc, element, value(i)))
                   return i;
                end;
             end;
@@ -409,19 +420,20 @@ Class (TArray) SArray()
    /**
       Метод аналогичен [SArray.indexOf indexOf]; но возвращает индекс 'последнего' элемента или -1;
    */
-   Macro lastIndexOf(element, equalfunc) : Integer
+   Macro lastIndexOf(element, equalsfunc) : Integer
       var i;
-      if (ValType(equalfunc) != V_UNDEF)
+      if (ValType(equalsfunc) != V_UNDEF)
+         equalsfunc = getFunc(equalsfunc);
          if (ValType(element) == 19)
             var clName = GenClassName(element);
             for (i, size-1, 0, -1)
-               if (isEqClass(clName, value(i)) and (ExecMacro2(equalfunc, element, value(i))))
+               if (isEqClass(clName, value(i)) and (ExecMacro2(equalsfunc, element, value(i))))
                   return i;
                end;
             end;
          else
             for (i, size-1, 0, -1)
-               if (ExecMacro2(equalfunc, element, value(i)))
+               if (ExecMacro2(equalsfunc, element, value(i)))
                   return i;
                end;
             end;
@@ -443,10 +455,24 @@ Class (TArray) SArray()
    End;
 
    /**
-      Возвращает `true`, если массив содержит элемент 'element', согласно функции 'equalfunc'. Если 'equalfunc' не указана или равняется `null`, тогда сравнение в поиске производится по ссылке через '=='.
+      Возвращает `true`, если массив содержит элемент 'element', согласно функции 'equalsfunc'. Если 'equalsfunc' не указана или равняется `null`, тогда сравнение в поиске производится по ссылке через '=='.
    */
-   Macro contains(element, equalfunc) : Bool
-      return (indexOf(element, equalfunc) >= 0);
+   Macro contains(element, equalsfunc) : Bool
+      equalsfunc = getFunc(equalsfunc);
+      return (indexOf(element, equalsfunc) >= 0);
+   End;
+
+   /**
+      Возвращает `true`, если массив содержит все элементы из 'enumerable' согласно функции 'equalsFun'. Если 'equalsfunc' не указана или равняется `null`, тогда сравнение в поиске производится по ссылке через '=='.
+   */
+   Macro containsAll(enumerable, equalsfunc) : Bool
+      equalsfunc = getFunc(equalsfunc);
+      for (var el, enumerable)
+         if (not (contains(el, equalsfunc)))
+            return false;
+         end;
+      end;
+      return true;
    End;
 
    /**
@@ -556,6 +582,25 @@ Class (TArray) SArray()
    End;
 
    /**
+      Возвращает `true` если массив отсортирован согласно функции-компаратору 'compfunc'.
+   */
+   Macro isSorted(compfunc) : Bool
+      if (size <= 1) return true; end;
+      if (ValType(compfunc) == V_UNDEF)
+         compfunc = @CF_ComparePrimitive;
+      elif ((ValType(compfunc) == V_STRING) and isLambdaLoaded)
+         compfunc = ExecMacro2(CREATE_LAMBDA_FUNC_NAME, compfunc);
+      end;
+
+      for (var i, 1, size - 1, 1)
+         if (ExecMacro2(compfunc, value(i-1), value(i)) > 0)
+            return false;
+         end;
+      end;
+      return true;
+   End;
+
+   /**
       Сортирует исходный массив согласно функции-компаратору 'compfunc' и возвращает ссылку на исходный массив.
       Если 'compfunc' не указана или равна `null` сортировка будет проводиться в натуральном порядке.
       Для использования необходимо предварительно импортировать 'bankinter' для возможности задействования функции QSort.
@@ -598,17 +643,19 @@ Class (TArray) SArray()
    End;
 
    /**
-      Возвращает новый массив [SArray] уникальных элементов исходного массива согласно функции 'equalfunc'. Если 'equalfunc' не задана или равняется `null`, сравнение будет проводиться по ссылке для объектов и по значению для примитивов через `==`.
-      Функция 'equalfunc' должна принимать два аргумента и возращать `true` если аргументы считаются равными, `false` в противном случае;
+      Возвращает новый массив [SArray] уникальных элементов исходного массива согласно функции 'equalsfunc'. Если 'equalsfunc' не задана или равняется `null`, сравнение будет проводиться по ссылке для объектов и по значению для примитивов через `==`.
+      Функция 'equalsfunc' должна принимать два аргумента и возращать `true` если аргументы считаются равными, `false` в противном случае;
 
       Пример:
       @sample [samples.sArray.distinct]
 
       @tag chain
    */
-   Macro distinct(equalfunc) : SArray
-      if (ValType(equalfunc) == V_UNDEF)
+   Macro distinct(equalsfunc) : SArray
+      if (ValType(equalsfunc) == V_UNDEF)
          return distinctPrim();
+      elif ((ValType(equalsfunc) == V_STRING) and isLambdaLoaded)
+         equalsfunc = ExecMacro2(CREATE_LAMBDA_FUNC_NAME, equalsfunc);
       end;
       var resArr = SArray();
       var i, j;
@@ -616,7 +663,7 @@ Class (TArray) SArray()
          var el = value(i);
          var uniq = true;
          for (j, 0, resArr.size - 1, 1)
-            if (ExecMacro2(equalFunc, el, resArr[j]))
+            if (ExecMacro2(equalsfunc, el, resArr[j]))
                uniq = false;
                break;
             end;
@@ -721,7 +768,7 @@ Class (TArray) SArray()
    End;
 
    /**
-      Создает [Stream.BornStream Stream] объект.
+      Создает [StreamApi.BornStream Stream] объект.
    */
    Macro toStream()
       if (ValType(ExecMacro2("StreamLoadedMarker")) != V_UNDEF)
