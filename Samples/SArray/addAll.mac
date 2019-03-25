@@ -1,7 +1,7 @@
 import "../mac/extra/utils/SArray.mac";
 //<
-var arr = SArray();
-arr.addAll("first", "second", "third");
-arr.addAll(1, 2, 3);
-arr.toScreen();         // [first, second, third, 1, 2, 3]
+var arr = SArray(1, 2, 3);
+var arr2 = SArray(4, 5, 6, 7);
+arr.addAll(arr2);
+arr.toScreen();         // [1, 2, 3, 4, 5, 6, 7]
 //>
