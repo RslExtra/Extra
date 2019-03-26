@@ -12,6 +12,7 @@
    @version 0.93
    @author Dzhanybaev M.P.
 */
+import "..\\Mac\\Extra\\Lambda\\Lambda.mac";
 
 Private Macro isBankInterLoaded()
    return (ValType(ExecMacro2("isAlpha", "a")) != V_UNDEF);
