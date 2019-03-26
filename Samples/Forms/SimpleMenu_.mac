@@ -1,0 +1,32 @@
+import "..\\Mac\\Extra\\Forms\\SimpleMenu.mac";
+import "..\\Mac\\Extra\\Utils\\SArray.mac";
+
+Class BranchClass(_FNCash, _desc, _city)
+   var FNCash = _FNCash;
+   var shortName = _desc;
+   var fullName = _desc;
+   var city = _city;
+
+   Macro equals(oth) : Bool
+      return (FNCash == oth.FNCash);
+   End;
+End;
+
+var branches = SArray(BranchClass(1, "Головной офис", "г. Москва"),
+                      BranchClass(12, "Допольнителный офис №14", "г. Бобруйск"),
+                      BranchClass(23, "Допольнителный офис №23", "г. Владивосток")
+                     );
+
+var mn = SimpleMenu()
+            .setTitle("Выберите подразделение")
+            .setCol("FNCash", 3)
+            .setCol("shortName", 40)
+            .setCol("city", 20)
+            .addArray(branches);
+var choice = mn.valueOf();
+if (choice == null)
+   println("Отмена задания");
+   exit(0);
+end;
+
+println("Вы выбрали " + choice.fullName );

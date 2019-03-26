@@ -3,6 +3,13 @@
 
    Реализация простого и удобного меню.
 */
+
+/**
+   Класс меню. Реализован на базе классического RSL меню [menu].
+
+   Пример использования:
+   @sample [samples.forms.SimpleMenu_]
+*/
 Class SimpleMenu()
    Const prefix   =  " ";
    Const postfix  =  " ";
@@ -18,12 +25,13 @@ Class SimpleMenu()
    private var ObjArr = TArray();
    private var ColumnProps = TArray();
    private var ColumnSizes = TArray();
+   var choice = null;
 
    /**
       Устанавливает заголовок меню '_Title'
    */
    Macro setTitle(_Title : String)
-      this.title = _Title;
+      title = _Title;
       return this;
    End;
 
@@ -31,7 +39,7 @@ Class SimpleMenu()
       Устанавливает сообщение внизу экрана  '_Message'.
    */
    Macro setMessage(_Message : String)
-      this.mess = _Message;
+      mess = _Message;
       return this;
    End;
 
@@ -39,16 +47,43 @@ Class SimpleMenu()
       Устанавливает координаты.
    */
    Macro setCoord(_x, _y)
-      this.x = _x;
-      this.y = _y;
+      x = _x;
+      y = _y;
       return this;
+   End;
+
+   /**
+      Устанавливает координату x.
+   */
+   Macro setX(_x)
+      x = _x;
+      return this;
+   End;
+
+   /**
+      Устанавливает координату y.
+   */
+   Macro setY(_y)
+      y = _y;
+      return this;
+   End;
+
+   /**
+      Возвращает ширину в символах
+   */
+   Macro getWidth() : Integer
+      var res = 2;
+      for(var s, ColumnSizes)
+         res = res + s + 1;
+      end;
+      return res;
    End;
 
    /**
       Устанавливает активную строку.
    */
    Macro setActiveLine(_n)
-      this.n = _n;
+      n = _n;
       return this;
    End;
 
@@ -97,7 +132,7 @@ Class SimpleMenu()
       var propVal;
       var sz = 0;
       while(i < ColumnProps.Size)
-         propVal = GenGetProp(obj,ColumnProps[i]);
+         propVal = GenGetProp(obj, ColumnProps[i]);
          sz      = ColumnSizes[i];
          s = s + processStr(String(propVal), sz);
          i = i + 1;
@@ -106,38 +141,39 @@ Class SimpleMenu()
          end;
       end;
       s = s + postfix;
+      ObjArr[ObjArr.size] = obj;
       LineArr[LineArr.size] = s;
    End;
 
-   Private Macro processLines()
-      var i = 0;
-      while(i < ObjArr.size)
-         addline(ObjArr[i]);
-         i = i + 1;
-      end;
-   End;
-
+   /**
+      Добавляет объект 'obj' к списку выбора.
+   */
    Macro add(obj : Variant)
-      ObjArr(ObjArr.size) = obj;
-      size = size + 1;
+      addLine(obj);
       return this;
    End;
 
+   /**
+      Добавляет массив объектов 'arr' к списку выбора.
+   */
    Macro addArray(arr : TArray)
-      var i = 0;
-      while(i < arr.size)
-         add(arr[i]);
-         i = i + 1;
+      for (var el, arr)
+         add(el);
       end;
       return this;
    End;
 
+   /**
+      Вызывает меню, и после выбора пользователя возвращает индекс выбранной строки или `-1`, если выбор не был сделан
+   */
    Macro indexOf()
-      processLines();
       var mn = Menu(LineArr, mess, title, x, y, n);
       return mn;
    End;
 
+   /**
+      Вызывает меню, и после выбора пользователя возвращает объект выбранной строки или `null`, если выбор не был сделан
+   */
    Macro valueOf() : Variant
       var ind = indexOf();
       if(ind >= 0)
