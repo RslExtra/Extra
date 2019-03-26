@@ -1,0 +1,35 @@
+import "../mac/extra/RUnit/MemDb.mac";
+
+// Билдим структуру
+var struct = StructureBuilder("MyDb")
+                  .addField("Referenc", V_INTEGER, 4)
+                  .addField("CodClient", V_INTEGER, 4)
+                  .addField("Account", V_STRING, 20)
+                  .addField("Open_date", V_DATE)
+                  .addField("Close_date", V_DATE)
+                  .addField("SumRest", V_MONEY)
+                  .build();                         // Не забываем сбилдить
+
+// Создаем бд и добавляем ключи
+var db = MemDB(struct)
+                  .addKey(8, "-Referenc")           // Так сообщаем, что в ключе это поле должно быть в порядке убывания
+                  .addKey(12, "Close_date", "Referenc");
+
+db.addRow(200000, 200001, "40817000000000132", date(01,03,2019), date(21,03,2019), $1500);
+db.addRow(100001, 300002, "40817000000000133", date(01,03,2019), date(21,03,2019), $1600);
+db.addRow(100002, 200001, "40817000000000134", date(02,01,2019), date(10,02,2019), $1700);
+db.addRow(100003, 123132, "40817000000000135", date(02,01,2019), date(0,0,0)     , $1800);
+db.addRow(100004, 420528, "40817000000000136", date(03,01,2019), date(10,02,2019), $1800);
+
+
+// Далее работаем как обычно
+db.keyNum = 12;
+db.rewind();
+db.clear();
+db.rec.Close_date = Date(12, 02, 2019);
+if (db.getGE())
+   while (true)
+      println(db.rec.Account);
+      if (Not(db.next)) break; end;
+   end;
+end;
