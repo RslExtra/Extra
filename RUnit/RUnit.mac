@@ -1,5 +1,5 @@
 /**
-   @Package  RUnit
+   @Package RUnit
    @Ancestor Extra
    @Title    RUnit. Библиотека для юнит-тестирования.
 
@@ -26,13 +26,11 @@
    Для логирования всё аналогично выводу на экран. За вывод отвечает настройка [RUnitProperties.AUTO_LOG_RESULT AUTO_LOG_RESULT] :
    - По умолчанию значение `true`. В конце работы программы результаты тестов запишутся в лог.
    - Если установить значение `false`. Необходимо вызвать функцию [UT_LogResults UT_LogResults()].
-
-
-
 */
 
 import rcw;
 import "..\\Mac\\Extra\\Utils\\StringUtils.mac";
+import "..\\Mac\\Extra\\RUnit\\MemDB.mac";
 
 /**
    Объект класса [RUnitProperties] для настройки поведения тестов.
@@ -678,7 +676,7 @@ Class TestCase(_name)
    End;
 
    /**
-      Проверка, является ли последнее брошенное исключение [Utils.Exception Exception] 'val2' того же типа, что и  'val1'.
+      Проверка, является ли последнее брошенное исключение [OOP.Exception Exception] 'val2' того же типа, что и  'val1'.
    */
    Macro assertException(val1, val2)
       curTestFun.addAssert(AssertExceptionClass(val1, val2));

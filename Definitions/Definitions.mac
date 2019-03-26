@@ -13,7 +13,7 @@
    - 0  - если аргументы равны
    Используется в массивах и коллекциях для установления порядка элементов, например при сортировке.
    @sample [Samples.Definitions.Comparator]
-   @see [Utils.#Comparators]
+   @see [OOP.#Comparators]
 
 */
 Macro SampleComparator(o1, o2) : Integer

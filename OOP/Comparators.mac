@@ -1,6 +1,6 @@
 import rcw;
 /**
-   @package Utils
+   @package OOP
    Реализованные функции-компараторы (compare и equals).
 */
 

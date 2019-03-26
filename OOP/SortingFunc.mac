@@ -1,10 +1,10 @@
-import bankinter;
 /**
-   @package Utils
+   @package OOP
    Релизация функций для сортировки массива.
 */
-
+import bankinter;
 Private var tempSortFunc = null;
+
 /**
    Обертка для вызова метода класса как функции.
 */

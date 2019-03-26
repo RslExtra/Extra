@@ -1,3 +1,14 @@
+/**
+   @Package RUnit
+
+   InMemory Database. Позволяет динамически создавать, заполнять структуру со схожим интерфейсом [TbFile].
+   Предназначен для тестирования работы макросов с предопределенным значением полей.
+
+   Пример использования:
+
+   @sample [samples.RUnit.MemDb]
+*/
+
 import rcw;
 import "..\\mac\\Extra\\Collections\\ArrayList.mac";
 import "..\\mac\\Extra\\Utils\\StringUtils.mac";
@@ -6,10 +17,12 @@ import "..\\mac\\Extra\\Utils\\SArray.mac";
 private var tmpArr = TArray;
 private const dbfilePath = "..\\dbfile\\";
 
+/**
+   Расширение стандартного класса [TRecHandler] для работы с [MemDB].
+*/
 Private Class (TRecHandler) MockTRecHandler(strName, altDic, _file, _index, _offs, isFixed)
    initTRecHandler(strName, altDic, _file, _index, _offs, isFixed);
    var __pos = -1;
-
 End;
 
 Private Macro naturalOrderCompare(rh1, rh2)
@@ -85,7 +98,9 @@ Private Class DBKey(_num)
    End;
 End;
 
-
+/**
+   Билдер структуры во время исполнения программы.
+*/
 Class StructureBuilder(_name : String)
    var name = _name;
    var fieldsDef = SArray();
@@ -95,6 +110,9 @@ Class StructureBuilder(_name : String)
       return this;
    End;
 
+   /**
+      Добавляет поле таблицы бд с именем '_name', типом '_type', размером '_size' и количеством знаков после запятой для дробных типов '_float'.
+   */
    Macro addField(_name : String, _type : Integer, _size : Integer, _float : Integer)
       if (ValType(_name) != V_STRING)
          RunError("Параметр name должен быть строкой");
@@ -106,7 +124,10 @@ Class StructureBuilder(_name : String)
       return this;
    End;
 
-   Macro build()
+   /**
+      Возвращает структуру типа [MockTRecHandler] из предварительно заданных полей.
+   */
+   Macro build() : MockTRecHandler
       var handler = MockTRecHandler(name, fieldsDef);
       var a = handler.getFldInfo;
       return handler;
@@ -160,8 +181,11 @@ Private Macro binarySearchLast(arr : TArray, el : Variant,  comp) : Integer
    return arr.size;
 End;
 
+/**
+   Класс таблицы в памяти. Единственным и обязательным параметром является структура '_struct' типа [MockTRecHandler]. Которая определяет структуру полей бд, которую необходимо предварительно собрать с помощью [StructureBuilder].
 
-
+   'Offtop:' - вообще предусматривалась возможность передать реальный [TBFile] в '_struct', чтобы скопировать все ключи и поля реальной таблицы, однако эта возможность не тестировалась. Можете попробовать и пофиксить последующие баги, тогда генерация таблицы будет еще проще, однако станет не удобным добавлять все поля бд, даже те, которые не нужны в конкретном тесте.
+*/
 Class MemDB(_struct)
    var rec = _struct.rec;
    var keyNum = -1;
@@ -230,6 +254,9 @@ Class MemDB(_struct)
       return r;
    End;
 
+   /**
+      Добавляет строку в бд, значения полей перечисляются в аргументах метода.
+   */
    Macro addRow()
       var newRow = newRec();
       var i = 0, v;
@@ -247,6 +274,9 @@ Class MemDB(_struct)
       datas.sort(keys[k].addComparator);
    End;
 
+   /**
+      Добавляет ключ бд под номером 'num'. Далее в  аргументах перечисляются имена полей. Обратный порядок сортировки задается знаком '-' перед полем.
+   */
    Macro addKey(num : Integer)
       var kb = DBKey(num);
       var i = 0, asc = true, v;
@@ -277,7 +307,7 @@ Class MemDB(_struct)
       cursor = s;
    End;
 
-   Macro checkKeyNum()
+   Private Macro checkKeyNum()
       if (lastKeyNum != keyNum)
          if (keyNum == -1)
             curDataSet = natural;
@@ -295,26 +325,41 @@ Class MemDB(_struct)
       lastKeyNum = keyNum;
    End;
 
+   /**
+      Возвращает количество записей бд.
+   */
    Macro NRecords() : Integer
       return natural.size;
    End;
 
+   /**
+      Очищает буфер.
+   */
    Macro clear()
       for (var i, 0, GenNumProps(buff.rec)-1, 1)
          buff.clear;
       end;
    End;
 
+   /**
+      Переводит курсор в начало таблицы.
+   */
    Macro rewind()
       cursor = -1;
       checkKeyNum();
    End;
 
+   /**
+      Возвращает физическую позицию текущей записи в буфере.
+   */
    Macro getPos() : Integer
       lastGetPos = buff.__pos;
       return lastGetPos;
    End;
 
+   /**
+      Переводит курсор бд в позицию на которой был последний вызов [GetPos].
+   */
    Macro getDirect(pos) : Bool
       if (ValType(pos) == V_UNDEF)
          pos = lastGetPos;
@@ -332,6 +377,9 @@ Class MemDB(_struct)
 
    End;
 
+   /**
+      Переводит курсор на следующую запись и возвращает `true` если она существует.
+   */
    Macro next() : Bool
       checkKeyNum();
       if (cursor >= (natural.size-1))
@@ -342,7 +390,10 @@ Class MemDB(_struct)
       return true;
    End;
 
-   Macro prev()
+   /**
+      Переводит курсор на предыдущую запись и возвращает `true` если она существует.
+   */
+   Macro prev() : Bool
       checkKeyNum();
       if ((cursor == 0) or (natural.size == 0))
          return false;
@@ -355,6 +406,9 @@ Class MemDB(_struct)
       return true;
    End;
 
+   /**
+      Выполняет операцию добавления новой строки из буфера.
+   */
    Macro insert()
       var newRow = newRec();
       for (var i, 0, GenNumProps(buff.rec)-1, 1)
@@ -363,6 +417,9 @@ Class MemDB(_struct)
       addInAllDataSet(newRow);
    End;
 
+   /**
+      Выполняет операцию обновления текущей строки из буфера.
+   */
    Macro update() : Bool
       if (cursor >= 0)
          copy(curDataSet[cursor], buff);
@@ -370,6 +427,9 @@ Class MemDB(_struct)
       return false;
    End;
 
+   /**
+      Выполняет операцию удаления строки из бд с физической позицией строки из буфера.
+   */
    Macro delete() : Bool
       if (cursor >= 0)
          RemoveInAllDataSet(curDataSet[cursor]);
@@ -379,6 +439,9 @@ Class MemDB(_struct)
       return false;
    End;
 
+   /**
+      Метод аналогичен [TBFile.GetEQ].
+   */
    Macro getEQ() : Bool
       checkKeyNum();
       var r = binarySearchFirst(curDataSet, buff, curComparator);
@@ -390,6 +453,9 @@ Class MemDB(_struct)
       return true;
    End;
 
+   /**
+      Метод аналогичен [TBFile.getGE].
+   */
    Macro getGE() : Bool
       checkKeyNum();
       var r = binarySearchFirst(curDataSet, buff, curComparator);
@@ -405,6 +471,9 @@ Class MemDB(_struct)
       return true;
    End;
 
+   /**
+      Метод аналогичен [TBFile.getGT].
+   */
    Macro getGT() : Bool
       checkKeyNum();
       var r = binarySearchFirst(curDataSet, buff, curComparator);
@@ -422,6 +491,9 @@ Class MemDB(_struct)
       return true;
    End;
 
+   /**
+      Метод аналогичен [TBFile.getLE].
+   */
    Macro getLE() : Bool
       checkKeyNum();
       var r = binarySearchLast(curDataSet, buff, curComparator);
@@ -436,6 +508,9 @@ Class MemDB(_struct)
       return true;
    End;
 
+   /**
+      Метод аналогичен [TBFile.getLT].
+   */
    Macro getLT() : Bool
       checkKeyNum();
       var r = binarySearchLast(curDataSet, buff, curComparator);
@@ -451,10 +526,16 @@ Class MemDB(_struct)
       return true;
    End;
 
+   /**
+      Возращает массив структуры полей.
+   */
    Macro getFldInfo()
       return struct.getFldInfo();
    End;
 
+   /**
+      Возращает массив структуры ключей.
+   */
    Macro getKeyInfo()
       if (IsEqClass("TBFile", struct))
          return struct.getKeyInfo();
@@ -468,7 +549,7 @@ Class MemDB(_struct)
       return res;
    End;
 
-   Macro createKeysFromTB(kinf)
+   Private Macro createKeysFromTB(kinf)
       var n, s, f, o, k;
       var curK = -1;
       for (var i, 0, kinf.size - 1, 5)
@@ -502,77 +583,3 @@ Class MemDB(_struct)
 
    ini();
 End;
-
-return;
-
-var struct = StructureBuilder("MyDb")
-                  .addField("referenc", V_STRING, 10)
-                  .addField("codClient", V_INTEGER, 4)
-                  .addField("account", V_STRING, 20)
-                  .addField("open_date", V_DATE)
-                  .addField("close_date", V_DATE)
-                  .addField("sumRest", V_MONEY)
-                  .build();
-var db = MemDB(struct);
-/*
-         .addKey(0, "referenc")
-         .addKey(5, "-open_date", "account");
-*/
-db.addRow("100000", 420526, "40817000000000132", date(01,03,2019), date(21,03,2019), $150000);
-db.addRow("100001", 420526, "40817000000000133", date(01,03,2019), date(21,03,2019), $160000);
-db.addRow("100002", 420527, "40817000000000134", date(02,01,2019), date(10,02,2019), $170000);
-db.addRow("100003", 420527, "40817000000000135", date(02,01,2019), date(10,02,2019), $180000);
-db.addRow("100004", 420528, "40817000000000136", date(03,01,2019), date(10,02,2019), $180000);
-debugbreak;
-
-var t0 = time;
-/*
-for (var i, 1, 1000)
-   db.addRow(Random + "", Random, Random + "" +Random, date, date, Random);
-end;
-*/
-db.addKey(0, "referenc");
-db.addKey(1, "referenc" , "codClient");
-  //.addKey(5, "-open_date", "account");
-
-var t1 = time;
-
-println(String((t1-t0):m));
-
-db.keyNum = 1;
-while(db.next)
-   println(db.rec.referenc);
-end;
-debugbreak;
-db.clear();
-db.rewind();
-db.rec.referenc  = "100005";
-db.rec.codClient = 4205276;
-if (db.getLT())
-   Println(db.rec.account);
-end;
-
-var fnew  = "../mac/Extra/Tests/CsvDb/depositr2.csv";
-
-
-
-// var db = DBEmul(fnew, "R", 8, null, null);
-
-/*
-for(var i, 1, 1000)
-   db.addRec(DepositrRec.generateRandom());
-end;
-
-db.saveAsCsv(fnew);
-*/
-/*
-db.addKey(8, "Referenc");
-db.rec.Referenc = 100;
-var res = db.getGT();
-*/
-//println(String(res) + " " + db.rec.referenc);
-/*
-var a = @Int;
-
-Println(ExecMacro2(a, "234"));
-*/

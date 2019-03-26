@@ -181,7 +181,7 @@ Class Iterable()
    Macro toArray() : SArray
    End;
 
-   /** Дефолтное добавление базовых элементов коллекции, для [ListInterface списков] и [SetInterface множеств] это Variant элементы, для [MapInterface карт] это объект типа [Pair] с полями key и value. */
+   /** Добавлет базовый элемент коллекции, для [ListInterface списков] и [SetInterface множеств] это Variant элементы, для [MapInterface карт] это объект типа [Pair] с полями key и value. Для внутреннего использования. */
    Macro append(baseCollectionElement)
    End;
 
