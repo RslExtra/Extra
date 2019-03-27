@@ -65,8 +65,27 @@ Private Class LambdaGen()
    var tmpFile : TStreamDoc;
    var un = UserNumber();
 
+   /* Массив уже сгенерированных функций */
+   private var LamArray = TArray();             // Массив уже сгенерированных лямбд
+
+   /* Количество сгенерированных функций, для избежания коллизий.*/
+   private var countLambdas = 0;
+
+   Macro add(l)
+      LamArray[LamArray.size] = l;
+   end;
+
+   Macro getCount()
+      return countLambdas;
+   End;
+
+   Macro incCount()
+      countLambdas = countLambdas + 1;
+      return countLambdas;
+   End;
+
    Macro generateFileName()
-      filename = dirPath + Lambdas.FILE_PREFIX + un + "_" + Lambdas.getCount + "." + (1000 + Random(8999));
+      filename = dirPath + Lambdas.FILE_PREFIX + un + "_" + countLambdas + "." + (1000 + Random(8999));
    End;
 
    Macro createFile() : Bool
@@ -104,14 +123,28 @@ Private Class LambdaGen()
    end;
 
    Macro makeMacro(l)
-      clname = "LamObject" + Lambdas.incCount();
+      clname = "LamObject" + incCount();
       generateFileName();
       createFile();
       writeTempFile(l);
       instLoadModule(filename);
       var lob = GenObject(clname);
-      Lambdas.add(lob);
+      add(lob);
       return R2M(lob, "lam");
+   End;
+
+   Macro findExistLambda(candidate)
+      for(var lamObj, LamArray)
+         if (lamObj.___lambdaText == candidate)
+            return R2M(lamObj, "lam");
+         end;
+      end;
+   End;
+
+   Macro removeAllFiles()
+      for (var l, LamArray)
+         removeFile(l.___filename);
+      end;
    End;
 End;
 
@@ -125,20 +158,14 @@ Private Class LambdaClass()
    */
    var REMOVE_FILES : Bool = true;
 
-   /** Строковое значение стрелки в лямбда выражении. По умолчанию равно '->'. */
+   /** Строковое значение стрелки в лямбда выражении; по умолчанию равно '->'. */
    var ARROW : String = "->";
 
-   /** Имя аргумента функции для использования без "стрелки". По умолчанию равен 'it'. */
+   /** Имя аргумента функции для использования без "стрелки"; по умолчанию равно 'it'. */
    var DEFARG : String = "it";
 
-   /** Префикс имени файлов. */
+   /** Префикс имени файлов; по умолчанию 'lam_' */
    var FILE_PREFIX = "lam_";
-
-   /* Массив уже сгенерированных функций */
-   Private var LamArray = TArray();             // Массив уже сгенерированных лямбд
-
-   /* Количество сгенерированных функций, для избежания коллизий.*/
-   private var countLambdas = 0;
 
    /* Генератор лямб */
    Private var lGen = GenObject("LambdaGen");   // Генератор лямбд
@@ -154,18 +181,7 @@ Private Class LambdaClass()
       return this;
    End;
 
-   Macro add(l)
-      LamArray[LamArray.size] = l;
-   end;
 
-   Macro getCount()
-      return countLambdas;
-   End;
-
-   Macro incCount()
-      countLambdas = countLambdas + 1;
-      return countLambdas;
-   End;
 
    /**
       Возвращает ссылку на сгенерированный метод согласно выражению 'lambdaText'.
@@ -209,7 +225,7 @@ Private Class LambdaClass()
       return true;
    End;
 
-   Macro getFunctionRef(funcName)
+   Private Macro getFunctionRef(funcName)
       var r = ExecExp(funcName);
       if (ValType(r) != V_PROC)
          Throw(IllegalArgumentException("Имя не соответсвует функции: " + funcName));
@@ -227,13 +243,13 @@ Private Class LambdaClass()
       if ((type == V_PROC) or (type == V_R2M))
          return candidate;
       elif (type == V_STRING)
+         //return lGen.findOrGenerate(candidate);
          if (isLambda(candidate))
-            for(var lamObj, LamArray)
-               if (lamObj.___lambdaText == candidate)
-                  return R2M(lamObj, "lam");
-               end;
+            var finded = lGen.findExistLambda(candidate);
+            if (ValType(finded) != V_UNDEF)
+               return finded;
             end;
-            return Create(candidate);
+            return create(candidate);
          else
             return getFunctionRef(candidate);
          end;
@@ -242,16 +258,10 @@ Private Class LambdaClass()
       end;
    End;
 
-   private Macro removeAllFiles()
-      if (REMOVE_FILES)
-         for (var l, LamArray)
-            removeFile(l.___filename);
-         end;
-      end;
-   End;
-
    Macro Destructor()
-      removeAllFiles();
+      if (REMOVE_FILES)
+         lgen.removeAllFiles();
+      end;
    End;
 End;
 
