@@ -1,4 +1,4 @@
-import "../mac/extra/ext_SArray.mac";
+import "..\\mac\\extra\\ext_SArray.mac";
 
 Private Class Person(_name, _age, _capital)
     var name : String = _name;

@@ -4,4 +4,4 @@
 
    Библиотека ui-элементов.
 */
-import "../Mac/Extra/Forms/SimpleMenu.mac";
+import "..\\Mac\\Extra\\Forms\\SimpleMenu.mac";

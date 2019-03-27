@@ -686,13 +686,13 @@ Class (Iterable) MapInterface()
    /**
       Устанавливает тип ключа 'type' из языка RSL.
    */
-   Macro setKeyType(type : Integer) : MapInterface
+   Macro setKeyType(rslType : Integer) : MapInterface
    End;
 
    /**
       Устанавливает тип значений 'type' из языка RSL.
    */
-   Macro setValueType(type : Integer) : MapInterface
+   Macro setValueType(rslType : Integer) : MapInterface
    End;
 
    /**
