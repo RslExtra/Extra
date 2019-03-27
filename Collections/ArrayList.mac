@@ -189,7 +189,7 @@ Class (ListInterface) ArrayList()
       return items[size - 1];
    End;
 
-   Macro set(ind : Integer , v : Variant) : Variant
+   Macro set(ind : Integer, v : Variant) : Variant
       if ((ValType(ind) == V_UNDEF) or (ind<0) or (ind >= size))
          return null;
       end;
@@ -220,9 +220,13 @@ Class (ListInterface) ArrayList()
    End;
 
    Macro addAll(enumerable, ind : Integer) : ArrayList
-      if (ValType(enumerable) == V_UNDEF) return this; end;
+      if (ValType(enumerable) == V_UNDEF)
+         return this;
+      elif (ValType(enumerable) != V_GENOBJ)
+         return Throw(IllegalArgumentException("enumerable is not an Object type"));
+      end;
       if (enumerable.size == 0) return this; end;
-      if(ValType(ind) != V_INTEGER)
+      if (ValType(ind) != V_INTEGER)
          ind = size;
       end;
       var ofs = enumerable.size;
@@ -265,6 +269,11 @@ Class (ListInterface) ArrayList()
    End;
 
    Macro containsAll(enumerable) : Bool
+      if (ValType(enumerable) == V_UNDEF)
+         return true;
+      elif (ValType(enumerable) != V_GENOBJ)
+         return Throw(IllegalArgumentException("enumerable is not an Object type"));
+      end;
       var res = true;
       for(var el, enumerable)
          res = (res and (contains(el)));
@@ -273,6 +282,11 @@ Class (ListInterface) ArrayList()
    End;
 
    Macro removeAll(enumerable) : Bool
+      if (ValType(enumerable) == V_UNDEF)
+         return false;
+      elif (ValType(enumerable) != V_GENOBJ)
+         return Throw(IllegalArgumentException("enumerable is not an Object type"));
+      end;
       var removed = false;
       for (var el, enumerable)
          var ind = indexOf(el);

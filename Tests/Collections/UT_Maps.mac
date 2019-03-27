@@ -86,12 +86,12 @@ Class (TestCase) TestMap()
       assertTrue(map.containsKey("key3"));
    End;
 
-   Macro test_putMapEntries()
+   Macro test_putAll()
       var addedMap = ArrayMap();
       for(var i, 1, 100)
          addedMap.put("kk" + i, "vv" + i);
       end;
-      map.putMapEntries(addedMap);
+      map.putAll(addedMap);
       assertEquals(100, map.size);
 
       for ( i, 1, 100)

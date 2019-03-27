@@ -427,106 +427,140 @@ Class (Iterable) ListInterface()
 
    /**
       Добавляет 'element' в список на позицию 'ind'. Если 'ind' не указан или равен `null`, добавляет элемент в конец списка.
+
+      @Sample [Samples.Collections.List.add]
    */
    Macro add(element : Variant, ind : Integer)
    End;
 
    /**
       Добавляет все аргументы в конец списка и возвращает текущий экземпляр.
+
+      @Sample [Samples.Collections.List.addItems]
    */
    Macro addItems(varargs )
    End;
 
    /**
       Добавляет 'element' в начало списка.
+
+      @Sample [Samples.Collections.List.addFirst]
    */
    Macro addFirst(element : Variant)
    End;
 
    /**
       Добавляет 'element' в конец списка.
+
+      @Sample [Samples.Collections.List.addLast]
    */
    Macro addLast(element : Variant)
    End;
 
    /**
       Добавляет все элементы 'enumerable' в конец списка.
+
+      @Sample [Samples.Collections.List.addAll]
    */
    Macro addAll(enumerable, ind : Integer)
    End;
 
    /**
       Возвращает элемент под индексом 'ind'.
+
+      @Sample [Samples.Collections.List.get]
    */
    Macro get(ind : Integer) : Variant
    End;
 
    /**
       Возвращает первый элемент списка.
+
+      @Sample [Samples.Collections.List.getFirst]
    */
    Macro getFirst() : Variant
    End;
 
    /**
       Возвращает последний элемент списка.
+
+      @Sample [Samples.Collections.List.getLast]
    */
    Macro getLast() : Variant
    End;
 
    /**
       Устанавливает новое значение 'newValue' элементу под индексом 'ind' и возвращает заменяемое значение.
+
+      @Sample [Samples.Collections.List.set]
    */
-   Macro set(newValue : Variant, ind : Integer) : Variant
+   Macro set(ind : Integer, newValue : Variant) : Variant
    End;
 
    /**
       Удаляет и возвращает значение под индексом 'ind'.
+
+      @Sample [Samples.Collections.List.remove]
    */
    Macro remove(ind : Integer) : Variant
    End;
 
    /**
       Удаляет и возвращает первый элемент.
+
+      @Sample [Samples.Collections.List.removeFirst]
    */
    Macro removeFirst() : Variant
    End;
 
    /**
       Удаляет и возвращает последний элемент.
+
+      @Sample [Samples.Collections.List.removeLast]
    */
    Macro removeLast() : Variant
    End;
 
    /**
       Удаляет все элементы из 'enumerable' и возвращает `true`, если был найден и удален хотябы один элемент.
+
+      @Sample [Samples.Collections.List.removeAll]
    */
-   Macro removeAll(enumerable, equalsFun) : Bool
+   Macro removeAll(enumerable) : Bool
    End;
 
    /**
-      Возвращает индекс первого элемента равного 'element' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через функцию заданную по умолчанию для текущего спискаа.
+      Возвращает индекс первого элемента равного 'element' или -1, если элемент не найден.
+
+      @Sample [Samples.Collections.List.indexOf]
    */
-   Macro indexOf(element, equalsFun)
+   Macro indexOf(element)
    End;
 
    /**
-      Возвращает индекс последнего элемента равного 'element' согласно функции 'equalsFun'. Если функция не указана сравнение происходит через функцию заданную по умолчанию для текущего списка.
+      Возвращает индекс последнего элемента равного 'element' или -1, если элемент не найден.
+
+      @Sample [Samples.Collections.List.lastIndexOf]
    */
-   Macro lastIndexOf(element, equalsFun)
+   Macro lastIndexOf(element)
    End;
 
    /**
       Возвращает `true`, если коллекция содержит элемент равный 'element' согласно функции 'equalsFun'. Можно не указывать 'equalsFun' если она определена для текущего списка.
+
+      @Sample [Samples.Collections.List.contains]
    */
-   Macro contains(element, equalsFun) : Bool
+   Macro contains(element) : Bool
    End;
 
    /**
       Возвращает `true`, если коллекция содержит все элементы из 'enumerable' согласно функции 'equalsFun'. Можно не указывать 'equalsFun' если она определена для текущего списка.
+
+      @Sample [Samples.Collections.List.containsAll]
    */
-   Macro containsAll(enumerable, equalsFun) : Bool
+   Macro containsAll(enumerable) : Bool
       for(var el, enumerable)
-         if (not(contains(el, equalsFun)))
+         if (not(contains(el)))
             return false;
          end;
       end;
@@ -541,30 +575,38 @@ Class (Iterable) ListInterface()
 
    /**
       Сортирует исходный список согласно функции-компаратору 'compareFun' и возвращает ссылку на него. Можно не указывать 'compareFun' если она определена для текущего списка.
+
+      @Sample [Samples.Collections.List.sort]
    */
    Macro sort(compareFun) : ListInterface
    End;
 
    /**
       Разворачивает исходный список и возращает ссылку на него. ожно не указывать 'compareFun' если она определена для текущего списка.
+
+      @Sample [Samples.Collections.List.reverse]
    */
    Macro reverse() : ListInterface
    End;
 
    /**
       Возвращает список состоящий из подмножества исходного, начиная с 'from' (включительно), заканчивая 'to' (исключительно).
+
+      @Sample [Samples.Collections.List.subList]
    */
    Macro subList(from : Integer, to : Integer) : ListInterface
    End;
 
    /**
       Возвращает массив типа [Utils.SArray SArray] состоящий из элементов исходного списка.
+
+      @Sample [Samples.Collections.List.toArray]
    */
    Macro toArray() : SArray
    End;
 
    /**
-      Возвращает максимальное значение коллекции. Можно не указывать 'compareFun' если она определена для текущего списка.
+      Возвращает максимальное значение коллекции. Можно не указывать '_comparator' если она определена для текущего списка.
 
       @oparam _comparator ссылка на функцию компаратор.
    */
@@ -589,7 +631,7 @@ Class (Iterable) ListInterface()
    End;
 
    /**
-      Возвращает минимальное значение коллекции. Можно не указывать 'compareFun' если она определена для текущего списка.
+      Возвращает минимальное значение коллекции. Можно не указывать '_comparator' если она определена для текущего списка.
       @oparam _comparator ссылка на функцию компаратор.
    */
    Macro min(_comparator) : Variant
@@ -612,7 +654,11 @@ Class (Iterable) ListInterface()
       return minV;
    End;
 
-   /** Возвращает новый убывающий итератор. */
+   /**
+      Возвращает новый обратный итератор.
+
+      @Sample [Samples.Collections.List.newDescIterator]
+   */
    Macro newDescIterator(ind) : DescendingIterator
       return DescendingIterator(this, ind);
    End;
@@ -685,30 +731,40 @@ Class (Iterable) MapInterface()
 
    /**
       Устанавливает тип ключа 'type' из языка RSL.
+
+      @Sample [Samples.Collections.Map.setKeyType]
    */
    Macro setKeyType(rslType : Integer) : MapInterface
    End;
 
    /**
       Устанавливает тип значений 'type' из языка RSL.
+
+      @Sample [Samples.Collections.Map.setValueType]
    */
    Macro setValueType(rslType : Integer) : MapInterface
    End;
 
    /**
       Помещает в коллекцию ключ 'key' и соответсвующее ему значение 'value', если такой ключ уже присутствует, значение меняется, а заменяемое значение возвращается.
+
+      @Sample [Samples.Collections.Map.put]
    */
    Macro put(key, value : Variant) : Variant
    End;
 
    /**
       Помещает в коллекцию все пары "ключ-значение" из 'map'.
+
+      @Sample [Samples.Collections.Map.putAll]
    */
-   Macro putMapEntries(map : MapInterface)
+   Macro putAll(map : MapInterface)
    End;
 
    /**
       Помещает в коллекцию все аргументы и возвращает текущую карту. Нечетным аргументам соответсвуют ключи, четным - значения.
+
+      @Sample [Samples.Collections.Map.putItems]
    */
    Macro putItems()
       var i, k, v;
@@ -722,42 +778,56 @@ Class (Iterable) MapInterface()
 
    /**
       Возвращает значение соответствующее ключу 'key', если такого ключа не найдено возвращает `null`.
+
+      @Sample [Samples.Collections.Map.get]
    */
    Macro get(key) : Variant
    End;
 
    /**
       Заменяет значение соответствующее ключу 'key' на 'newValue' и возвращает `true`, если ключа не найдено возвращает `false`, при этом добавление нового элемента не происходит.
+
+      @Sample [Samples.Collections.Map.replace]
    */
    Macro replace(key, newValue : Variant) : Bool
    End;
 
    /**
       Удаляет и коллекции пару с ключем 'key' и возвращает удаляемое значение.
+
+      @Sample [Samples.Collections.Map.remove]
    */
    Macro remove(key) : Variant
    End;
 
    /**
       Возвращает `true`, если коллекция содержит пару с ключем 'key'.
+
+      @Sample [Samples.Collections.Map.containsKey]
    */
    Macro containsKey(key) : Bool
    End;
 
    /**
       Возвращает `true`, если коллекция содержит пару со значением равным 'value'
+
+      @Sample [Samples.Collections.Map.containsValue]
    */
    Macro containsValue(value) : Bool
    End;
 
    /**
       Возвращает массив [Utils.SArray SArray] состоящий из ключей исходной коллекции.
+
+      @Sample [Samples.Collections.Map.keys]
    */
    Macro keys() : SArray
    End;
 
    /**
       Возвращает массив [Utils.SArray SArray] состоящий из значений исходной коллекции.
+
+      @Sample [Samples.Collections.Map.values]
    */
    Macro values() : SArray
    End;
@@ -796,6 +866,8 @@ Class (Iterable) SetInterface()
 
    /**
       Устанавливает необходимые для работы с конкретным 'rslType' типом RSL  'comparator' и 'equalsFunc'
+
+      @Sample [Samples.Collections.set.setType]
    */
    Macro setType(rslType : Integer) : SetInterface
 
@@ -803,42 +875,56 @@ Class (Iterable) SetInterface()
 
    /**
       Добавляет 'element' в множество и возвразает `true`, если элемент добавляется впервые.
+
+      @Sample [Samples.Collections.set.add]
    */
    Macro add(element) : Bool
    End;
 
    /**
       Добавляет все элементы 'enumerable' в конец множества. Возвращает `true` если был добавлен хотя бы один элемент.
+
+      @Sample [Samples.Collections.set.addAll]
    */
    Macro addAll(enumerable) : Bool
    End;
 
    /**
       Добавляет все аргументы в множество и возвращает текущий экземпляр.
+
+      @Sample [Samples.Collections.set.addItems]
    */
    Macro addItems()
    End;
 
    /**
       Ищет и удаляет 'element', возвращает `true`, если элемент был найден и удален.
+
+      @Sample [Samples.Collections.set.remove]
    */
    Macro remove(element) : Bool
    End;
 
    /**
       Ищет и удаляет все элементы иcходного множества, которые содержаться в 'enumerable', который может являться списком, множеством или массивом. Вовзращает `true` если был найден или удален хотя бы один элемент.
+
+      @Sample [Samples.Collections.set.removeAll]
    */
    Macro removeAll(enumerable) : Bool
    End;
 
    /**
       Возвращает `true`, если сэт содержит элемент равный 'element'.
+
+      @Sample [Samples.Collections.set.contains]
    */
    Macro contains(element) : Bool
    End;
 
    /**
       Возвращает `true`, если сэт содержит все элементы из 'enumerable'.
+
+      @Sample [Samples.Collections.set.containsAll]
    */
    Macro containsAll(enumerable, equalsFun) : Bool
       for(var el, enumerable)

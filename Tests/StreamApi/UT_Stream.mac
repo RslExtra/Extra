@@ -84,8 +84,10 @@ Class (TestCase) TestStreamApi()
                .collect(Collectors.toArray);
       AssertArrays(ar(1, 2, 3), res);
 
+      var compObj = Account;
+
       res = list.toStream()
-               .filter(R2M(Account, "filt"))
+               .filter(R2M(compObj, "filt"))
                .toArray();
       AssertArrays(ar(2, 4), res);
 

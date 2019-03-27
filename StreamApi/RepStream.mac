@@ -1,7 +1,6 @@
 import "..\\Mac\\Extra\\StreamApi\\Stream.mac";
 import or_rep_h;
 
-
 Class (TerminalStream) CMakeRepStream(_fields : TArray, _headersOrStr : Variant)
    var fields  = _fields;
    var headers = _headersOrStr;
