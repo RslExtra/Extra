@@ -246,7 +246,7 @@ Class (MapInterface) TreeMap(_keyComparator)
       return null;
    End;
 
-   Macro putMapEntries(map) : TreeMap
+   Macro putAll(map) : TreeMap
       var iter = map.newEntryIterator();
       var curE;
       while (iter.hasnext())

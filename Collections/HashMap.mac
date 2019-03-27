@@ -286,10 +286,7 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
       putVal(_pair.key, _pair.value);
    End;
 
-   /**
-      Помещает все элементы из 'map' в текущую хэштаблицу.ы
-   */
-   Macro putMapEntries(map) : HashMap
+   Macro putAll(map) : HashMap
       var iter = map.newEntryIterator();
       var curE;
       while (iter.hasnext())
@@ -315,9 +312,6 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
       end;
    End;
 
-/**
-   Возращает объект типа [HashMapEntry] соответствующую ключу 'key' или `null`, если такого ключа не найдено.
-*/
    Macro getEntry(key)
       var hash = CalcHash(key);
       var busk = mod(hash, capacity);
@@ -340,9 +334,6 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
       end;
    End;
 
-   /**
-      Возвращает значение из хэш-таблицы с ключем 'key' или `null`, если значения не найдено.
-   */
    Macro get(key) : Variant
       var ent = getEntry(key);
       if (ent == null)
@@ -381,9 +372,6 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
       end;
    End;
 
-   /**
-      Удаляет узел с ключем 'key' и возвращает значение удаленного элемента. Если узла с таким ключем не найдено возвращает `null`.
-   */
    Macro remove(key) : Variant
       var remEnt = removeEntry(key);
       if (remEnt == null)

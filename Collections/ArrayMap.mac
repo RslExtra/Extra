@@ -125,7 +125,7 @@ Class (MapInterface) ArrayMap()
       put(p.key, p.value);
    End;
 
-   Macro putMapEntries(map) : ArrayMap
+   Macro putAll(map) : ArrayMap
       for (var p, map)
          put(p.key, p.value);
       end;
