@@ -1,0 +1,13 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var set = HashSet();
+
+//<
+set.addItems(1, 2, 3);
+var arr = SArray(1, 2, 3, 4);
+var result = set.containsAll(arr);
+println(result);              // false
+arr = SArray(3, 1);
+result = set.containsAll(arr);
+println(result);              // true
+
+//>

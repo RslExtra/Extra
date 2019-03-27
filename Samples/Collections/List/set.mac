@@ -1,0 +1,8 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems("first", "second", "third");
+var result = list.set(1, "newval");  //
+println(result);                       // second
+list.toScreen();                    // [first, newval, third]
+//>

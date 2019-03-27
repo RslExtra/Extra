@@ -1,0 +1,9 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var set = LinkedHashSet();
+
+//<
+set.addItems(1, 2, 3);
+var result = set.toArray();
+result.toScreen();   // [1, 2, 3]
+
+//>

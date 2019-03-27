@@ -1,0 +1,10 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var set = HashSet();
+
+//<
+println(set.add(1));    // true
+println(set.add(2));    // true
+println(set.add(1));    // false
+
+set.toScreen();
+//>

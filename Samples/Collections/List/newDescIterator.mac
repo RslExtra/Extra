@@ -1,0 +1,10 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems(1, 2, 3, 4);
+var itr = list.newDescIterator();
+
+while (itr.hasNext())
+    println(itr.next());   // выведет все числа в обратном порядке на экран
+end;
+//>

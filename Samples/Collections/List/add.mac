@@ -1,0 +1,11 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.add("first");
+list.add("second");
+list.add("between", 1);
+
+for(var l, list)
+   print(l + " ");
+end;
+//>

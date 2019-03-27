@@ -1,0 +1,5 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.setType(V_STRING);
+//>

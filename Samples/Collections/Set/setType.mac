@@ -1,0 +1,7 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var set = LinkedHashSet();
+
+//<
+set.setType(V_INTEGER);
+
+//>

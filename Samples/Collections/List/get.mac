@@ -1,0 +1,7 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.add(1);
+var result = list.get(0);
+println(result);
+//>

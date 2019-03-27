@@ -1,0 +1,8 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems(1, 2, 3, 4);
+var result = removeFirst();
+println(result);           // 1
+list.toScreen();           // [2, 3, 4]
+//>

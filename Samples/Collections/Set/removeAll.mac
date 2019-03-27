@@ -1,0 +1,11 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var set = HashSet();
+
+//<
+set.addItems(1, 2, 3);
+var arr = SArray(3, 5, 6);
+var result = set.removeAll(arr);
+println(result);        // true
+set.toScreen();         // [1, 2]
+
+//>

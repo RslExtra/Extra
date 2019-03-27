@@ -1,0 +1,9 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var map = LinkedHashMap();
+
+//<
+
+map.setValueType(V_GENOBJ);
+map.putItems("key1", SArray(1, 2, 3), "key2", SArray(4, 5, 6), "key3", null);
+map.toScreen();
+//>

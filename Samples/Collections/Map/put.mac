@@ -1,0 +1,12 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var map = LinkedHashMap();
+
+//<
+var result = map.put("key1", 1);
+println(result);            // Undefined
+result = map.put("key2", 2);
+println(result);            // Undefined
+result = map.put("key1", 3);   // Вытесняем старое значение
+println(result);            // 1
+map.toScreen();             // [(key1 - 3), (key2 - 2)]
+//>

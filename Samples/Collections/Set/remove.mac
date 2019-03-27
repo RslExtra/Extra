@@ -1,0 +1,12 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var set = HashSet();
+
+//<
+set.addItems(1, 2, 3);
+var result = set.remove(0);
+println(result);        // false
+result = set.remove(1);
+println(result);        // true
+set.toScreen();         // [2, 3]
+
+//>

@@ -1,0 +1,8 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var set = HashSet();
+
+//<
+set.addItems(1, 2, 3, 1, 2);
+
+set.toScreen();   // [1, 2, 3] - порядок зависит от реализации
+//>

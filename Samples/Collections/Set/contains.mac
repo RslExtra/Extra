@@ -1,0 +1,11 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var set = HashSet();
+
+//<
+set.addItems(1, 2, 3);
+var result = set.contains(0);
+println(result);              // false
+result = set.contains(3);
+println(result);              // true
+
+//>

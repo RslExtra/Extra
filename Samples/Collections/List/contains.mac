@@ -1,0 +1,10 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems(1, 2, 3);
+
+var result = list.contains(1);
+println(result);           // true
+result = list.contains(0);
+println(result);           // false
+//>

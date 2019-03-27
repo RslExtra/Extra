@@ -1,0 +1,12 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var map = LinkedHashMap();
+
+//<
+map.putItems("key1", "val1", "key2", "val2", "key3", "val3");
+
+var result = map.remove("someKey");
+println(result);            // Undefined
+result = map.remove("key2");
+println(result);            // val2
+map.toScreen();
+//>

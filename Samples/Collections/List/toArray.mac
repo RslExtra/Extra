@@ -1,0 +1,9 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems(1, 2, 3, 4);
+var result = list.toArray();
+for (var el, result)
+    print(el + " ");            // выводим все элементы массива
+end;
+//>

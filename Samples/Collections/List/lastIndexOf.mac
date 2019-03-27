@@ -1,0 +1,9 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems(1, 4, 2, 3, 4);
+var result = list.indexOf(4);
+println(result);            // 1
+result = list.lastIndexOf(4);
+println(result);            // 4
+//>

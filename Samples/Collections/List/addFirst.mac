@@ -1,0 +1,9 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems(1, 2, 3);
+list.addFirst(10);
+for(var l, list)
+   print(l + " ");      // 10 1 2 3
+end;
+//>

@@ -1,0 +1,9 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems(1, 2, 3, 4, 5);
+var result = list.sublist(2);
+result.toScreen();              // [3, 4, 5]
+result = list.sublist(2, 4);
+result.toScreen();              // [3, 4]
+//>

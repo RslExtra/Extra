@@ -1,0 +1,10 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var list = ArrayList();
+//<
+list.addItems(1, 2, 3, 4);
+var arr = SArray(1, 3, 5);
+
+var result = list.removeAll(arr);
+println(result);                   // true
+list.toScreen();                   // [2, 4]
+//>

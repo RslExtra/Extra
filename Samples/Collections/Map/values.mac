@@ -1,0 +1,7 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+var map = LinkedHashMap();
+
+//<
+map.putItems("key1", "val1", "key2", "val2", "key3", "val3");
+var arr = map.values();
+//>
