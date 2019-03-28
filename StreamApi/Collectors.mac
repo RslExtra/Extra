@@ -113,6 +113,39 @@ Private Class HashMapCollector(_keyMapper, _valueMapper)
    End;
 End;
 
+private Class CountingCollector(_keyMapper, _keyType)
+   var keyType   = _keyType;
+   var keyMapper = _keyMapper;
+
+   Macro create()
+      var lmap = LinkedHashMap();
+      if (ValType(keyType) != V_INTEGER)
+         return lmap;
+      end;
+      lmap.setKeyType(keyType);
+      return lmap;
+   End;
+
+   Macro accumulate(map, el)
+      var k = ExecMacro2(keyMapper, el);
+      var summ = map.get(k);
+      if (ValType(summ) == V_UNDEF)
+         summ = Tuple1(0);
+         map.put(k, summ);
+      end;
+      summ._1 = summ._1 + 1;
+   End;
+
+   Macro finish(map)
+      var itr = map.newIterator();
+      while(itr.hasNext)
+         var ent = itr.next;
+         ent.value = ent.value._1;
+      end;
+      return map;
+   End;
+End;
+
 /**
    Предоставляет часто используемые коллекторы, представлен singleton [Collectors].
 */
@@ -157,6 +190,14 @@ Private Class CollectorsClass()
       keyMapper = Lambdas.getFunc(keyMapper);
       valueMapper = Lambdas.getFunc(valueMapper);
       return HashMapCollector(keyMapper, valueMapper);
+   End;
+
+   /**
+      Возвращает коллектор в карту [Collections.LinkedHashMap], которая групирует по ключу возвращаемому 'keyMapper', типа 'keyType', и значением как количество элементов соответсвующих ключу.
+   */
+   Macro counting(keyMapper, keyType : Integer)
+      keyMapper = Lambdas.getFunc(keyMapper);
+      return CountingCollector(keyMapper, keyType);
    End;
 
 End;
