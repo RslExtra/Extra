@@ -106,13 +106,30 @@ Private Class (IteratorInterface) ArrayListIterator(arrList, ind : Integer)
    End;
 End;
 
+Private Class NativeArrayListIterator(_list)
+   private var list = _list;
+   private var size = list.size;
+   private var ind = -1;
+
+   Macro next() : Bool
+      ind = ind + 1;
+      return (ind != size);
+   End;
+
+   Macro item()
+      return list.items[ind];
+   End;
+End;
+
 /** Вместимость списка при инициализации. */
-Private CONST INIT_CAPACITY = 128;
+Private Const INIT_CAPACITY = 32;
 
 
-/** Реализация списка на основе массива [TArray]. Реализует все классические методы как в реализации Java.Collection [ArrayList.add add()], [ArrayList.get() get()] и т.д.
+/**
+   Реализация списка на основе массива [TArray]. Получение элемента за O(1), вставка и удаление за O(n).
+
+
 @see [Collections.LinkedList Двусвязный список]
-@see [NativeIterator]
 */
 Class (ListInterface) ArrayList()
    size = 0;
@@ -274,11 +291,12 @@ Class (ListInterface) ArrayList()
       elif (ValType(enumerable) != V_GENOBJ)
          return Throw(IllegalArgumentException("enumerable is not an Object type"));
       end;
-      var res = true;
       for(var el, enumerable)
-         res = (res and (contains(el)));
+         if (not(contains(el)))
+            return false;
+         end;
       end;
-      return res;
+      return true;
    End;
 
    Macro removeAll(enumerable) : Bool
@@ -300,12 +318,12 @@ Class (ListInterface) ArrayList()
 
 
    /**
-      Бинарный поиск по списку элемента `el`. Возвращает индекс найденного элемента или отрицательное значение равное подходящему индексу вставки умноженное на -1 и отнять 1.
+      Бинарный поиск по списку элемента `el`. Возвращает индекс найденного элемента или отрицательное значение равное подходящему индексу вставки умноженное на -1 и минус 1 (т.е. если вернется значение -1, подходящий индекс вставки для сохранения порядка сортировки будет 0). Для корректного поиска список должен быть предварительно отсортирован.
    */
    Macro binarySearch(el) : Integer
       var high = size, low = 0, mid, x;
       var i = -1;
-      while(low < high)
+      while (low < high)
          mid = (low + high) / 2;
          var resCom = ExecMacro2(comparator, el, items[mid]);
          if (resCom == 0)
@@ -398,7 +416,6 @@ Class (ListInterface) ArrayList()
          end;
    End;
 
-
    Macro isSorted(compareFun) : Bool
       if (ValType(compareFun) == V_UNDEF)
          compareFun = comparator;
@@ -428,5 +445,9 @@ Class (ListInterface) ArrayList()
 
    Macro newIterator(ind)
       return ArrayListIterator(this, ind);
+   End;
+
+   Macro createEnum()
+      return NativeArrayListIterator(this);
    End;
 End;

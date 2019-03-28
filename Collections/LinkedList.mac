@@ -2,73 +2,6 @@
    @package Collections
    Файл включает в себя реализацию связного списка [LinkedList] и отсортированного связного списка [SortedLinkedList].
 */
-
-
-/*!
-   LinkedList  - структура для хранения объектов произвольного типа в памяти, с быстрым последовательным доступом и вставкой О(1) в произвольное место списка.
-               - использовать для последовательного ввода и вывода коллекции через LinkedList.iter();
-               - не использовать для вывода объекта по индексу в списке
-
-   Основные Методы.
-      - add(Ob : Variant, ind : Integer)  - добавить элемент в список, если ind не указан, добаляет в конец.
-      - addFirst(Ob : Variant) - добавляет объект в начало списка
-      - addLast(Ob : Variant)  - добавляет объект в конец списка
-      - addE(Ob : Variant, ind : Integer) : Node - тоже самое что и add, только возвращает ссылку на свой Node.
-      - get(index : Integer) : Variant - получить элемент по индексу. не рекомендуется использовать. Пробегать лучше через итератор.
-      - getFirst() : Variant
-      - getLast() : Variant
-      - set(index : Integer, newVal : Variant) : Variant - устанавливает новое значение элементу списка с index. Возвращает вытесняемое значение.
-      - remove(nd : Node) : Variant - удаляет элемент из списка. Возвращает значение.
-      - removeFirst() : Variant - удаляет первый элемент из списка.
-      - removeLast() : Variant  - удаляет последний элемент из списка.
-      - indexOf(findValue : Variant, compRef : MethodReference) : Integer - возвращает позицию первого значения в списке равного findValue
-      - lastIndexOf(findValue : Variant, compRef : MethodReference) : Integer - возвращает позицию последнего значения в списке равного findValue
-      - contains(findValue : Variant, compRef : MethodReference) : Bool = возвращает true - если есть в списке равный элемент, false - если нет.
-      - clear() - очищает список и подготавливает его для сборщика мусора. - Рекомендуется использовать при необходиомтси экономии памяти.
-      - copy() : LinkedList - создает копию связного списка.
-      - reverse() - "разворачивает" список.
-      - printList()- печать списка на синий экран
-      - getInstance() : LinkedList - возвращает новый связный список.
-
-      - newIterator() : ListItr - возвращает спозиционированный в начало списка итератор
-      - newDescIterator(): DescendingIterator - возвращает обратный итератор спозационированный в конец списка
-
-      - addAll(list : LinkedList ) - добавляет в конец списка все элементы из list.
-      - fromList(list : LinkedList) - = addAll()
-      - fromArray(arr : TArray)    - добавляет в конец списка все элементы из arr.
-      - toArray() : TArray         - возвращает массив заполненный элементами из списка
-
-      - setCompareFun(compareFun) - устанавливает функцию для сравнения элементов списка.
-      - sort(compareFun : ) - сортирует список. CompareFun - ссылка на метод компаратор типа Compare(o1,o2) : Integer
-                           , который возвращает 0 - если o1==o2, >0 если o1>o2,  <0 если o1 < o2.
-                           Можно не указывать при использовании .setCompareFun(compareFun)
-
-      - isSorted() : Bool  - Возвращает true, если список отсортирован
-
-
-      class ListItr(list : LinkedList, index) - Класс итератора.
-                     list  - связный список по которому необходмо пройтись
-                     index - индекс стартового элемента
-         Методы
-         - hasnext() : Bool - возвращает true если есть элемент для выдачи
-         - hasprev() : Bool - возвращает true если есть предыдущий элемент
-         - next() : Variant - возвращает следующий элемент
-         - previous() : Variant - возвращает предыдущий элемент
-         - get() - возвращает текущий элемент
-         - getNode() : Node - возвращает Node текущего элемента
-         - add(el : Variant)- добавляет элемент после текущего
-         - addE(el : Variant) : Node - добавляет элемент после текущего и возвращает его Node
-         - set(el : Variant) - изменяет значение текущего элемента
-         - remove() - удаляет текущий элемент из списка, не позиционируется на следующий.
-         - clear()  - реинициализирует итератор.
-         - refresh()- актуализирует следующий шаг после ручного удаления, добавления и пр.
-         - toPos(index : Integer) - перемещается к элементу с индексом Index
-         - moveNext()
-
-   Глобальные процедуры:
-   ListOf(..) - возвращает LinkedList заполненный параметрами через запятую
-      */
-
 import "..\\Mac\\Extra\\Collections\\Iterable.mac";
 
 /**
@@ -84,8 +17,8 @@ Private Class Node(p: @Node, el: Variant, n : @Node)
    end;
 End;
 
-//Класс Итератор принимает лист, и начальный индекс откуда начнем бежать
-Class (IteratorInterface) ListItr(LList, ind)
+// Класс итератора
+Private Class (IteratorInterface) ListItr(LList, ind)
    var inst = LList;
    var nextNode               = null;
    var nextIndex  : Integer   = 0;
@@ -232,17 +165,36 @@ Class (IteratorInterface) ListItr(LList, ind)
    End;
 End;
 
+
+Private Class NativeLinkedListIterator(_list)
+   private var lastNode = null;
+   private var nextNode = _list.first;
+
+   Macro next() : Bool
+      if (nextNode == null)
+         return false;
+      end;
+      lastNode = nextNode;
+      nextNode = nextNode.nxt;
+      return true;
+   End;
+
+   Macro item()
+      return lastNode.e;
+   End;
+End;
+
 //-------------------------------------------------
 Private Const SORT_FRAGMENT_SIZE : Integer = 10000;  // Размер фрагмента для сортировки в массиве
 /**
-   Классическая реализация двусвязного списка. Имеет методы для использования как стэк и очередь.
+   Класс-реализация двусвязного списка. Cтруктура для хранения объектов произвольного типа в памяти, с быстрым последовательным доступом и вставкой О(1) в произвольное место списка. Можно использовать как стэк и очередь.
 */
 Class (ListInterface) LinkedList()
    size = 0;
    comparator = @VariantCompare;
    equalsfunc = @VariantEquals;
-   var first: Node;
-   var last : Node;
+   var first = null;
+   var last  = null;
 
    Macro setPrimitive()
 
@@ -387,7 +339,7 @@ Class (ListInterface) LinkedList()
    End;
 
    Macro addFirst(el : Variant) : Node
-      return linkFirst(el)
+      return linkFirst(el);
    End;
 
    Macro addLast(el : Variant) : Node
@@ -460,13 +412,17 @@ Class (ListInterface) LinkedList()
 
    Macro removeFirst() : Variant
       var f = first;
-      if (ValType(f) == V_UNDEF) return null; end;
+      if (ValType(f) == V_UNDEF)
+         return Throw(NoSuchElementException);
+      end;
       return unlinkFirst(f);
    End;
 
    Macro removeLast() : Variant
       var l = last;
-      if (ValType(l) == V_UNDEF) return null; end;
+      if (ValType(l) == V_UNDEF)
+         return Throw(NoSuchElementException);
+      end;
       return unlinkLast(l);
    End;
 
@@ -476,7 +432,7 @@ Class (ListInterface) LinkedList()
    End;
 
    Macro remove(ind) : Variant
-      if (Not(checkPosInd(ind)))
+      if (not(checkPosInd(ind)))
          return Throw(IndexOutOfBoundsException);
       end;
       var nd = nodeByInd(ind);
@@ -536,19 +492,29 @@ Class (ListInterface) LinkedList()
    End;
 
    Macro containsAll(enumerable) : Bool
-      var res = true;
-      for(var el, enumerable)
-         res = (res and (contains(el)));
+      if (ValType(enumerable) == V_UNDEF)
+         return true;
+      elif (ValType(enumerable) != V_GENOBJ)
+         return Throw(IllegalArgumentException("enumerable is not an Object type"));
       end;
-      return res;
+      for(var el, enumerable)
+         if (not(contains(el)))
+            return false;
+         end;
+      end;
+      return true;
    End;
 
    Macro removeAll(enumerable) : Bool
+      if (ValType(enumerable) == V_UNDEF)
+         return false;
+      elif (ValType(enumerable) != V_GENOBJ)
+         return Throw(IllegalArgumentException("enumerable is not an Object type"));
+      end;
       var removed = false;
-      var ind;
       for (var el, enumerable)
-         var nd = searchNode(el, ind);
-         if (ind >= 0)
+         var nd = searchNode(el);
+         if (ValType(nd) != V_UNDEF)
             removeNode(nd);
             removed = true;
          end;
@@ -559,7 +525,7 @@ Class (ListInterface) LinkedList()
    // Методы Stack --------------------------------
 
    /**
-      Возвращает первый элемент списка или `null` если список пуст.
+      Возвращает первый элемент списка без удаления или `null` если список пуст.
    */
    Macro peek() : Variant
       var f = first;
@@ -636,7 +602,11 @@ Class (ListInterface) LinkedList()
    End;
 
    Macro addAll(enumerable, ind : Integer) : LinkedList
-      if (ValType(enumerable) == V_UNDEF) return this; end;
+      if (ValType(enumerable) == V_UNDEF)
+         return this;
+      elif (ValType(enumerable) != V_GENOBJ)
+         return Throw(IllegalArgumentException("enumerable is not an Object type"));
+      end;
       if (enumerable.size == 0) return this; end;
       if (ValType(ind) != V_INTEGER)
          ind = size;
@@ -773,11 +743,15 @@ Class (ListInterface) LinkedList()
    Macro Destructor()
       clear();
    End;
+
+   Macro createEnum()
+      return NativeLinkedListIterator(this);
+   End;
 End;
 
 /**
    Сортированный связный список (в каждый момент времени).
-   Если порядок нужен лишь однажды, быстрее использовать LinkedList.sort()
+   Если порядок нужен лишь однажды, производительней будет использовать LinkedList.sort()
    @param  compareFun - опционально ссылка на метод компаратор Compare(el1,el2) : Integer, для сравнения объектов)
    Если не указан или null, то используется метод объекта  <objectClass>.CompareTo(ob : <objectClass>).
 */
@@ -805,8 +779,11 @@ Class (Linkedlist) SortedLinkedList(compareFun)
       setParm(2, 0);
       linkFirst(el);
    End;
+
    /**
       Добавляет элемент и возвращает его индекс.
+
+      @Sample [Samples.Collections.LinkedList.sll_add]
    */
    Macro add(el : Variant) : Integer
       var ind = -1;
@@ -832,44 +809,38 @@ Class (Linkedlist) SortedLinkedList(compareFun)
       end;
       return this;
    End;
-
 End;
 
 
-Macro LListOfPrimitive()
-   return LinkedList.setPrimitive();
-End;
+/**
+   Возвращает связный список содержащий параметры `varargs`.
 
-
-/** Возвращает связный список содержащий параметры `varargs`
+   @Sample [Samples.Collections.LinkedList.llistOf]
 */
-// н.р llistOf(10, 21, 32, "Hello") вернет список [10, 21, 32, "Hello"]
+
 Macro llistOf(varargs) : LinkedList
    var ll = LinkedList();
-   var p;
-   var i = 0;
-   var count = Parmcount();
-   while (i < count)
+   var p, i;
+   for (i, 0, ParmCount - 1, 1)
       getParm(i, p);
       ll.addLast(p);
-      i = i + 1;
    end;
    return ll;
 End;
 
-// Возвращает LinkedList примитивов из заданого дипазона.
-// _from - начало диапазона
-// _to   - конец диапазона
-// [_step] - опционально, шаг. По умолчанию = 1
-// н.р. llrange(10, 1, 2) вернет список [10, 8, 6, 4, 2]
+/**
+   Возвращает LinkedList чисел из заданого дипазона.
 
-Macro llrange(_from : Integer, _to: Integer, _step: Integer) : LinkedList
-   var resList = LinkedList().setPrimitive();
+   @Sample [Samples.Collections.LinkedList.llistOf]
+
+   @param _from начало диапазона включительно.
+   @param _to конец диапазона включительно.
+   @oparam _step = 1 шаг.
+*/
+Macro llRange(_from : Integer, _to: Integer, _step: Integer) : LinkedList
+   var resList = LinkedList().setType(V_INTEGER);
    if (ValType(_step) != V_INTEGER)
       _step = 1;
-   end;
-   if (_from > _to)
-      _step = -_step;
    end;
    for (var i, _from, _to, _step)
       resList.addLast(i);
