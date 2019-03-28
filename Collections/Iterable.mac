@@ -1,8 +1,5 @@
 /**
  *  @package Collections
- *  @version 1.0
- *  @author Dzhanybaev M.P.
- *
  *  Базовые классы и функции коллекций.
 */
 
@@ -52,7 +49,7 @@ Private Class EmptyObj()
    End;
 End;
 
-/** Нулевой объект-загулшка для [Collections.HashSet]*/
+/** Нулевой объект-заглушка для [SetInterface]*/
 Const PRESENT = EmptyObj();  //
 
 /**
@@ -699,6 +696,8 @@ Class (Iterable) MapInterface()
 
    /**
       Устанавливает функцию-компаратор ключей 'kCompareFun' и возвращает текущую коллекцию.
+
+
    */
    Macro setKeyComparator(kCompareFun)
       keyComparator = kCompareFun;
