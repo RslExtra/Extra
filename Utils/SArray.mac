@@ -802,8 +802,4 @@ Class (TArray) SArray()
       end;
       return true;
    End;
-
-   Macro createEnum()
-      return SAIterator(this);
-   End;
 End;
