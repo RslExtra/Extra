@@ -226,7 +226,6 @@ End;
    Tupple класс обертка, представлен от Tuple2 до Tuple5. Поля инициализируются конструктором и именуются _1, _2 и т.д.
 */
 Class Tuple()
-
    Macro hash()
       var h = 0;
       for(var i, 0, GenNumProps(this) - 1, 1)
@@ -254,6 +253,13 @@ Class Tuple()
       res = res + "]";
       return res;
    End;
+End;
+
+/**
+   Tupple1
+*/
+Class (Tuple) Tuple1(__1)
+   var _1 = __1;
 End;
 
 /**
