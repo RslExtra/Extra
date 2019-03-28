@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+
+//<
+var list = llRange(10, 1, -2);
+list.toScreen();   // 10 8 6 4 2
+//>

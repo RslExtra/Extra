@@ -374,10 +374,22 @@ Class (TestCase) TestFileReader()
       AssertArrays(Ar("c - 1", "d - 2", "e - 1", "f - 1", "h - 1", "i - 2", "n - 1", "o - 1", "r - 2", "s - 2", "t - 2"), res);
    End;
 
+   Macro test_WarAndPeace()
+      var fl = TStreamDoc("../mac/warandpeace.txt", "R", "rsansi");
+
+      var res = StreamOf(fl)
+                  .flatMap("l -> StreamOf(l)")
+                  .collect(Collectors.counting("StrUpr(it)", V_STRING))
+                  .sort();
+
+      res.toScreen2();
+      println("total: " + res.sumByProp("value"));
+   End;
+
 End;
 
 
 
-TestStreamApi;
-TestStreamDb;
+//TestStreamApi;
+//TestStreamDb;
 TestFileReader;

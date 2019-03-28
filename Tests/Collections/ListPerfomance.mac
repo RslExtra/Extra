@@ -1,0 +1,172 @@
+import "..\\Mac\\Extra\\Collections\\Collections.mac";
+import "..\\Mac\\Extra\\Utils\\StringUtils.mac";
+
+Const SU = StringUtils;
+
+Macro TArrayAdd(arr, n)
+   for (var i, 1, n)
+      arr[arr.size] = i;
+   end;
+End;
+
+Macro TArrayGet(arr, n)
+   for (var i, 1, n)
+      arr[n];
+   end;
+End;
+
+Macro TArrayGetItr(arr, n)
+   var i = 0;
+   for (var el, arr)
+      if (i == n)
+         break;
+      end;
+      i = i + 1;
+   end;
+End;
+
+Macro SArrayAdd(arr, n)
+   for (var i, 1, n)
+      arr.push(i);
+   end;
+End;
+
+Macro SArrayGet(arr, n)
+   for (var i, 1, n)
+      arr[n];
+   end;
+End;
+
+Macro SArrayGetItr(arr, n)
+   var i = 0;
+   for (var el, arr)
+      if (i == n)
+         break;
+      end;
+      i = i + 1;
+   end;
+End;
+
+Macro ArrayListAdd(list, n)
+   for (var i, 1, n)
+      list.addLast(i);
+   end;
+End;
+
+Macro ArrayListGet(list, n)
+   for (var i, 1, n)
+      list.get(i);
+   end;
+End;
+
+Macro ArrayListGetItr(list, n)
+   var i = 0;
+   for (var el, list)
+      if (i == n)
+         break;
+      end;
+      i = i + 1;
+   end;
+End;
+
+Macro LinkedListAdd(list, n)
+   for (var i, 1, n)
+      list.addLast(i);
+   end;
+End;
+
+Macro LinkedListGet(list, n)
+   for (var i, 1, n)
+      list.addLast(i);
+   end;
+End;
+
+Macro LinkedListGetItr(list, n)
+   var i = 0;
+   for (var el, list)
+      if (i == n)
+         break;
+      end;
+      i = i + 1;
+   end;
+End;
+
+Macro runCase(method, coll, n) : String
+   var t0 = time;
+   ExecMacro(method, coll, n);
+   return String((time-t0):m);
+End;
+
+Macro printCase(classname, coll, meth)
+   print(SU.padEnd(className, 15, " "));
+   print(SU.padEnd(runCase(meth, coll, 1000)   ,12 ," "));
+   print(SU.padEnd(runCase(meth, coll, 10000)  ,12 ," "));
+   print(SU.padEnd(runCase(meth, coll, 100000) ,12 ," "));
+   print(SU.padEnd(runCase(meth, coll, 1000000),12 ," "));
+   println;
+End;
+
+Macro TestAdd()
+   println(SU.padStartEnd("Добавление", 75, " "));
+   println(SU.repeat("-",75));
+   print(SU.padEnd("Class",   15, " "));
+   print(SU.padEnd("1000",    12, " "));
+   print(SU.padEnd("10000",   12, " "));
+   print(SU.padEnd("100000",  12, " "));
+   print(SU.padEnd("1000000", 12, " "));
+   println();
+   printCase("TArray", TArray(), @TArrayAdd);
+   printCase("SArray", SArray(), @SArrayAdd);
+   printCase("ArrayList", ArrayList, @ArrayListAdd);
+   printCase("LinkedList", LinkedList, @LinkedListAdd);
+End;
+
+Macro testGet()
+   var TArr = TArray(); TArr[1000000] = null;
+   var SArr = SArray(); SArr[1000000] = null;
+   var ArrList = ArrayList();
+   var LinkList = Linkedlist();
+   for (var i, 0, 1000000)
+      ArrList.addLast(i);
+      LinkList.addLast(i);
+   end;
+
+   println(SU.padStartEnd("Доступ по индексу", 75, " "));
+   println(SU.repeat("-",75));
+   print(SU.padEnd("Class",   15, " "));
+   print(SU.padEnd("1000",    12, " "));
+   print(SU.padEnd("10000",   12, " "));
+   print(SU.padEnd("100000",  12, " "));
+   print(SU.padEnd("1000000", 12, " "));
+   println();
+   printCase("TArray", TArr, @TArrayGet);
+   printCase("SArray", SArr, @SArrayGet);
+   printCase("ArrayList", ArrList, @ArrayListGet);
+   printCase("LinkedList", Linklist, @LinkedListGet);
+end;
+
+Macro testGetItr()
+   var TArr = TArray(); TArr[1000000] = null;
+   var SArr = SArray(); SArr[1000000] = null;
+   var ArrList = ArrayList();
+   var LinkList = Linkedlist();
+   for (var i, 0, 1000000)
+      ArrList.addLast(i);
+      LinkList.addLast(i);
+   end;
+
+   println(SU.padStartEnd("Последовательный доступ", 75, " "));
+   println(SU.repeat("-",75));
+   print(SU.padEnd("Class",   15, " "));
+   print(SU.padEnd("1000",    12, " "));
+   print(SU.padEnd("10000",   12, " "));
+   print(SU.padEnd("100000",  12, " "));
+   print(SU.padEnd("1000000", 12, " "));
+   println();
+   printCase("TArray", TArr, @TArrayGetItr);
+   printCase("SArray", SArr, @SArrayGetItr);
+   printCase("ArrayList", ArrList, @ArrayListGetItr);
+   printCase("LinkedList", Linklist, @LinkedListGetItr);
+end;
+
+testGetItr();

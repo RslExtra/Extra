@@ -1,0 +1,7 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+
+//<
+var list = llistOf(1, 2, 3);
+var result = list.peek();
+list.toScreen();   // 1 two Undefined
+//>

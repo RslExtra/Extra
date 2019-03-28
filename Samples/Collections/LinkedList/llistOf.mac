@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\collections\\collections.mac";
+
+//<
+var list = llistOf(1, "two", null);
+list.toScreen();   // 1 two Undefined
+//>
