@@ -4,8 +4,10 @@ import rcw;
    Реализованные функции-компараторы (compare и equals).
 */
 
-/** Сравнение двух примитивных типов средствами языка (==, >, <).
-    Для скорости сортировки, аргументы не проверяются на 'null` или соответствие типов значения */
+/**
+   Сравнение двух примитивных типов средствами языка (==, >, <).
+   Для скорости сортировки, аргументы не проверяются на 'null` или соответствие типов значения
+*/
 Macro CF_ComparePrimitive(el1 : Variant, el2 : Variant) : Integer
    if(el1 > el2)
       return 1;
@@ -28,6 +30,18 @@ Macro CF_CompareNullable(el1 : Variant, el2 : Variant) : Integer
       return 1;
    else
       return CF_ComparePrimitive(el1, el2);
+   end;
+End;
+
+Macro CF_CompareStrIgnoreCase(s1 : String, s2 : String) : Integer
+   s1 = StrUpr(s1);
+   s2 = StrUpr(s2);
+   if (s1 == s2)
+      return 0;
+   elif (s1 < s2)
+      return -1;
+   else
+      return 1;
    end;
 End;
 
@@ -95,6 +109,10 @@ End;
 */
 Macro CF_EqualsPrimitive(p1, p2) : Bool
    return (p1 == p2);
+End;
+
+Macro CF_StrEqualsIgnoreCase(s1 : String, s2 : String) : Bool
+   return (StrUpr(s1) == StrUpr(s2));
 End;
 /**
    Проверка объектов на полное равенство по свойствам (в т.ч вложенным и массивам).
