@@ -1,0 +1,126 @@
+import "..\\mac\\extra\\RUnit\\RUnit.Mac";
+import "..\\mac\\extra\\Utils\\TimeUtils.Mac";
+
+Class (TestCase) TestTimeUtils()
+   const TU = TimeUtils;
+
+   Macro test_getStartMonth()
+      var dt = Date(01, 02, 2018);
+      var res = TU.getStartMonth(dt);
+      AssertEquals(Date(01, 02, 2018), res);
+      dt = Date(28, 02, 2018);
+      res = TU.getStartMonth(dt);
+      AssertEquals(Date(01, 02, 2018), res);
+      res = TU.getStartMonth(Date(02, 12, 2018), 1);
+      AssertEquals(Date(01, 01, 2019), res);
+   End;
+
+   Macro test_getEndMonth()
+      var dt, res;
+      dt = Date(01, 02, 2016);
+      res = TU.getEndMonth(dt);
+      AssertEquals(Date(29, 02, 2016), res);
+      dt = Date(31, 1, 2019);
+      res = TU.getEndMonth(dt, -1);
+      AssertEquals(Date(31, 12, 2018), res);
+   End;
+
+   Macro test_getStartYear()
+      var dt, res;
+      dt = Date(01, 02, 2016);
+      res = TU.getStartYear(dt);
+      AssertEquals(Date(01,01,2016), res);
+      dt = Date(31, 12, 2019);
+      res = TU.getStartYear(dt, -1);
+      AssertEquals(Date(1, 1, 2018), res);
+   End;
+
+   Macro test_getEndYear()
+      var dt, res;
+      dt = Date(01, 02, 2016);
+      res = TU.getEndYear(dt);
+      AssertEquals(Date(31, 12, 2016), res);
+      dt = Date(31, 1, 2019);
+      res = TU.getEndMonth(dt, -1);
+      AssertEquals(Date(31, 12, 2018), res);
+   End;
+
+
+   Macro test_getWeekDay()
+      var dt, res;
+      dt = Date(01, 01, 2019);
+      res = TU.getWeekDay(dt);
+      AssertEquals("вторник", res);
+      AssertEquals("Tuesday", TU.getWeekDay(dt, Locales.US));
+      dt = Date(26, 08, 1990);
+      res = TU.getWeekDay(dt);
+      AssertEquals("воскресенье", res);
+      AssertEquals("Sunday", TU.getWeekDay(dt, Locales.US));
+      dt = Date(31, 12, 2018);
+      res = TU.getWeekDay(dt);
+      AssertEquals("понедельник", res);
+   End;
+
+   Macro test_getDayOfYear()
+      var dt = date(1, 1, 2019);
+      assertEquals(1, TU.getDayOfYear(dt));
+      dt = date(1, 2, 2019);
+      assertEquals(32, TU.getDayOfYear(dt));
+      dt = date(31, 12, 2016);
+      assertEquals(366, TU.getDayOfYear(dt));
+   End;
+
+   Macro test_getWeekDayNumInMonth()
+      var dt = date(1, 1, 2019);
+      assertEquals(1, TU.getWeekDayNumInMonth(dt));
+      dt = date(7, 4, 2019);
+      assertEquals(1, TU.getWeekDayNumInMonth(dt));
+      dt = date(8, 4, 2019);
+      assertEquals(2, TU.getWeekDayNumInMonth(dt));
+   End;
+
+   Macro test_getNumWeekInMonth()
+      var dt = date(3, 3, 2019);
+      assertEquals(1, TU.getNumWeekInMonth(dt));
+      assertEquals(2, TU.getNumWeekInMonth(dt, Locales.US));
+      dt = date(4, 3, 2019);
+      assertEquals(2, TU.getNumWeekInMonth(dt));
+      dt = date(10, 3, 2019);
+      assertEquals(2, TU.getNumWeekInMonth(dt));
+   End;
+
+   Macro test_timeformat()
+      var format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.S");
+      var strDate = "2014-12-09T13:50:51.644000Z";
+      var par = format.parse(strDate);
+      var dt = par.getDate();
+      var tm = par.getTime();
+      assertEquals(Date(9, 12, 2014), dt);
+
+      assertEquals(Time(13, 50, 51, 64), tm);
+      dt = TU_DateTime(Date(01, 01, 2019), Time(12, 30, 01, 52));
+      assertEquals(Date(01, 01, 2019), dt.getDate);
+      assertEquals(Time(12, 30, 01, 52), dt.getTime);
+
+      strDate = format.dateTimeToString(dt);
+      assertEquals("2019-01-01T12:30:01.520" , strDate);
+
+      format = TU_DateFormat("EEEE yyyy LLLL dd HH:mm:ss.S");
+      strDate = format.dateTimeToString(dt);
+      assertEquals("вторник 2019 Январь 01 12:30:01.520", strDate);
+      var dt2 = format.stringToDateTime(strDate);
+      assertTrue(dt2.equals(dt));
+   End;
+
+   Macro test_timeZone()
+      var format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+      var strDate = "2014-12-09T13:50:51.640+0200";
+      debugbreak;
+      var dt = format.parse(strDate);
+      assertTrue(dt.equals(TU_DateTime(date(09, 12, 2014), time(13,50,51,64), 200)));
+      var str = format.format(dt);
+      assertEquals(strDate, str);
+   End;
+End;
+
+TestTimeUtils();

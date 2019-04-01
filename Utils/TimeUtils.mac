@@ -1,0 +1,971 @@
+/**
+   @package Utils
+
+   Утилиты для работы с датой и временем.
+*/
+import "..\\Mac\\Extra\\Utils\\StringUtils.mac";
+import "..\\Mac\\Extra\\OOP\\Comparators.mac";
+
+/** Singleton объект класса [TimeUtilsClass]. */
+const TimeUtils = GenObject("TimeUtilsClass");
+/** Singleton объект класса [LocalesClass]. */
+const Locales = GenObject("LocalesClass");
+
+private const SU = StringUtils;
+private const DefaultLocale = GenObject("RuLocale");
+
+/**
+   Класс предопределнных локалей. На данный момент поддерживаются 2: RU и US.
+*/
+Private Class LocalesClass()
+   /** Русская локаль. */
+   const RU = GenObject("RuLocale");
+   /** Локаль США. */
+   const US = GenObject("UsLocale");
+End;
+
+private Class LocaleClass()
+   var monthesI;
+   var monthesR;
+   var monthesShort;
+   var weekDays;
+   var weekDaysShort;
+   var AD;
+   var BC;
+   var AM;
+   var PM;
+   var sampleFirstWeekDay;
+
+   Macro getNumWeekDay(dt)
+      return mod(abs(dt - sampleFirstWeekDay), 7) + 1;
+   End;
+
+   Macro getNumWeekInMonth(dt)
+      var nwd = getNumWeekDay(TimeUtils.getStartMonth(dt));
+      var cwd = getNumWeekDay(dt);
+      var wdim = TimeUtils.getWeekDayNumInMonth(dt);
+      if (cwd < nwd)
+         return wdim + 1;
+      end;
+      return wdim;
+   End;
+
+   Macro getNumWeekInYear(dt)
+      var d = mod(TimeUtils.getDayOfYear(dt)-1, 7) + 1;
+      var nwd = getNumWeekDay(TimeUtils.getStartYear(dt));
+      var cwd = getNumWeekDay(dt);
+      if (cwd < nwd)
+         return d + 1;
+      end;
+      return d;
+   End;
+End;
+
+private Class (LocaleClass) RuLocale()
+   monthesI = SArray("Январь", "Февраль", "Март",
+                               "Апрель", "Май", "Июнь",
+                               "Июль", "Август", "Сентябрь",
+                               "Октябрь", "Ноябрь", "Декабрь");
+   monthesR = SArray("января", "февраля", "марта",
+                               "апреля", "мая", "июня",
+                               "июля", "августа", "сентября",
+                               "октября", "ноября", "декабря");
+   monthesShort = SArray("янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек");
+   weekDays = SArray("понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье");
+   weekDaysShort = SArray("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс");
+   sampleFirstWeekDay = Date(1, 1, 1990);
+   AD = "н.э.";
+   BC = "до н.э.";
+   AM = "AM";
+   PM = "PM";
+End;
+
+private Class (LocaleClass) UsLocale()
+   monthesI = SArray("January", "February", "March",
+                               "April", "May", "June",
+                               "July", "August", "September",
+                               "October", "November", "December");
+   monthesR = monthesI;
+
+   monthesShort = SArray("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+   weekDays = SArray("Sunday", "Monday", "Tuesday", "Wednesday", "Friday", "Saturday");
+   weekDaysShort = SArray("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat");
+   sampleFirstWeekDay = Date(1, 1, 1989);
+   AD = "AD";
+   BC = "BC";
+   AM = "AM";
+   PM = "PM";
+End;
+
+/**
+   Класс утилит, представлен синглтоном [TimeUtil].
+*/
+Private Class TimeUtilsClass()
+
+   /**
+      Возвращает дату, соответствующую первому дню месяца переданной даты 'dt', также можно указать сдвиг месяца, целое число 'monthOff'.
+   */
+   Macro getStartMonth(dt : Date, monthOff : Integer) : Date
+      var calcDt;
+      var y,m,d;
+      if(ValType(monthOff) != V_INTEGER)
+         monthOff = 0;
+      end;
+      calcDt = DateShift(dt, null, monthOff);
+      DateSplit(calcDt, d, m, y);
+      return Date(1, m, y);
+   End;
+
+   /**
+      Возвращает дату, соответствующую последнему дню месяца переданной даты 'dt', также можно указать сдвиг месяца, целое число 'monthOff'.
+   */
+   Macro getEndMonth(dt : Date, monthOff : Integer) : Date
+      var stDT = getStartMonth(dt, monthOff);
+      var calcDt = DateShift(stDT, null, 1);
+      var resDate = calcDt - 1;
+      return resDate;
+   End;
+
+   /**
+      Возвращает дату, соответствующую первому дню в году переданной даты 'dt', также можно указать сдвиг месяца, целое число 'yearOff'.
+   */
+   Macro getStartYear(dt : Date, yearOff : Integer) : Date
+      var y,m,d;
+      var calcDt;
+      if(ValType(yearOff) != V_INTEGER)
+         yearOff = 0;
+      end;
+      calcDt = DateShift(dt, null, null, yearOff);
+      DateSplit(calcDt, d, m, y);
+      return Date(1, 1, y);
+   End;
+
+   /**
+      Возвращает дату, соответствующую последнему  дню в году переданной даты 'dt', также можно указать сдвиг месяца, целое число 'yearOff'.
+   */
+   Macro getEndYear(dt : Date, yearOff : Integer) : Date
+      var stDT = getStartYear(dt, yearOff);
+      var calcDt = DateShift(stDT, null, null, 1);
+      return (calcDt - 1);
+   End;
+   /**
+      Возвращает полное название для недели для даты 'dt'.
+   */
+   Macro getWeekDay(dt: Date, locale)
+      if (Valtype(locale) == V_UNDEF)
+         locale = DefaultLocale;
+      end;
+      return (locale.WeekDays[mod(abs(dt - locale.sampleFirstWeekDay), 7)]);
+   End;
+
+   /**
+      Возвращает сокращенное название для недели для даты 'dt'.
+   */
+   Macro getShortWeekDay(dt: Date, locale)
+      if (Valtype(locale) == V_UNDEF)
+         locale = DefaultLocale;
+      end;
+      return (locale.weekDaysShort[mod(abs(dt - locale.sampleFirstWeekDay), 7)]);
+   End;
+
+   Macro getWeekDayNum(dt : Date, locale)
+      if (ValType(locale) == V_UNDEF)
+         locale = DefaultLocale;
+      end;
+      return (locale.getNumWeekDay(dt));
+   End;
+
+   Macro getDayOfYear(dt : Date)
+      var y,m,d;
+      DateSplit(dt, d, m, y);
+      return (dt - Date(1,1, y) + 1);
+   End;
+
+   Macro getWeekDayNumInMonth(dt : Date)
+      var d;
+      DateSplit(dt, d, null, null);
+      return (Int((d-1)/7) + 1);
+   End;
+
+   Macro getNumWeekInMonth(dt : Date, locale)
+      if (ValType(locale) == V_UNDEF)
+         locale = DefaultLocale;
+      end;
+      return (locale.getNumWeekInMonth(dt));
+   End;
+End;
+
+
+/**
+   Класс обертка для даты/времени. В конструктор передаются аргументы: дата '_dt' и время '_tm' временная зона '_timezone'.
+   После инициализации в полях класса становятся доступными числовые временные значения.
+*/
+Class TU_DateTime(_dt, _tm, _tz)
+   /** Год */
+   var year    = 0;
+   /** Месяц */
+   var month   = 0;
+   /** День */
+   var day     = 0;
+   /** Час */
+   var hour    = 0;
+   /** Минута */
+   var minute  = 0;
+   /** Секунда */
+   var sec     = 0;
+   /** Миллисекунда */
+   var msec    = 0;
+   /** Временная зона */
+   var timezone = 0;
+
+   /**
+      Возвращает дату.
+   */
+   Macro getDate() : Date
+      return date(day,month, year);
+   End;
+
+   /**
+      Возвращает время.
+   */
+   Macro getTime()
+      return time(hour, minute, sec, msec/10);
+   End;
+
+   /**
+      Возвращает RSL DtTm.
+   */
+   Macro getDtTm()
+      return DtTm(date(day,month, year), time(hour, minute, sec, msec/10));
+   End;
+
+   Macro getTZString()
+      if (timezone < 0)
+         return "-" + SU.padStart(timezone, 4, "0");
+      else
+         return "+" + SU.padStart(timezone, 4, "0");
+      end;
+   End;
+   /**
+      Возвращает `true`, если текущая дата равна 'oth'
+   */
+   Macro equals(oth) : Bool
+      if (IsEqClass("TU_DATETIME", oth) == false)
+         return false;
+      end;
+      for (var i, 0, GenNumProps(this)-1, 1)
+         if (this[i] != oth[i])
+            return false;
+         end;
+      end;
+      return true;
+   End;
+
+   Private Macro ini(dt, tm, tz)
+      if (ValType(dt) == V_DATE)
+         DateSplit(dt, day, month, year);
+      elif (ValType(dt) == V_DTTM)
+         var td, tt;
+         DtTmSplit(dt, td, tt);
+         DateSplit(td, day, month, year);
+         TimeSplit(tt, hour, minute, sec, msec);
+         msec = msec * 10;
+      end;
+      if (ValType(tm) == V_TIME)
+         TimeSplit(tm, hour, minute, sec, msec);
+         msec = msec * 10;
+      end;
+      if (ValType(tz) == V_INTEGER)
+         timezone = tz;
+      end;
+   End;
+
+   ini(_dt, _tm, _tz);
+End;
+
+Private Macro TU_StrIsNumber(s)
+   var c = CodeFor(s);
+   return ((c >= 48) and (c <= 57));
+End;
+
+Private Class Part()
+   var sign = "";
+   var pattern = "";
+   var maxSize = 4;
+   var size = 0;
+   var isFloat = false;
+
+   Macro setFloat()
+      if (size == maxSize)
+         isFloat = false;
+      else
+         isFloat = true;
+      end;
+   End;
+
+   Macro readFormat(str, fromInd) : Integer
+      for (var i, fromInd, fromInd + maxSize)
+         var s = SubStr(str, i, 1);
+         if (s == sign)
+            pattern = pattern + s;
+            size = size + 1;
+         else
+            break;
+         end;
+      end;
+      setFloat();
+      return i;
+   End;
+
+   Macro tryRead(dt, str, fromInd)
+      return fromInd + StrLen(pattern);
+   End;
+
+   Macro getString(dt)
+      return pattern;
+   End;
+End;
+
+Private Class (Part) TextPart()
+   pattern = "";
+
+   Macro readFormat(str, fromInd) : Integer
+      var i = fromInd;
+      while (i <= StrLen(str))
+         var s = SubStr(str, i, 1);
+         var f = ExecMacro2("getPart", s);
+         if (isEqClass("TextPart",f))
+            pattern = pattern + s;
+         else
+            break;
+         end;
+         i = i + 1;
+      end;
+      isFloat = false;
+      return i;
+   End;
+
+   Macro getString(dt)
+      return pattern;
+   End;
+End;
+
+Private Class (Part) CommentPart()
+   pattern = "";
+
+   Macro readFormat(str, fromInd) : Integer
+      var i = fromInd + 1;
+      while (i < strLen(str))
+         var s = SubStr(str, i, 1);
+         if (s == "'")
+            break;
+         else
+            pattern = pattern + s;
+         end;
+         i = i + 1;
+      end;
+      isFloat = false;
+      return i + 1;
+   End;
+
+   Macro getString(dt)
+      return pattern;
+   End;
+End;
+
+Private Class (Part) DatePart()
+
+End;
+
+Private Class (DatePart) YearPart()
+   sign = "y";
+   pattern = "";
+   maxSize = 4;
+   size = 0;
+
+   Macro getString(dt)
+      if (pattern == "y")
+         return dt.year;
+      elif (pattern == "yy")
+         var y = String(mod(dt.year, 100));
+         return SU.padStart(y, 2, "0");
+      elif (pattern == "yyyy")
+         return dt.year;
+      end;
+   End;
+
+   Macro tryRead(dt, str, fromInd : Integer)
+      var res;
+      if (pattern == "yy")
+         res = SubStr(str, fromInd, 2);
+         res = Int(res);
+         if (res <= 80)
+            res = 2000 + res;
+         else
+            res = 1900 + res;
+         end;
+         dt.year = res;
+         return fromInd + 2;
+      elif ((pattern == "yyyy") or (pattern == "y"))
+         res = Substr(str, fromInd, 4);
+         res = Int(res);
+         dt.year = res;
+         return fromInd + 4;
+      end;
+
+      return 0;
+   End;
+End;
+
+Private Class (DatePart) MonthPart()
+   sign = "M";
+   pattern = "";
+   maxSize = 4;
+   size = 0;
+   var fullName = false;
+
+   Macro setFloat()
+      if (size == 1)
+         isFloat = true;
+      elif (size == 2)
+         isFloat = false;
+      elif (size == 4)
+         fullName = true;
+      end;
+   End;
+
+   Macro getString(dt, locale)
+      var m = String(dt.month);
+      if (pattern == "M")
+         return m;
+      elif (pattern == "MM")
+         return SU.padStart(m, 2, "0");
+      elif (pattern == "MMM")
+         return locale.monthesShort[dt.month-1];
+      elif (pattern == "MMMM")
+         return locale.monthesR[dt.month-1];
+      end;
+   End;
+
+   Macro tryRead(dt, str, fromInd : Integer, locale)
+      var i, s, p, ind;
+      if (pattern == "M")
+         var s1 = SubStr(str, fromInd, 1);
+         var s2 = SubStr(str, fromInd+1, 1);
+         if (TU_StrIsNumber(s2))
+            dt.month = Int(s1+s2);
+            return fromInd + 2;
+         else
+            dt.month = Int(s1);
+            return fromInd + 1;
+         end;
+      elif (pattern == "MM")
+         dt.month = Int(SubStr(str, fromInd, 2));
+         return fromInd + 2;
+      elif (pattern == "MMM")
+         for (i, fromInd, StrLen(str))
+            s = SubStr(str, i, 1);
+            p = SubStr(str, fromInd, i-fromInd + 1);
+            if ((s == " ") or (s == ".") or (TU_StrIsNumber(s)))
+               return i;
+            end;
+            ind = locale.monthesShort.indexOf(p, @CF_StrEqualsIgnoreCase);
+            if (ind >= 0)
+               dt.month = ind + 1;
+               return i+1;
+            end;
+         end;
+      elif (pattern == "MMMM")
+         for ( i, fromInd, StrLen(str))
+            s = SubStr(str, i, 1);
+            p = SubStr(str, fromInd, i-fromInd + 1);
+            if ((s == " ") or (s == ".") or (TU_StrIsNumber(s)))
+               return i;
+            end;
+            ind = locale.monthesR.indexOf(p, @CF_StrEqualsIgnoreCase);
+            if (ind >= 0)
+               dt.month = ind + 1;
+               return i+1;
+            end;
+         end;
+      end;
+      return 0;
+   End;
+End;
+
+Private Class (DatePart) MonthPartCI()
+   sign = "L";
+   pattern = "";
+   maxSize = 4;
+   size = 0;
+   var fullName = false;
+
+   Macro setFloat()
+      if (pattern == "LLL")
+         isFloat = true;
+      elif (pattern == "LLLL")
+         isFloat = true;
+      end;
+   End;
+
+   Macro getString(dt, locale)
+      var m = String(dt.month);
+      if (pattern == "LLL")
+
+      elif (pattern == "LLLL")
+         return locale.monthesI[dt.month-1];
+      end;
+   End;
+
+   Macro tryRead(dt, str, fromInd : Integer, locale)
+      var res;
+      if (pattern == "LLL")
+
+      elif (pattern == "LLLL")
+         for (var i, fromInd, StrLen(str))
+            var s = SubStr(str, i, 1);
+            var p = SubStr(str, fromInd, i-fromInd + 1);
+            if ((s == " ") or (s == ".") or (TU_StrIsNumber(s)))
+               return i;
+            end;
+            var ind = locale.monthesI.indexOf(p, @CF_StrEqualsIgnoreCase);
+            if (ind >= 0)
+               dt.month = ind + 1;
+               return i+1;
+            end;
+         end;
+      end;
+      return 0;
+   End;
+End;
+
+
+Private Class (DatePart) WeekDayPart()
+   sign = "E";
+   pattern = "";
+   maxSize = 10;
+   size = 0;
+   var fullName = false;
+
+   Macro setFloat()
+      isFloat = true;
+   End;
+
+   Macro getString(dt, locale)
+      if (pattern == "E")
+         return TimeUtils.getShortWeekDay(dt.getDate, locale);
+      elif (pattern == "EEEE")
+         return TimeUtils.getWeekDay(dt.getDate, locale);
+      end;
+   End;
+
+   Macro tryRead(dt, str, fromInd : Integer, locale)
+      var res;
+      if (pattern == "E")
+         for (var i, fromInd, StrLen(str))
+            var s = SubStr(str, i, 1);
+            var p = SubStr(str, fromInd, i-fromInd + 1);
+            if ((s == " ") or (s == ".") or (TU_StrIsNumber(s)))
+               return i;
+            end;
+            if (locale.weekDaysShort.contains(p, @CF_StrEqualsIgnoreCase))
+               return i+1;
+            end;
+         end;
+      elif (pattern == "EEEE")
+         for (i, fromInd, StrLen(str))
+            s = SubStr(str, i, 1);
+            p = SubStr(str, fromInd, i-fromInd + 1);
+            if ((s == " ") or (s == "."))
+               return i;
+            end;
+            if (locale.weekDays.contains(p, @CF_StrEqualsIgnoreCase))
+               return i+1;
+            end;
+         end;
+      end;
+      return 0;
+   End;
+End;
+
+Private Class (DatePart) DayPart()
+   sign = "d";
+   pattern = "";
+   maxSize = 2;
+   size = 0;
+
+
+   Macro getString(dt)
+      if (pattern == "d")
+         return dt.day;
+      elif (pattern == "dd")
+         return SU.padStart(dt.day, 2, "0");
+      end;
+   end;
+
+   Macro tryRead(dt, str, fromInd : Integer)
+      if (pattern == "d")
+         var s1 = SubStr(str, fromInd, 1);
+         var s2 = SubStr(str, fromInd+1, 1);
+         if (TU_StrIsNumber(s2))
+            dt.day = Int(s1+s2);
+            return fromInd + 2;
+         else
+            dt.day = Int(s1);
+            return fromInd + 1;
+         end;
+      elif (pattern == "dd")
+         dt.day = Int(SubStr(str, fromInd, 2));
+         return fromInd + 2;
+      end;
+      return 0;
+   End;
+End;
+
+Private Class (Part) TimePart()
+
+End;
+
+Private Class (TimePart) HourPart()
+   sign = "H";
+   pattern = "";
+   maxSize = 2;
+   size = 0;
+
+   Macro getString(dt)
+      if (pattern == "H")
+         return dt.hour;
+      elif (pattern == "HH")
+         return SU.padStart(dt.hour, 2, "0");
+      end;
+   end;
+
+   Macro tryRead(dt, str, fromInd : Integer)
+      if (pattern == "H")
+         var s1 = SubStr(str, fromInd, 1);
+         var s2 = SubStr(str, fromInd+1, 1);
+         if (TU_StrIsNumber(s2))
+            dt.hour = Int(s1+s2);
+            return fromInd + 2;
+         else
+            dt.hour = Int(s1);
+            return fromInd + 1;
+         end;
+      elif (pattern == "HH")
+         dt.hour = Int(SubStr(str, fromInd, 2));
+         return fromInd + 2;
+      end;
+      return 0;
+   End;
+End;
+
+Private Class (TimePart) MinutePart()
+   sign = "m";
+   pattern = "";
+   maxSize = 2;
+   size = 0;
+
+   Macro getString(dt)
+      if (pattern == "m")
+         return dt.minute;
+      elif (pattern == "mm")
+         return SU.padStart(dt.minute, 2, "0");
+      end;
+   end;
+
+   Macro tryRead(dt, str, fromInd : Integer)
+      if (pattern == "m")
+         var s1 = SubStr(str, fromInd, 1);
+         var s2 = SubStr(str, fromInd+1, 1);
+         if (TU_StrIsNumber(s2))
+            dt.minute = Int(s1+s2);
+            return fromInd + 2;
+         else
+            dt.minute = Int(s1);
+            return fromInd + 1;
+         end;
+      elif (pattern == "mm")
+         dt.minute = Int(SubStr(str, fromInd, 2));
+         return fromInd + 2;
+      end;
+      return 0;
+   End;
+End;
+
+Private Class (TimePart) SecondPart()
+   sign = "s";
+   pattern = "";
+   maxSize = 2;
+   size = 0;
+
+   Macro getString(dt)
+      if (pattern == "s")
+         return dt.sec;
+      elif (pattern == "ss")
+         return SU.padStart(dt.sec, 2, "0");
+      end;
+   End;
+
+   Macro tryRead(dt, str, fromInd : Integer)
+      if (pattern == "s")
+         var s1 = SubStr(str, fromInd, 1);
+         var s2 = SubStr(str, fromInd+1, 1);
+         if (TU_StrIsNumber(s2))
+            dt.sec = Int(s1+s2);
+            return fromInd + 2;
+         else
+            dt.sec = Int(s1);
+            return fromInd + 1;
+         end;
+      elif (pattern == "ss")
+         dt.sec = Int(SubStr(str, fromInd, 2));
+         return fromInd + 2;
+      end;
+      return 0;
+   End;
+End;
+
+Private Class (TimePart) MilliSecondPart()
+   sign = "S";
+   pattern = "";
+   maxSize = 3;
+   size = 0;
+   isFloat = false;
+
+   Macro setFloat()
+   End;
+
+   Macro getString(dt)
+      return SU.padStart(dt.msec, 3, "0");
+   end;
+
+   Macro tryRead(dt, str, fromInd : Integer)
+      var res = SubStr(str, fromInd, 3);
+      dt.msec = Int(res);
+      return fromInd + 3;
+      OnError
+         return 0;
+   End;
+End;
+
+
+Private Class (TimePart) TimeZonePart()
+   sign = "Z";
+   pattern = "";
+   maxSize = 5;
+   size = 5;
+   isFloat = false;
+
+   Macro setFloat()
+   End;
+
+   Macro getString(dt, locale, TZ)
+      if (ValType(TZ) == V_UNDEF)
+         return dt.getTZString();
+      end;
+      var s = "+";
+      if (TZ < 0)
+         s = "-";
+         TZ = -TZ;
+      end;
+      return s + SU.padStart(TZ, 4, "0");
+   end;
+
+   Macro tryRead(dt, str, fromInd : Integer, locale)
+      var z = "";
+      var s = SubStr(str, fromInd, 1);
+      var p;
+      if (s == "-")
+         p = SubStr(str, fromInd + 1, 4);
+      elif (s == "+")
+         p = SubStr(str, fromInd + 1, 4);
+      else
+         p = SubStr(str, fromInd, 4);
+      end;
+      dt.timezone = Int(s + p);
+      if (TU_StrIsNumber(s))
+         return fromInd + 5;
+      else
+         return fromInd + 6;
+      end;
+      OnError
+         return 0;
+   End;
+End;
+
+
+Private Macro getPart(s)
+   var prt;
+   if (s == "y")
+      prt = YearPart();
+   elif (s == "M")
+      prt = MonthPart();
+   elif (s == "L")
+      prt = MonthPartCI();
+   elif (s == "d")
+      prt = DayPart();
+   elif (s == "H")
+      prt = HourPart();
+   elif (s == "m")
+      prt = MinutePart();
+   elif (s == "s")
+      prt = SecondPart();
+   elif (s == "S")
+      prt = MilliSecondPart();
+   elif (s == "E")
+      prt = WeekDayPart();
+   elif (s == "Z")
+      prt = TimeZonePart();
+   elif (s == "'")
+      prt = CommentPart();
+   else
+      prt = TextPart();
+   end;
+   return prt;
+End;
+
+/**
+   Класс временного формата. В конструктор предается один параметр: маска формата '_pattern'.
+*/
+Class TU_DateFormat(_pattern, _locale)
+   var pattern = _pattern;
+   var locale = _locale;
+   var timezone  = null;
+   var parts : TArray = TArray();
+
+   /**
+      Устанавливает временную зону 'tz' (например 1000 для Владивостока).
+   */
+   Macro setTimeZone(tz : Integer)
+      timezone = tz;
+      return this;
+   End;
+
+   Private Macro addPart(part)
+      if (part.pattern != "")
+         parts[parts.size] = part;
+      end;
+   End;
+
+   /**
+      Возвращает строковое представления согласно маске дате/времени типа [TU_DateTime] 'dt'.
+   */
+   Macro dateTimeToString(dt) : String
+      var res = "";
+      var p;
+      for(p, parts)
+         res = res + p.getString(dt, locale, timezone);
+      end;
+      return res;
+   End;
+
+   /**
+      Принимает параметр типа [Date] 'dt' и возвращает строковое представление согласно маске.
+   */
+   Macro dateToString(dt : Date) : String
+      return dateTimeToString(TU_DateTime(dt));
+   End;
+
+   /**
+      Принимает параметр типа [Time] 'tm' и возвращает строковое представление согласно маске.
+   */
+   Macro timeToString(tm : Time) : String
+      return dateTimeToString(TU_DateTime(null, tm));
+   End;
+
+   /**
+      Возвращает объект типа [TU_DateTime] преобразованного из строки 'str' согласно маске.
+   */
+   Macro stringToDateTime(str : String)
+      var dt = TU_DateTime();
+      var i = 1;
+      for(var p, parts)
+         i = p.tryRead(dt, str, i, locale);
+         if (i <= 0)
+            // Ошибка формата
+            return dt;
+         end;
+      end;
+      return dt;
+
+      OnError
+         RunError("Ошибка преобразования строки в дату : " + str + " -> ???");
+   End;
+
+   Macro stringToDate(str : String)
+     return stringToDateTime(str).getDate();
+   End;
+
+   Macro stringToTime(str : String)
+      return stringToDateTime(str).getTime();
+   End;
+
+   /**
+      Возвращает строковое представления согласно шаблону для 'dt'.
+
+      Входной параметр 'dt' может являться:
+         - Датой типа V_DATE
+         - Временем типа V_TIME
+         - RSL типом V_DTTM
+         - Объектом типа [TU_DATETIME]
+   */
+   Macro format(dt) : String
+      if (isEqClass("TU_DATETIME",dt))
+         return dateTimeToString(dt);
+      elif ((ValType(dt) == V_DTTM) or (ValType(dt) == V_DATE))
+         dt = TU_DATETIME(dt, null);
+         return dateTimeToString(dt);
+      elif (ValType(dt) == V_TIME)
+         dt = TU_DATETIME(null, dt);
+         return dateTimeToString(dt);
+      else
+         return Throw(IllegalArgumentException("Не верный тип даты"));
+      end;
+   End;
+
+   /**
+      Парсит строку 'str' и возвращает объект типа [TU_DATETIME]. Получить дату и\или можно методами [TU_DATETIME.getDate], [TU_DATETIME.getTime]
+      [TU_DATETIME.getDtTm].
+   */
+   Macro parse(str : String)
+      return stringToDateTime(str);
+   End;
+
+
+   Private Macro ini()
+      var i = 1;
+      var prt;
+      var r;
+      while (i <= StrLen(pattern))
+         var s = SubStr(pattern, i, 1);
+         prt = getPart(s);
+         r = prt.readFormat(pattern, i);
+         if (r > 0)
+            i = r;
+            addPart(prt);
+         else
+            i = i + 1;
+         end;
+      end;
+
+      if (ValType(locale) == V_UNDEF)
+         locale = DefaultLocale;
+      end;
+   End;
+
+
+   ini();
+End;
+/*
+var formatt = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.S");
+var form2 = TU_DateFormat("yy-M-d H:m:s.S");
+var d = formatt.StringToDateTime("2014-12-09T13:50:51.644000Z");
+
+var t = formatt.dateTimeToString(d);
+
+var d2 = form2.StringToDateTime("19-3-31 22:54:2.960");
+println(form2.dateTimeToString(TU_DateTime(date, time)));
+*/
+//println(d.getDateTime);
+//println(t);
+

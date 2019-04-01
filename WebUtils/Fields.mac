@@ -1,0 +1,233 @@
+/***********************************************************
+FILE         :     NullObjects.mac
+COPYRIGHT    :
+DESCRIPTION  :     Реализация Optional - оберток для примитивных типов RSL
+PROGRAMMED BY:     Dzhanybaev M.P. (maratkhv@mail.ru)
+CREATION DATE:     07.03.2018
+Update       :
+************************************************************/
+
+Const StringField  = GenObject("StringFieldClass");
+Const IntegerField = GenObject("IntegerFieldClass");
+Const DoubleFiled  = GenObject("DoubleFieldClass");
+Const MoneyField   = GenObject("MoneyFieldClass");
+Const BoolField    = GenObject("BoolFieldClass");
+
+Class FieldClass()
+End;
+
+Class (FieldClass) PrimFieldClass()
+   var defVal = null;
+
+   Macro of(val : Variant)
+      if(ValType(val) != V_UNDEF)
+         return val;
+      else
+         return null;
+      end;
+   End;
+
+   Macro toStr(val)
+      return String(val);
+   End;
+
+   Macro ofDefault(val : Variant) : Variant
+      var valOf = of(val);
+      if(valOf != V_UNDEF)
+         return valOf;
+      end;
+      return defVal;
+   End;
+End;
+
+Class (PrimFieldClass) StringFieldClass()
+   defVal = "";
+End;
+
+Class (PrimFieldClass) IntegerFieldClass()
+   defVal = 0;
+
+   Macro of(val : String)
+      var ret = Int(val);
+      return ret;
+      OnError
+         return null;
+   End;
+End;
+
+Class (PrimFieldClass) DoubleFieldClass()
+   defVal = 0.0;
+
+   Macro of(val : String)
+      var ret = Double(val);
+      return ret;
+      OnError
+         return null;
+   End;
+End;
+
+Class (PrimFieldClass) MoneyFieldClass()
+   defVal = $0.0;
+
+   Macro of(val : String)
+      var ret = Money(val);
+      return ret;
+      OnError
+         return null;
+   End;
+End;
+
+Class (PrimFieldClass) BoolFieldClass()
+   defVal = false;
+
+   Macro of(val : String)
+      var ret = (StrLwr(val) == "true");
+      return ret;
+      OnError
+         return null;
+   End;
+End;
+
+Class (PrimFieldClass) DateTimeField(dtformatter)
+   var formatter = dtformatter;
+
+   Macro of(val : String)
+      var ret = formatter.StringToDateTime(val);
+      return ret;
+      OnError
+         return null;
+   End;
+
+   Macro toStr(val)
+      return formatter.dateTimeToString(val);
+   End;
+End;
+
+Class (PrimFieldClass) DateField(dtformatter)
+   var formatter = dtformatter;
+   defVal = date(0,0,0);
+
+   Macro of(val : String)
+      var ret = formatter.StringToDate(val);
+      return ret;
+      OnError
+         return null;
+   End;
+
+   Macro toStr(val)
+
+      return formatter.dateToString(val);
+   End;
+End;
+
+Class (PrimFieldClass) TimeField(dtformatter)
+   var formatter = dtformatter;
+   defVal = time(0,0,0);
+
+   Macro of(val : String)
+      var ret = formatter.StringToTime(val);
+      return ret;
+      OnError
+         return null;
+   End;
+
+   Macro toStr(val)
+      return formatter.timeToString(val);
+   End;
+End;
+
+Class (FieldClass) ObjectField(_className)
+   var className = _className;
+End;
+
+Class (FieldClass) ArrayField(_itemsType)
+   var type = null;
+
+   Macro ini(tp)
+      if (ValType(tp) == V_INTEGER)
+         if (tp == V_INTEGER)
+            type = IntegerField;
+         elif (tp == V_STRING)
+            type = StringField;
+         end;
+      elif (ValType(tp) == V_STRING)
+         type = ObjectField(tp);
+      elif (IsEqClass("FieldClass", tp))
+         type = tp;
+      else
+         RunError("\nНе верный тип поля ArrayField");
+      end;
+   End;
+
+   ini(_itemsType);
+End;
+
+Macro TryCastOrNull(obj : Variant, val : String) : Bool
+   if(IsEqClass("FieldClass", obj))
+      SetParm(0, obj.of(val));
+   else
+      return false;
+   end;
+End;
+
+Macro TryCastOrDefault(obj : @Variant, val : String) : Bool
+   if(IsEqClass("FieldClass", obj))
+      obj = obj.ofDefault(val);
+   else
+      return false;
+   end;
+End;
+
+
+Private Macro getPropVal(obj, pn)
+   if (moduleName(pn) == "SYSTEM")
+      pn = "_" + pn;
+   end;
+   var i = GenPropId(obj, pn);
+   if (i >= 0)
+      return obj[i];
+   end;
+End;
+
+Macro getPropOrNull(obj, objpath)
+   if (ValType(obj) != V_GENOBJ)
+      return null;
+   end;
+   var finded = obj;
+   var propn = "";
+   var isFirst = true;
+   for (var i, 1, StrLen(objpath), 1)
+      if (ValType(finded) != V_GENOBJ)
+         return null;
+      end;
+      var s = SubStr(objpath, i, 1);
+      if (s == ".")
+         if (propn != "")
+            finded = getPropVal(finded, propn);
+            propn = "";
+
+         end;
+      elif (s == "[")
+         if (propn != "")
+            finded = getPropVal(finded, propn);
+            propn = "";
+         end;
+      elif (s == "]")
+         if (propn != "")
+            var ind = Int(propn);
+            finded = finded[ind];
+            propn = "";
+         end;
+      else
+         propn = propn + s;
+      end;
+   end;
+   if (propn != "")
+      finded = getPropVal(finded, propn);
+   end;
+   return finded;
+   OnError
+      return null;
+End;
+
+
