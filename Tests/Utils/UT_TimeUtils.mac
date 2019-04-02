@@ -45,7 +45,6 @@ Class (TestCase) TestTimeUtils()
       AssertEquals(Date(31, 12, 2018), res);
    End;
 
-
    Macro test_getWeekDay()
       var dt, res;
       dt = Date(01, 01, 2019);
@@ -59,6 +58,14 @@ Class (TestCase) TestTimeUtils()
       dt = Date(31, 12, 2018);
       res = TU.getWeekDay(dt);
       AssertEquals("понедельник", res);
+
+      dt = Date(1, 1, 1945);
+      res = TU.getWeekDay(dt);
+      AssertEquals("понедельник", res);
+
+      dt = Date(9, 5, 1945);
+      res = TU.getWeekDay(dt);
+      AssertEquals("среда", res);
    End;
 
    Macro test_getDayOfYear()
@@ -89,7 +96,19 @@ Class (TestCase) TestTimeUtils()
       assertEquals(2, TU.getNumWeekInMonth(dt));
    End;
 
-   Macro test_timeformat()
+   Macro test_getNumWeekInYear()
+      var dt = date(2, 1, 1989);
+      var n = TU.getNumWeekInYear(dt);
+      AssertEquals(2 , n);
+      n = TU.getNumWeekInYear(dt, Locales.US);
+      AssertEquals(1, n);
+   End;
+
+
+End;
+
+Class (TestCase) TestFormatter()
+     Macro test_timeformat()
       var format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.S");
       var strDate = "2014-12-09T13:50:51.644000Z";
       var par = format.parse(strDate);
@@ -115,12 +134,168 @@ Class (TestCase) TestTimeUtils()
    Macro test_timeZone()
       var format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
       var strDate = "2014-12-09T13:50:51.640+0200";
-      debugbreak;
       var dt = format.parse(strDate);
       assertTrue(dt.equals(TU_DateTime(date(09, 12, 2014), time(13,50,51,64), 200)));
       var str = format.format(dt);
       assertEquals(strDate, str);
+      format = TU_DateFormat("yyyy MM dd HH:mm:ss X");
+      strDate = "2019 12 02 06:56:36 +03";
+      dt = format.parse(strDate);
+      assertTrue(dt.equals(TU_DateTime(date(02, 12, 2019), time(6,56,36), 300)));
+      var str2 = format.format(dt);
+      assertEquals(strDate, str2);
    End;
+
+   Macro test_settimeZone()
+      var format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+      format.setTimeZone(1000);
+      var strDate = "2014-12-09T16:50:51.640+0200";
+      var dt = format.parse(strDate);
+      assertEquals(date(10, 12,2014), dt.getDate);
+      assertEquals(time(0, 50, 51, 64), dt.getTime);
+   End;
+
+   Macro test_validation()
+      var format = TU_DateFormat("yyyy MMM dd XXXX");
+      assertException(IllegalArgumentException);
+   End;
+
+   Macro test_shortFormats()
+      var format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+      var strDate = "2016-02-09T03:06:01.040";
+
+      var dt = format.parse(strDate);
+      assertTrue(dt.equals(TU_DateTime(date(9,2,2016), time(3,6,1,4))));
+      assertEquals(strDate, format.format(dt));
+
+      format = TU_DateFormat("yyyy-M-d'T'H:m:s.S");
+      strDate = format.format(dt);
+      assertEquals("2016-2-9T3:6:1.40", strDate);
+
+      var dt2 = format.parse(strDate);
+      assertTrue(dt2.equals(dt));
+      assertEquals(strDate, format.format(dt));
+
+      format = TU_DateFormat("yyyyMd");
+      strDate = "2019111";
+      dt = format.parse(strDate).getDate();
+      assertEquals(Date(1, 11, 2019), dt);
+   End;
+
+   Macro test_extraLongFormats()
+      var format = TU_DateFormat("yyyyy-MM-ddd'T'HHH:mmm:sss.SSSS");
+      var strDate = "02016-02-009T003:006:001.0040";
+
+      var dt = format.parse(strDate);
+      assertTrue(dt.equals(TU_DateTime(date(9, 2, 2016), time(3,6,1,4))));
+      var str = format.format(dt);
+      assertEquals(strDate, str);
+   End;
+
+   Macro test_weekInYearPart()
+      var format = TU_DateFormat("yyyy MM dd w");
+      var dt = Date(2, 1, 1989);
+      var str = format.format(dt);
+      assertEquals("1989 01 02 2", str);
+      format = TU_DateFormat("yyyy MM dd ww");
+      str = format.format(dt);
+      assertEquals("1989 01 02 02", str);
+      format = TU_DateFormat("yyyy MM dd ww", Locales.US);
+      str = format.format(dt);
+      assertEquals("1989 01 02 01", str);
+   End;
+
+   Macro test_time12()
+      var format = TU_DateFormat("HH:mm:ss a");
+      var tm = Time(23, 12, 34);
+      var str = format.format(tm);
+      assertEquals("11:12:34 PM", str);
+      var tm2 = format.parse(str).getTime();
+      assertEquals(tm, tm2);
+      tm = Time(0, 30, 20);
+      str = format.format(tm);
+      assertEquals("12:30:20 AM", str);
+      tm2 = format.parse(str).getTime();
+      assertEquals(tm, tm2);
+      format = TU_DateFormat("aa HH:mm:ss");
+      str = format.format(tm);
+      assertEquals("AM 12:30:20", str);
+      tm2 = format.parse(str).getTime();
+      assertEquals(tm, tm2);
+   End;
+
+   Macro test_DayInYear()
+      var format = TU_DateFormat("yyyy D");
+      var dt = Date(2, 4, 2019);
+      var str = format.format(dt);
+      assertEquals("2019 92", str);
+      var dt2 = format.parse(str).getDate();
+      assertEquals(dt, dt2);
+   End;
+
+   Macro test_quotes()
+      var format = TU_DateFormat("EEE, LLL d, ''yy");
+      var dt = date(9, 5, 1945);
+      var str = format.format(dt);
+      assertEquals("Ср, Май 9, '45", str);
+      format = TU_DateFormat("HH 'o''clock' a");
+      var tm = Time(23, 30, 10);
+      str = format.format(tm);
+      assertEquals("11 o'clock PM", str);
+   End;
+
+   Macro test_era()
+      var format = TU_DateFormat("yyyy MM dd G");
+      var dt = date(9, 5, 1945);
+      var str = format.format(dt);
+      assertEquals("1945 05 09 н.э.",str)
+   End;
+
+
 End;
 
+
+Class (TestCase) TestTU_DateTime()
+
+   Macro test_addHours()
+      var dt = TU_DateTime(date(1, 1, 2019), time(12, 0, 0));
+      dt.plusHours(13);
+      assertEquals(date(2, 1, 2019), dt.getDate);
+      assertEquals(time(1, 0, 0), dt.getTime);
+
+      dt = TU_DateTime(date(1, 1, 2019), time(12, 0, 0));
+      dt.plusHours(-13);
+      assertEquals(date(31, 12, 2018), dt.getDate);
+      assertEquals(time(23, 0, 0), dt.getTime);
+   End;
+
+   Macro test_addMinutes()
+      var dt = TU_DateTime(date(1, 1, 2019), time(12, 0, 0));
+      dt.plusMinutes(128);
+      assertEquals(date(1, 1, 2019), dt.getDate);
+      assertEquals(time(14, 8, 0), dt.getTime);
+      dt = TU_DateTime(date(1, 1, 2019), time(1, 10, 0));
+      dt.plusMinutes(-120);
+      assertEquals(date(31, 12, 2018), dt.getDate);
+      assertEquals(time(23, 10, 0), dt.getTime);
+   End;
+
+   Macro test_inTimeZone()
+      var dt = TU_DateTime(date(2, 4, 2019), time(9, 0, 0));
+      var dt2 = dt.inTimeZone(300);
+      assertEquals(time(9, 0, 0), dt2.getTime());
+      dt2 = dt.inTimeZone(000);
+      assertEquals(time(6, 0, 0), dt2.getTime());
+      dt2 = dt.inTimeZone(-700);
+      assertEquals(time(23, 0, 0), dt2.getTime());
+      assertEquals(date(1, 4, 2019), dt2.getDate());
+   End;
+
+
+End;
+
+SetThrowMode(2);
 TestTimeUtils();
+TestFormatter();
+TestTU_DateTime();
+SetThrowMode(0);
