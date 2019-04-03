@@ -121,13 +121,13 @@ Class (TestCase) TestFormatter()
       assertEquals(Date(01, 01, 2019), dt.getDate);
       assertEquals(Time(12, 30, 01, 52), dt.getTime);
 
-      strDate = format.dateTimeToString(dt);
+      strDate = format.format(dt);
       assertEquals("2019-01-01T12:30:01.520" , strDate);
 
       format = TU_DateFormat("EEEE yyyy LLLL dd HH:mm:ss.S");
-      strDate = format.dateTimeToString(dt);
+      strDate = format.format(dt);
       assertEquals("вторник 2019 Январь 01 12:30:01.520", strDate);
-      var dt2 = format.stringToDateTime(strDate);
+      var dt2 = format.parse(strDate);
       assertTrue(dt2.equals(dt));
    End;
 
@@ -144,6 +144,33 @@ Class (TestCase) TestFormatter()
       assertTrue(dt.equals(TU_DateTime(date(02, 12, 2019), time(6,56,36), 300)));
       var str2 = format.format(dt);
       assertEquals(strDate, str2);
+   End;
+
+   Macro test_xTimeZone()
+      var format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ssX");
+      var str = "2019-01-01T12:35:00+03";
+      var dt = format.parse(str);
+      var dt2 =TU_DateTime(Date(1, 1, 2019), Time(12, 35, 0));
+      assertTrue(dt.equals(dt2));
+      var str2 = format.format(dt);
+      assertEquals(str, str2);
+
+      str =  "2019-01-01T12:35:00+0300";
+
+      format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ssXX");
+
+      dt = format.parse(str);
+      assertTrue(dt.equals(dt2));
+      str2 = format.format(dt);
+      assertEquals(str, str2);
+
+      str =  "2019-01-01T12:35:00+03:00";
+      format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+      dt = format.parse(str);
+      assertTrue(dt.equals(dt2));
+      debugbreak;
+      str2 = format.format(dt);
+      assertEquals(str, str2);
    End;
 
    Macro test_settimeZone()
@@ -206,7 +233,7 @@ Class (TestCase) TestFormatter()
    End;
 
    Macro test_time12()
-      var format = TU_DateFormat("HH:mm:ss a");
+      var format = TU_DateFormat("hh:mm:ss a");
       var tm = Time(23, 12, 34);
       var str = format.format(tm);
       assertEquals("11:12:34 PM", str);
@@ -217,11 +244,15 @@ Class (TestCase) TestFormatter()
       assertEquals("12:30:20 AM", str);
       tm2 = format.parse(str).getTime();
       assertEquals(tm, tm2);
-      format = TU_DateFormat("aa HH:mm:ss");
+      format = TU_DateFormat("aa hh:mm:ss");
       str = format.format(tm);
       assertEquals("AM 12:30:20", str);
       tm2 = format.parse(str).getTime();
       assertEquals(tm, tm2);
+      format = TU_DateFormat("HH:mm:ss a");
+      tm = Time(23, 12, 34);
+      str = format.format(tm);
+      assertEquals("23:12:34 PM", str);
    End;
 
    Macro test_DayInYear()
@@ -238,7 +269,7 @@ Class (TestCase) TestFormatter()
       var dt = date(9, 5, 1945);
       var str = format.format(dt);
       assertEquals("Ср, Май 9, '45", str);
-      format = TU_DateFormat("HH 'o''clock' a");
+      format = TU_DateFormat("hh 'o''clock' a");
       var tm = Time(23, 30, 10);
       str = format.format(tm);
       assertEquals("11 o'clock PM", str);
@@ -248,8 +279,23 @@ Class (TestCase) TestFormatter()
       var format = TU_DateFormat("yyyy MM dd G");
       var dt = date(9, 5, 1945);
       var str = format.format(dt);
-      assertEquals("1945 05 09 н.э.",str)
+      assertEquals("1945 05 09 н.э.",str);
+      format = TU_DateFormat("yyyy MM dd G", Locales.US);
+      str = format.format(dt);
+      assertEquals("1945 05 09 AD",str);
    End;
+
+   Macro test_weekAndDay()
+      var format = TU_DateFormat("yyyy-'W'ww-u");
+      var dt = date(12, 01, 2019);
+      debugbreak;
+      var str = format.format(dt);
+      assertEquals("2019-W02-6", str);
+      var dt2 = format.parse(str).getDate();
+      assertEquals(dt, dt2);
+   End;
+
+
 
 
 End;

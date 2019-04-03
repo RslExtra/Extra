@@ -3,8 +3,8 @@
 
    Утилиты для работы с датой и временем.
 */
-import rcw, rsexts;
 import "..\\Mac\\Extra\\Utils\\StringUtils.mac";
+import "..\\Mac\\Extra\\Utils\\SArray.mac";
 import "..\\Mac\\Extra\\OOP\\Comparators.mac";
 
 /** Singleton объект класса [TimeUtilsClass]. */
@@ -240,17 +240,6 @@ Class TU_DateTime(_dt, _tm, _tz)
    /** Временная зона */
    var timezone = 0;
 
-   /** Флаг 12 часового формата времени */
-   var ampm = null;
-
-   Macro checkAMPM()
-      if ((ValType(ampm) == V_BOOL) and ampm and (hour != 12))
-         hour = hour + 12;
-      elif ((ValType(ampm) == V_BOOL) and (hour == 12))
-         hour = 0;
-      end;
-   End;
-
    /**
       Возвращает дату.
    */
@@ -449,12 +438,33 @@ Class TU_DateTime(_dt, _tm, _tz)
       return DtTm(date(day,month, year), time(hour, minute, sec, msec/10));
    End;
 
-   Macro getTZString()
+   /**
+      Возвращает временную зону в формате RFC 822 ("+0300");
+   */
+   Macro getRFCTimeZone()
       if (timezone < 0)
          return "-" + SU.padStart(timezone, 4, "0");
       else
          return "+" + SU.padStart(timezone, 4, "0");
       end;
+   End;
+
+   /**
+      Возвращает временную зону в формате ISO 8601 ("+03:00");
+   */
+   Macro getISOTimeZone() : String
+      if (timezone < 0)
+         return "-" + SU.padStart(timezone/100, 2, "0") + ":" + SU.padStart(mod(timezone, 100), 2, "0");
+      else
+         return "+" + SU.padStart(timezone/100, 2, "0") + ":" + SU.padStart(mod(timezone, 100), 2, "0");
+      end;
+   End;
+
+   /**
+      Возвращает временную зону в GMT ("GMT+03:00");
+   */
+   Macro getGMTTimeZone() : String
+      return "GMT" + getISOTimeZone();
    End;
 
    /**
@@ -485,14 +495,10 @@ Class TU_DateTime(_dt, _tm, _tz)
          DateSplit(td, day, month, year);
          TimeSplit(tt, hour, minute, sec, msec);
          msec = msec * 10;
-      else
-         setDate(date);
       end;
       if (ValType(tm) == V_TIME)
          TimeSplit(tm, hour, minute, sec, msec);
          msec = msec * 10;
-      else
-         setTime(time);
       end;
       if (ValType(tz) == V_INTEGER)
          timezone = tz;
@@ -520,6 +526,8 @@ Private Class Part()
    var minVal  = 0;
    var maxVal  = 0;
    var maxSize = 1;
+   var applyOrder = 0;
+   var parsedValue = null;
 
    Macro getValidVal(str)
       if (TU_StrIsNumber(str) == false)
@@ -552,6 +560,7 @@ Private Class Part()
       end;
    End;
 
+   // Читает шаблон
    Macro readFormat(str, fromInd) : Integer
       for (var i, fromInd, StrLen(str), 1)
          var s = SubStr(str, i, 1);
@@ -564,14 +573,22 @@ Private Class Part()
       return i+1;
    End;
 
+   // Пытается получить значение
    Macro tryParse(dt, str, fromInd, frm)
       return fromInd + StrLen(pattern);
    End;
 
+   // Применяет эффект и возвращает результирующую дату
+   Macro apply(dt, frm) : TU_DateTime
+      return dt;
+   End;
+
+   // Возращает строковый результат
    Macro getString(dt) : String
       return pattern;
    End;
 
+   // Проверяет на валидность шаблон и корректирует его, если возможно.
    Macro isValid() : Bool
       return true;
    End;
@@ -659,16 +676,20 @@ Private Class (DatePart) YearPart()
          else
             res = 1900 + res;
          end;
-         dt.year = res;
+         parsedValue = res;
          return fromInd + 2;
       else
          res = Substr(str, fromInd, StrLen(pattern));
          res = Int(res);
-         dt.year = res;
+         parsedValue = res;
          return fromInd + StrLen(pattern);
       end;
-
       return 0;
+   End;
+
+   Macro apply(dt, frm)
+      dt.year = parsedValue;
+      return dt;
    End;
 
    Macro isValid()
@@ -700,14 +721,14 @@ Private Class (DatePart) MonthPart()
          var s1 = SubStr(str, fromInd, 1);
          var s2 = SubStr(str, fromInd+1, 1);
          if (TU_StrIsNumber(s2))
-            dt.month = Int(s1+s2);
+            parsedValue = Int(s1+s2);
             return fromInd + 2;
          else
-            dt.month = Int(s1);
+            parsedValue = Int(s1);
             return fromInd + 1;
          end;
       elif (pattern == "MM")
-         dt.month = Int(SubStr(str, fromInd, 2));
+         parsedValue = Int(SubStr(str, fromInd, 2));
          return fromInd + 2;
       elif (pattern == "MMM")
          for (i, fromInd, StrLen(str))
@@ -718,7 +739,7 @@ Private Class (DatePart) MonthPart()
             end;
             ind = frm.locale.monthesShortR.indexOf(p, @CF_StrEqualsIgnoreCase);
             if (ind >= 0)
-               dt.month = ind + 1;
+               parsedValue = ind + 1;
                return i+1;
             end;
          end;
@@ -731,12 +752,17 @@ Private Class (DatePart) MonthPart()
             end;
             ind = frm.locale.monthesR.indexOf(p, @CF_StrEqualsIgnoreCase);
             if (ind >= 0)
-               dt.month = ind + 1;
+               parsedValue = ind + 1;
                return i+1;
             end;
          end;
       end;
       return 0;
+   End;
+
+   Macro apply(dt, frm)
+      dt.month = parsedValue;
+      return dt;
    End;
 
    Macro isValid()
@@ -769,14 +795,14 @@ Private Class (DatePart) MonthPartCI()
          var s1 = SubStr(str, fromInd, 1);
          var s2 = SubStr(str, fromInd+1, 1);
          if (TU_StrIsNumber(s2))
-            dt.month = Int(s1+s2);
+            parsedValue = Int(s1+s2);
             return fromInd + 2;
          else
-            dt.month = Int(s1);
+            parsedValue = Int(s1);
             return fromInd + 1;
          end;
       elif (pattern == "LL")
-         dt.month = Int(SubStr(str, fromInd, 2));
+         parsedValue = Int(SubStr(str, fromInd, 2));
          return fromInd + 2;
       elif (pattern == "LLL")
          for (i, fromInd, StrLen(str))
@@ -787,7 +813,7 @@ Private Class (DatePart) MonthPartCI()
             end;
             ind = frm.locale.monthesShortI.indexOf(p, @CF_StrEqualsIgnoreCase);
             if (ind >= 0)
-               dt.month = ind + 1;
+               parsedValue = ind + 1;
                return i+1;
             end;
          end;
@@ -800,12 +826,17 @@ Private Class (DatePart) MonthPartCI()
             end;
             ind = frm.locale.monthesI.indexOf(p, @CF_StrEqualsIgnoreCase);
             if (ind >= 0)
-               dt.month = ind + 1;
+               parsedValue = ind + 1;
                return i+1;
             end;
          end;
       end;
       return 0;
+   End;
+
+   Macro apply(dt, frm)
+      dt.month = parsedValue;
+      return dt;
    End;
 
    Macro isValid()
@@ -866,6 +897,46 @@ Private Class (DatePart) WeekDayPart()
    End;
 End;
 
+Private Class (DatePart) DayInWeekPart()
+   sign       = "u";
+   pattern    = "";
+   maxSize    = 2;
+   minVal     = 1;
+   maxVal     = 7;
+   applyOrder = 15;
+
+   Macro getString(dt, frm)
+      return TimeUtils.getWeekDayNum(dt.getDate, frm.locale);
+   End;
+
+   Macro tryParse(dt, str, fromInd : Integer, frm)
+      var res;
+      return parseFloatVal(parsedValue, str, fromInd);
+   End;
+
+   Macro apply(dt, frm)
+      for (var p, frm.parts)
+         if (IsEqClass("WeekInYearPart", p))
+            var w = p.parsedValue;
+            var y = dt.year;
+            if ((ValType(w) == V_INTEGER))
+               var fd = TimeUtils.getStartYear(Date(1,1,y));
+               var fdn = TimeUtils.getWeekDayNum(fd, frm.locale);
+               var ofs = parsedValue - fdn;
+               var ws = fd + (w-1)*7;
+               var resD = ws + ofs;
+               dt.SetDate(resD);
+            end;
+         end;
+      end;
+      return dt;
+   End;
+
+   Macro isValid()
+      return true;
+   End;
+End;
+
 Private Class (DatePart) DayPart()
    sign = "d";
    pattern = "";
@@ -878,7 +949,12 @@ Private Class (DatePart) DayPart()
    end;
 
    Macro tryParse(dt, str, fromInd : Integer)
-      return parseFloatVal(dt.day, str, fromInd);
+      return parseFloatVal(parsedValue, str, fromInd);
+   End;
+
+   Macro apply(dt, frm)
+      dt.day = parsedValue;
+      return dt;
    End;
 End;
 
@@ -888,20 +964,22 @@ Private Class (DatePart) DayInYearPart()
    minVal = 1;
    maxVal = 366;
    maxSize = 3;
+   applyOrder = 13;
 
    Macro getString(dt)
       return SU.padStart((dt.getDate() - Date(1, 1, dt.year) + 1), StrLen(pattern), "0");
    End;
 
    Macro tryParse(dt, str, fromInd : Integer)
-      var v;
-      var r = parseFloatVal(v, str, fromInd);
-      if (r > 0)
-         if (dt.year > 0)
-            dt.setDate(Date(1, 1, dt.year) + v - 1);
-         end;
+      return parseFloatVal(parsedValue, str, fromInd);
+
+   End;
+
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         dt.setDate(Date(1, 1, dt.year) + parsedValue - 1);
       end;
-      return r;
+      return dt;
    End;
 End;
 
@@ -947,13 +1025,14 @@ Private Class (DatePart) WeekInYearPart()
    minVal = 1;
    maxVal = 53;
    maxSize = 2;
+   applyOrder = 14;
 
    Macro getString(dt, frm)
       return SU.padStart(TimeUtils.getNumWeekInYear(dt.getDate, frm.locale), StrLen(pattern), "0");
    end;
 
-   Macro tryParse(dt, str, fromInd : Integer, frm)
-      return parseFloatVal(null, str, fromInd);
+   Macro tryParse(dt, str, fromInd : Integer)
+      return parseFloatVal(parsedValue, str, fromInd);
    End;
 
    Macro isValid()
@@ -972,23 +1051,67 @@ Private Class (TimePart) HourPart()
    maxSize = 2;
 
    Macro getString(dt, frm)
-      if (frm.time12)
-         var h = dt.hour;
-         if (h > 12)
-            h = h - 12;
-         elif (h == 0)
-            h = 12;
-         end;
-         return SU.padStart(h, StrLen(pattern), "0");
-      else
-         return SU.padStart(dt.hour, StrLen(pattern), "0");
-      end;
+      return SU.padStart(dt.hour, StrLen(pattern), "0");
    end;
 
    Macro tryParse(dt, str, fromInd : Integer, frm)
-      return parseFloatVal(dt.hour, str, fromInd);
+      return parseFloatVal(parsedValue, str, fromInd);
    End;
 
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         dt.hour = parsedValue;
+      end;
+      return dt;
+   End;
+End;
+
+Private Class (TimePart) Hour12Part()
+   sign       = "h";
+   pattern    = "";
+   minVal     = 1;
+   maxVal     = 12;
+   maxSize    = 2;
+   applyOrder = 21;     // after ampm
+
+   Macro getString(dt, frm)
+      var h = dt.hour;
+      h = mod(h, 12);
+      if (h == 0)
+         h = 12;
+      end;
+      return SU.padStart(h, StrLen(pattern), "0");
+   end;
+
+   Macro tryParse(dt, str, fromInd : Integer, frm)
+      return parseFloatVal(parsedValue, str, fromInd);
+   End;
+
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         var offs = 0;
+         var ampm;
+         for (var p, frm.parts)
+            if (IsEqClass("AMPMPart", p))
+               ampm = p.parsedValue;
+            end;
+         end;
+         if (ValType(ampm) == V_UNDEF)
+            dt.hour = parsedValue;
+         elif (ampm)
+            if (parsedValue < 12)
+               dt.hour = parsedValue + 12;
+            else
+               dt.hour = parsedValue;
+            end;
+         else
+            if (parsedValue == 12)
+               dt.hour = 0;
+            end;
+         end;
+      end;
+      return dt;
+   End;
 End;
 
 Private Class (TimePart) MinutePart()
@@ -1003,7 +1126,14 @@ Private Class (TimePart) MinutePart()
    end;
 
    Macro tryParse(dt, str, fromInd : Integer)
-      return parseFloatVal(dt.minute, str, fromInd);
+      return parseFloatVal(parsedValue, str, fromInd);
+   End;
+
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         dt.minute = parsedValue;
+      end;
+      return dt;
    End;
 
 End;
@@ -1020,7 +1150,14 @@ Private Class (TimePart) SecondPart()
    end;
 
    Macro tryParse(dt, str, fromInd : Integer)
-      return parseFloatVal(dt.sec, str, fromInd);
+      return parseFloatVal(parsedValue, str, fromInd);
+   End;
+
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         dt.sec = parsedValue;
+      end;
+      return dt;
    End;
 End;
 
@@ -1036,7 +1173,14 @@ Private Class (TimePart) MilliSecondPart()
    end;
 
    Macro tryParse(dt, str, fromInd : Integer)
-      return parseFloatVal(dt.msec, str, fromInd);
+      return parseFloatVal(parsedValue, str, fromInd);
+   End;
+
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         dt.msec = parsedValue;
+      end;
+      return dt;
    End;
 End;
 
@@ -1046,6 +1190,7 @@ Private Class (DatePart) AMPMPart()
    minVal = 0;
    maxVal = 0;
    maxSize = 2;
+   applyOrder = 20;
 
    Macro getString(dt, frm)
       if (dt.hour >= 12)
@@ -1062,13 +1207,17 @@ Private Class (DatePart) AMPMPart()
       var v2 = SubStr(str, fromInd, StrLen(frm.locale.PM));
 
       if (StrLwr(v1) == StrLwr(frm.locale.AM))
-         dt.ampm = false;
+         parsedValue = false;
          return fromInd +  StrLen(frm.locale.AM);
       elif (StrLwr(v2) == StrLwr(frm.locale.PM))
-         dt.ampm = true;
+         parsedValue = true;
          return fromInd +  StrLen(frm.locale.PM);
       end;
       return 0;
+   End;
+
+   Macro apply(dt, frm)
+      return dt;
    End;
 
    Macro isValid()
@@ -1078,14 +1227,14 @@ Private Class (DatePart) AMPMPart()
 End;
 
 
-Private Class (TimePart) TimeZonePart()
+Private Class (TimePart) TimeZoneRFCPart()
    sign = "Z";
    pattern = "";
 
    Macro getString(dt, frm)
       var TZ = frm.timezone;
       if (ValType(TZ) == V_UNDEF)
-         return dt.getTZString();
+         return dt.getRFCTimeZone();
       end;
       var s = "+";
       if (TZ < 0)
@@ -1106,7 +1255,7 @@ Private Class (TimePart) TimeZonePart()
       else
          p = SubStr(str, fromInd, 4);
       end;
-      dt.timezone = Int(s + p);
+      parsedValue = Int(s + p);
       if (TU_StrIsNumber(s))
          return fromInd + 5;
       else
@@ -1116,8 +1265,58 @@ Private Class (TimePart) TimeZonePart()
          return 0;
    End;
 
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         dt.timezone = parsedValue;
+      end;
+      return dt;
+   End;
+
    Macro isValid()
-      return (pattern == "Z");
+      pattern = "Z";
+      return true;
+   End;
+End;
+
+Private Class (TimePart) TimeZoneGMTPart()
+   sign = "z";
+   pattern = "";
+
+   Macro getString(dt, frm)
+      return dt.getGMTTimeZone();
+   end;
+
+   Macro tryParse(dt, str, fromInd : Integer, frm)
+      var z = "";
+      var s = SubStr(str, fromInd, 1);
+      var p;
+      if (s == "-")
+         p = SubStr(str, fromInd + 1, 4);
+      elif (s == "+")
+         p = SubStr(str, fromInd + 1, 4);
+      else
+         p = SubStr(str, fromInd, 4);
+      end;
+      parsedValue = Int(s + p);
+      if (TU_StrIsNumber(s))
+         return fromInd + 5;
+      else
+         return fromInd + 6;
+      end;
+      OnError
+         return 0;
+   End;
+
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         dt.timezone = parsedValue;
+      end;
+      return dt;
+   End;
+
+   Macro isValid()
+      pattern = "z";
+      return true;
    End;
 End;
 
@@ -1126,19 +1325,12 @@ Private Class (TimePart) TimeZoneISOPart()
    pattern = "";
 
    Macro getString(dt, frm)
-      var TZ = frm.timezone;
-      if (ValType(TZ) == V_UNDEF)
-         TZ = dt.timezone;
-      end;
-      var s = "+";
-      if (TZ < 0)
-         s = "-";
-         TZ = -TZ;
-      end;
       if (pattern == "X")
-         return s + SU.padStart(Int(TZ/100), 2, "0");
+         return SubStr(dt.getRFCTimeZone(), 1, 3);
+      elif (pattern == "XX")
+         return dt.getRFCTimeZone();
       elif (pattern == "XXX")
-         return s + SU.padStart(Int(TZ/100), 2, "0") + ":" + SU.padStart(mod(TZ, 100), 2, "0");
+         return dt.getISOTimeZone();
       end;
       return 0;
    end;
@@ -1146,31 +1338,38 @@ Private Class (TimePart) TimeZoneISOPart()
    Macro tryParse(dt, str, fromInd : Integer, frm)
       var z = "";
       var s = SubStr(str, fromInd, 1);
-      var p;
+      if ((s != "+") and (s != "-"))
+         return 0;
+      end;
+
+      var p, c;
       if (pattern == "X")
-         if ((s == "-") or (s == "+"))
-            p = SubStr(str, fromInd + 1, 2);
-         else
-            return 0;
-         end;
-         dt.timezone = Int(s + SubStr(p, 1, 2) + "00");
+         p = SubStr(str, fromInd + 1, 2);
+         parsedValue = Int(s + SU.padEnd(p, 4, "0"));
          return fromInd + 3;
+      elif (pattern == "XX")
+         p = SubStr(str, fromInd + 1, 4);
+         parsedValue = Int(p);
+         return fromInd + 5;
       elif (pattern == "XXX")
-         if ((s == "-") or (s == "+"))
-            p = SubStr(str, fromInd + 1, 5);
-         else
-            return 0;
-         end;
-         dt.timezone = Int(s + SubStr(p, 1, 2) + SubStr(p, 4, 2));
+         p = SubStr(str, fromInd + 1, 5);
+         parsedValue = Int(s + SubStr(p, 1, 2) + SubStr(p, 4, 2));
          return fromInd + 6;
       end;
-      return 0;
       OnError
          return 0;
    End;
 
+   Macro apply(dt, frm)
+      if (ValType(parsedValue) != V_UNDEF)
+         dt.timezone = parsedValue;
+      end;
+      return dt;
+   End;
+
    Macro isValid()
-      return ((pattern == "X") or (pattern == "XXX"));
+      if (StrLen(pattern) > 3) pattern = "XXX"; end;
+      return true;
    End;
 End;
 
@@ -1189,6 +1388,8 @@ Private Macro getPart(s)
       prt = DayInYearPart();
    elif (s == "H")
       prt = HourPart();
+   elif (s == "h")
+      prt = Hour12Part();
    elif (s == "a")
       prt = AMPMPart();
    elif (s == "m")
@@ -1199,12 +1400,16 @@ Private Macro getPart(s)
       prt = MilliSecondPart();
    elif (s == "E")
       prt = WeekDayPart();
+   elif (s == "u")
+      prt = DayInWeekPart();
    elif (s == "w")
       prt = WeekInYearPart();
    elif (s == "G")
       prt = EraPart();
+   elif (s == "z")
+      prt = TimeZoneGMTPart();
    elif (s == "Z")
-      prt = TimeZonePart();
+      prt = TimeZoneRFCPart();
    elif (s == "X")
       prt = TimeZoneISOPart();
    elif (s == "'")
@@ -1219,21 +1424,38 @@ Class (Exception) ParseDateException(detailMessage : String)
    initException(detailMessage);
 End;
 
+Private Macro PartsCompare(p1, p2)
+   var o1 = p1.applyOrder;
+   var o2 = p2.applyOrder;
+   if (ValType(o1) == V_UNDEF)
+      o1 = 0;
+   end;
+   if (ValType(o2) == V_UNDEF)
+      o2 = 0;
+   end;
+   return CF_ComparePrimitive(o1, o2);
+End;
+
 /**
    Класс временного формата. В конструктор предается один параметр: маска формата '_pattern'.
 */
 Class TU_DateFormat(_pattern, _locale)
-   var pattern = _pattern;
-   var locale = _locale;
-   var timezone  = null;
-   var time12 = false;
-   var parts : TArray = TArray();
-
+   var pattern          = _pattern;
+   var locale           = _locale;
+   var timezone         = null;
+   var parts            = SArray();
+   var applyQueue       = null;
+   var passError        = false;
    /**
       Устанавливает временную зону 'tz' (например 1000 для Владивостока).
    */
    Macro setTimeZone(tz : Integer)
       timezone = tz;
+      return this;
+   End;
+
+   Macro setPassError(pass : Bool)
+      passError = pass;
       return this;
    End;
 
@@ -1243,51 +1465,56 @@ Class TU_DateFormat(_pattern, _locale)
       end;
    End;
 
-   /**
+   /*
       Возвращает строковое представления согласно маске дате/времени типа [TU_DateTime] 'dt'.
    */
-   Macro dateTimeToString(dt) : String
+   Private Macro dateTimeToString(dt) : String
+      var resDt = dt;
+      if (ValType(timezone) != V_UNDEF)
+         resDt = dt.inTimeZone(timezone);
+      end;
       var res = "";
-      var p;
-      for(p, parts)
+      for(var p, parts)
          res = res + p.getString(dt, this);
       end;
       return res;
    End;
 
-   /**
+   /*
       Принимает параметр типа [Date] 'dt' и возвращает строковое представление согласно маске.
    */
-   Macro dateToString(dt : Date) : String
+   Private Macro dateToString(dt : Date) : String
       return dateTimeToString(TU_DateTime(dt));
    End;
 
-   /**
+   /*
       Принимает параметр типа [Time] 'tm' и возвращает строковое представление согласно маске.
    */
-   Macro timeToString(tm : Time) : String
+   Private Macro timeToString(tm : Time) : String
       return dateTimeToString(TU_DateTime(null, tm));
    End;
 
-   Macro recalcTime()
-
-   End;
-   /**
+   /*
       Возвращает объект типа [TU_DateTime] преобразованного из строки 'str' согласно маске.
    */
-   Macro stringToDateTime(str : String)
+   Private Macro stringToDateTime(str : String)
       var dt = TU_DateTime();
       var i = 1;
       for(var p, parts)
          i = p.tryParse(dt, str, i, this);
          if (i <= 0) // Ошибка
-            return Throw(ParseDateException("Не возможно распарсить дату: " + str));
+            if (not(passError))
+               return Throw(ParseDateException("Не возможно распарсить дату: " + str));
+            else
+               dt.setDate(Date()).setTime(time());
+               return dt;
+            end;
          end;
       end;
-      if (time12) // Если был флаг шаблон а
-         dt.checkAMPM();
+      for (p, applyQueue)
+         dt = p.apply(dt, this);
       end;
-      if (ValType(timezone) == V_INTEGER)
+      if (ValType(timezone) != V_UNDEF)
          dt = dt.inTimeZone(timezone);
       end;
       return dt;
@@ -1296,11 +1523,11 @@ Class TU_DateFormat(_pattern, _locale)
          RunError("Ошибка преобразования строки в дату : " + str + " -> ???");
    End;
 
-   Macro stringToDate(str : String)
+   Private Macro stringToDate(str : String)
      return stringToDateTime(str).getDate();
    End;
 
-   Macro stringToTime(str : String)
+   Private Macro stringToTime(str : String)
       return stringToDateTime(str).getTime();
    End;
 
@@ -1350,20 +1577,17 @@ Class TU_DateFormat(_pattern, _locale)
          else
             i = i + 1;
          end;
-         if (IsEqClass("AMPMPart", prt))
-            time12 = true;
-         end;
       end;
       if (ValType(locale) == V_UNDEF)
          locale = DefaultLocale;
       end;
-
       for (prt, parts)
          if (Not(prt.isValid()))
             return Throw(IllegalArgumentException("Не верный паттерн: " + pattern + " на участке " + prt.pattern));
          end;
       end;
 
+      applyQueue = parts.slice().sort(@PartsCompare);
    End;
 
 
