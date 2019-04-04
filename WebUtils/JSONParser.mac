@@ -1,18 +1,36 @@
 import rcw;
-import "..\\mac\\extra\\Fields.mac";
-import "..\\mac\\extra\\utils\\TimeUtils.mac";
-import "..\\mac\\extra\\utils\\Sarray.mac";
-import "..\\mac\\extra\\utils\\StringUtils.mac";
+import "..\\mac\\extra\\WebUtils\\Fields.mac";
+import "..\\mac\\extra\\Utils\\TimeUtils.mac";
+import "..\\mac\\extra\\Utils\\Sarray.mac";
+import "..\\mac\\extra\\Utils\\StringUtils.mac";
+import "..\\mac\\extra\\Collections\\ArrayMap.mac";
 import "..\\mac\\extra\\OOP\\Exceptions.mac";
 
-private var loadedModules : TArray = TArray();
 private var SU = StringUtils;
+private var parsedClassMap = ArrayMap();
+
+Private Macro getObjectCustomMap(className : String)
+   var lwr = StrLwr(className);
+   var customMap = parsedClassMap.get(lwr);
+   if (ValType(customMap) == V_UNDEF)
+      customMap = ArrayMap();
+      var obj = GenObject(className);
+      for (var i, 0, GenNumProps(obj) - 1, 1)
+         if (IsEqClass("CustomField", obj[i]))
+            var cp = obj[i];
+            customMap.put(cp.fieldName, i);
+         end;
+      end;
+      parsedClassMap.put(lwr, customMap);
+   end;
+   return customMap;
+End;
 
 Private Macro UnusedFieldsToNull(obj)
    var pc = GenNumProps(obj);
    var i;
-   for(i, 0, pc - 1, 1)
-      if((ValType(obj[i]) != V_UNDEF) and (IsEqClass("FieldClass", obj[i])))
+   for (i, 0, pc - 1, 1)
+      if ((ValType(obj[i]) != V_UNDEF) and (IsEqClass("FieldClass", obj[i])))
          obj[i] = null;
       end;
    end;
@@ -23,10 +41,10 @@ private Macro isSystemName(_name) : Bool
    return (mn != "");
 End;
 
-Private Macro getStrOpenClose(str, op, cl)
+Private Macro getStrOpenClose(str, from, op, cl)
    var res = "";
    var c = 0;
-   for(var i, 1, StrLen(str))
+   for (var i, from, StrLen(str))
       var s = SubStr(str, i, 1);
       if (s == op)
          c = c + 1;
@@ -34,34 +52,12 @@ Private Macro getStrOpenClose(str, op, cl)
       if (s == cl)
          c = c - 1;
       end;
-
+      res = res + s;
       if (c == 0)
          break;
       end;
-      res = res + s;
    end;
-   res = SubStr(res, 2, StrLen(res) - 1);
-   return res;
-End;
-
-Private Macro getStrOpenClose2(str, from, op, cl)
-   var res = "";
-   var c = 0;
-   for(var i, from, StrLen(str))
-      var s = SubStr(str, i, 1);
-      if (s == op)
-         c = c + 1;
-      end;
-      if (s == cl)
-         c = c - 1;
-      end;
-
-      if (c == 0)
-         break;
-      end;
-      res = res + s;
-   end;
-   res = SubStr(res, 2, StrLen(res) - 1);
+   // res = SubStr(res, 2, StrLen(res) - 1);
    return res;
 End;
 
@@ -87,6 +83,7 @@ Private Macro getPrimItems(str) : SArray
       if ((open == false) and (s == ","))
          result.push(part);
          part = "";
+      elif (s == " ")
       else
          part = part + s;
       end;
@@ -100,11 +97,9 @@ End;
 Private Macro getProps(str) : SArray
    var result = SArray();
    var isOpen = false;
-   var s;
    var i = 1;
-   var part = "";
-   var block;
-   while(i <= StrLen(str))
+   var s, block, part = "";
+   while (i <= StrLen(str))
       s = SubStr(str, i, 1);
       if (s == "\"")
          isOpen = not(isOpen);
@@ -115,11 +110,11 @@ Private Macro getProps(str) : SArray
             part = "";
             i = i + 1;
          elif (s == "{")
-            block = "{" + getStrOpenClose2(str, i, "{", "}") + "}";
+            block = getStrOpenClose(str, i, "{", "}");
             part = part + block;
             i = i + StrLen(block);
          elif (s == "[")
-            block = "[" + getStrOpenClose2(str, i, "[", "]") + "]";
+            block = getStrOpenClose(str, i, "[", "]");
             part = part + block;
             i = i + StrLen(block);
          else
@@ -137,46 +132,151 @@ Private Macro getProps(str) : SArray
    return result;
 End;
 
-Private Macro parseArray(str, type)
+Private Macro GetNextProp(str, ind, prop : String) : Bool
+   var result = "";
+   var block;
+   var isOpen = false;
+   while (ind <= StrLen(str))
+      var s = SubStr(str, ind, 1);
+      if (s == "\"")
+         isOpen = not(isOpen);
+      end;
+      if ((isOpen == false))
+         if (s == ",")
+            ind = ind+1;
+            SetParm(1, ind);
+            SetParm(2, result);
+            return true;
+         elif (s == "{")
+            block = "{" + getStrOpenClose(str, ind, "{", "}") + "}";
+            result  = result + block;
+            ind = ind + StrLen(block);
+         elif (s == "[")
+            block = "[" + getStrOpenClose(str, ind, "[", "]") + "]";
+            result = result + block;
+            ind = ind + StrLen(block);
+         else
+            result = result + s;
+            ind = ind + 1;
+         end;
+      else
+         result = result + s;
+         ind = ind + 1
+      end;
+   end;
+   if (result != "")
+      SetParm(1, ind);
+      SetParm(2, result);
+      return true;
+   end;
+   return false;
+End;
+
+Private macro choosePrimType(type) : FieldClass
+   if (type == V_INTEGER)
+      return IntegerField;
+   elif (type == V_STRING)
+      return StringField;
+   elif (type == V_BOOL)
+      return BoolField;
+   elif (type == V_MONEY)
+      return MoneyField;
+   elif (type == V_DOUBLE)
+      return DoubleField;
+   end;
+End;
+
+Private Macro ParseFromJSON(jsonString : String, pojoClassNameOrField : Variant)
+   var obj;
+   if (SubStr(jsonString, 1, 1) == "{")
+      jsonString = SubStr(jsonString, 2, StrLen(jsonString) - 2);
+      obj = ExecMacro2("parseObject", jsonString, pojoClassNameOrField);
+   elif (SubStr(jsonString, 1, 1) == "[")
+      if (ValType(pojoClassNameOrField) == V_STRING)
+         pojoClassNameOrField = ObjectField(pojoClassNameOrField);
+      elif (ValType(pojoClassNameOrField) == V_UNDEF)
+         pojoClassNameOrField = VariantField;
+      end;
+      obj = ExecMacro2("parseArray", jsonString, pojoClassNameOrField);
+   else
+      Throw(IllegalArgumentException("JSON is not valid"));
+   end;
+   return obj;
+End;
+
+Private Macro parseArray(str, type : FieldClass)
    var result = SArray();
    var tmpstr = str;
    if (SubStr(tmpstr, 1, 1) == "[")
       tmpstr = SubStr(tmpstr, 2, StrLen(tmpstr) - 2);
    end;
-   if (isEqClass("PrimFieldClass", type))
-      var items = getPrimItems(tmpstr);
-      for (var it, items)
-         result.push(type.of(it));
-      end;
-   else
+   if ((SubStr(tmpstr, 1, 1) == "{") and (ValType(type) != V_UNDEF))
       while (true)
-         var strObj = getStrOpenClose2(SubStr(tmpstr, 1), 1,"{", "}");
-         if (strObj == "") break; end;
-         var newObj = ExecMacro2("ParseObject", strObj, type.className);
+         var strObj = getStrOpenClose(tmpstr, 1,"{", "}");
+         var newObj = type.parseValue(strObj, @ParseFromJSON);
          if (ValType(newObj) != V_UNDEF)
             result.push(newObj);
          end;
-         tmpstr = SubStr(tmpstr, StrLen(strObj) + 4);
+         tmpstr = SubStr(tmpstr, StrLen(strObj) + 2);
          if (tmpstr == "") break; end;
+      end;
+   else
+      var items = getPrimItems(tmpstr);
+      for (var it, items)
+         result.push(type.parseValue(it));
       end;
    end;
    return result;
 End;
 
 Private Macro parseProp (field, strVal)
-   if (isEqClass("PrimFieldClass", field))
-      if (SubStr(strVal, 1, 1) == "\"")
-         strVal = SubStr(strVal, 2, StrLen(strVal) - 2);
-      end;
-      return field.of(strVal);
-   elif (isEqClass("ObjectField", field))
-      return ExecMacro2("parseObject", strVal, field.className);
-   elif (isEqClass("ArrayField", field))
-      return ExecMacro2("parseArray", strVal, field.type);
-   else
-      return strVal;
+   if (SubStr(strVal, 1, 1) == "\"")
+      strVal = SubStr(strVal, 2, StrLen(strVal) - 2);
    end;
+   if (isEqClass("FieldClass", field))
+      return field.parseValue(strVal, @ParseFromJSON);
+   end;
+   return strVal;
 End;
+/*
+Private Macro parseObject(str, className) : Object
+   var resultObject = GenObject(className);
+
+   if (SubStr(str, 1, 1) == "{")
+      str = SubStr(str, 2, StrLen(str) - 2);
+   end;
+   var customMap = getObjectCustomMap(className);
+   var hascustom = (customMap.size > 0);
+   var pr, ind = 1;
+   while (GetNextProp(str, ind, pr))
+      var pos = Index(pr, ":");
+      if (pos > 0)
+         var propName = SubStr(pr, 2, pos-3);
+         var value = SubStr(pr, pos + 1);
+         if (ModuleName(propname) == "SYSTEM")
+            propname = "_" + propname;
+         end;
+         var id = genPropID(resultObject, propname);
+         if (id >= 0)
+            var field = resultObject[id];
+            resultObject[id] = parseProp(field, value);
+         else
+            if (hascustom)
+               id = customMap.get(StrLwr(propname));
+               if (ValType(id) == V_INTEGER)
+                  resultObject[id] = parseProp(resultObject[id], value);
+               end;
+            end;
+         end;
+      end;
+   end;
+   UnusedFieldsToNull(resultObject);
+   return resultObject;
+
+   OnError
+      return null;
+End;
+*/
 
 Private Macro parseObject(str, className) : Object
    var resultObject = GenObject(className);
@@ -184,19 +284,28 @@ Private Macro parseObject(str, className) : Object
    if (SubStr(str, 1, 1) == "{")
       str = SubStr(str, 2, StrLen(str) - 2);
    end;
+   var customMap = getObjectCustomMap(className);
+   var hascustom = (customMap.size > 0);
    var props = getProps(str);
    for (var pr, props)
       var pos = Index(pr, ":");
       if (pos > 0)
          var propName = SubStr(pr, 2, pos-3);
          var value = SubStr(pr, pos + 1);
-         if (ModuleName(propname) != "")
+         if (ModuleName(propname) == "SYSTEM")
             propname = "_" + propname;
          end;
          var id = genPropID(resultObject, propname);
          if (id >= 0)
             var field = resultObject[id];
             resultObject[id] = parseProp(field, value);
+         else
+            if (hascustom)
+               id = customMap.get(StrLwr(propname));
+               if (ValType(id) == V_INTEGER)
+                  resultObject[id] = parseProp(resultObject[id], value);
+               end;
+            end;
          end;
       end;
    end;
@@ -207,113 +316,113 @@ Private Macro parseObject(str, className) : Object
       return null;
 End;
 
-private Macro getPropName(propName)
+// TO JSON
+
+
+Private Macro formatJsonKey(propName)
    propName = StrLwr(propname);
    if (SubStr(propname, 1, 1) == "_")
       propname = SubStr(propname, 2);
    end;
-   return propName;
+   return "\"" + propName + "\":";
 end;
 
-Private Macro primToJSONString(propName, modelProp, objProp) : String
-   return "\"" + getPropName(propName) + "\":\"" + modelProp.toStr(objProp) + "\"";
+Private Macro formatJsonValue(val : Variant, type)
+   var vt = ValType(val);
+   if ((IsEqClass("ArrayField", type)) or (IsEqClass("ObjectField", type)))
+      return val;
+   elif (vt == V_STRING)
+      return "\"" + val + "\"";
+   elif ((vt == V_BOOL) or (vt == V_INTEGER) or (vt == V_MONEY) or (vt == V_DOUBLE))
+      return val;
+   else
+      return "\"" + val + "\"";
+   end;
 End;
 
-Private Macro objectToJSONString(propname, obj) : String
-   var result = "";
-   if (ValType(propname) != V_UNDEF)
-      result = "\"" + getPropName(propname) + "\":{";
+Private Macro SomeToJSONString(val : Variant, type) : String
+   if (ValType(val) == V_UNDEF)
+      return "";
+   elif (ValType(val) == V_GENOBJ)
+      if (IsEqClass("TARRAY", val))
+         return ExecMacro2("arrayToJSONString", val, type);
+      else
+         return ExecMacro2("objectToJSONString", val, null);
+      end;
+   elif (IsEqClass("FieldClass", type))
+      return type.formatJSON(val, @SomeToJSONString);
    else
-      result = "{";
+      return formatJsonValue(val);
    end;
+   return "";
+End;
 
-   var clName = GenClassName(obj);
-   var model = GenObject(clName);
+Private Macro objectToJSONString(obj, type) : String
+   var result = "{";
+   var model  = GenObject(GenClassName(obj));
    var propnames = getObjProps(model);
    var isFirst = true;
-   for (var i, 0, genNumProps(model)-1, 1)
-      var pr = model[i];
-      var objPr = obj[i];
-      if (isEqClass("FieldClass", pr) and (ValType(objPr) != V_UNDEF))
+   for (var i, 0, genNumProps(model) - 1, 1)
+      var modelPr = model[i];
+      var propVal = obj[i];
+      if (isEqClass("FieldClass", modelPr) and (ValType(propVal) != V_UNDEF))
          if (not(isFirst))
             result = result + ",";
          end;
-         var part;
-         if (isEqClass("ObjectField", pr))
-            part = objectToJSONString(propnames[i], objPr);
-         elif (isEqClass("ArrayField", pr))
-            part = ExecMacro2("arrayToJSONString", objPr, pr.type);
-            part = "\"" + getPropName(propnames[i]) + "\":" + part;
-         else
-            part = primToJSONString(propnames[i], model[i] , objPr);
+         var fieldName = propnames[i];
+         if (isEqClass("CustomField", modelPr))
+            fieldName = modelPr.fieldName;
          end;
-         if (part != "")
-            result = result + part;
-         end;
+         var keystr    = formatJsonKey(fieldName);
+         var valuestr  = modelPr.formatJSON(propVal, @SomeToJSONString);
+
+         result = result + keystr + valuestr;
          isFirst = false;
       end;
    end;
-
    result = result + "}";
    return result;
 End;
 
-Private Macro arrayToJSONString(arr, type)
-   if ((ValType(arr) == V_UNDEF) or (arr.size == 0))
-      return "[]";
-   end;
-
+Private Macro arrayToJSONString(arr, itemstype)
    var result = "[";
    var isFirst = true;
    var part;
-   if (IsEqClass("PrimFieldClass", type))
-      for (var p, arr)
-         if (isFirst == false)
-            result = result + ",";
-         end;
-         result = result + "\"" + type.of(p) + "\"";
-         isFirst = false;
-      end;
-   else
-      for (var o, arr)
-         if (isFirst == false)
-            result = result + ",";
-         end;
-         if (ValType(o) == V_GENOBJ)
-            part = objectToJSONString(null, o);
-         else
-            part =  "\"" + String(o) +  "\"";
-         end;
-         if (part != "")
-            result = result + part;
-         end;
-         isFirst = false;
-      end;
 
+   for (var p, arr)
+      if (isFirst == false)
+         result = result + ",";
+      end;
+      result = result + itemstype.formatJSON(p, @SomeToJSONString);
+      isFirst = false;
    end;
    result = result + "]";
    return result;
 End;
 
-Macro prettifyJSON(sourcestr : String, tab : Integer) : String
-   if (ValType(tab) != V_INTEGER)
-      tab = 4;
+
+/**
+   Возвращает форматированную JSON строку с отступами в 'indent' пробелов (по умолчанию 4).
+*/
+Macro PrettifyJSON(sourcestr : String, indent : Integer) : String
+   if (ValType(indent) != V_INTEGER)
+      indent = 4;
    end;
    var result = "";
    var s;
    var curTab = 0;
    var curTabStr = "";
    var open = false;
-   for (var i, 1, strLen(sourcestr), 1)
+   for (var i, 1, StrLen(sourcestr), 1)
       s = SubStr(sourcestr, i, 1);
       if (open == false)
          if ((s == "{") or (s == "["))
             result = result + s + "\n";
-            curTab = curTab + tab;
+            curTab = curTab + indent;
             curTabStr = SU.repeat(" ", curTab);
             result = result + curTabStr;
          elif ((s == "}") or (s == "]"))
-            curTab = curTab - tab;
+            curTab = curTab - indent;
             curTabStr = SU.repeat(" ", curTab);
             result = result + "\n" + curTabStr + s;
          elif (s == ":")
@@ -336,7 +445,10 @@ Macro prettifyJSON(sourcestr : String, tab : Integer) : String
    return result;
 End;
 
-Macro minifyJSON(sourcestr) : String
+/**
+   Возвращает минифицированную JSON строку из строки 'sourcestr'
+*/
+Macro MinifyJSON(sourcestr) : String
    var result = "";
    var s;
    var open = false;
@@ -356,26 +468,27 @@ Macro minifyJSON(sourcestr) : String
    return result;
 End;
 
+
+/**
+   Класс парсер JSON. Для использования необходимо создать объект этого класса.
+*/
 Class JSONParser()
 
-   Macro parse(jsonString : String, pojoClassName : String)
-      var obj;
-      if (SubStr(jsonString, 1, 1) == "{")
-         jsonString = SubStr(jsonString, 2, strLen(jsonString) - 2);
-         obj = parseObject(jsonString, pojoClassName);
-      elif (SubStr(jsonString, 1, 1) == "[")
-         obj = parseArray(jsonString, ObjectField(pojoClassName));
-      else
-         Throw(IllegalArgumentException("JSON is not valid"));
-      end;
-      return obj;
+   /**
+      Преобразует валидную строку JSON 'jsonString' в объект класса 'pojoClassName', или массив объектов.
+   */
+   Macro parse(jsonString : String, pojoClassName : Variant)
+      return ParseFromJSON(jsonString, pojoClassName);
    End;
 
-   Macro toJSON(sourceObj : Object) : String
-      if (IsEqClass("TARRAY", sourceObj))
-         return (arrayToJSONString(sourceObj));
+   /**
+      Возвращает валидную JSON строку из объекта или массива 'sourceObj'.
+   */
+   Macro toJSON(sourceObj : Object, typeObject) : String
+      if (ValType(typeObject) == V_UNDEF)
+         typeObject = VariantField;
       end;
-      return objectToJSONString(null, sourceObj);
+      return SomeToJSONString(sourceObj, typeObject);
    End;
 End;
 
@@ -404,7 +517,7 @@ Class Person()
    var created = DateField();
 
 End;
-
+/*
 var fl  = TStreamDoc("../mac/old/extra_/jsont.txt", "R", "utf8");
 var fl2 = TStreamDoc("../mac/old/extra_/jsonarr.json", "R", "utf8");
 var fl3 = TStreamDoc("../mac/old/extra_/people.json", "R", "utf8");
@@ -416,8 +529,9 @@ var str;
 fl.readLine(str);
 
 var par = JSONParser();
-var obj = par.parse(str, "Planet");
 
+var obj = par.parse(str, "Planet");
+debugbreak;
 var res = par.toJSON(obj);
 var pret = prettifyJSON(res);
 
@@ -427,7 +541,9 @@ var obj2 = par.parse(minj, "Planet");
 fl2.readLine(str);
 debugbreak;
 var arr = par.parse(str, "som");
+exit();
 var p = GetPropOrNull(arr, "[0].date");
 var inverse = par.toJSON(SArray(1, 2, true, "http:/google.com"));
 
 println(prettifyJSON(inverse));
+*/

@@ -1,0 +1,76 @@
+import "..\\mac\\extra\\RUnit\\RUnit.Mac";
+import "..\\mac\\extra\\WebUtils\\JSONParser.Mac";
+import "..\\mac\\extra\\OOP\\OOP.Mac";
+
+private var formatter = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.S");
+
+private macro fetchShipInfo(url)
+    return Tuple2(url);
+End;
+
+Class TestPOJOPerson()
+   var name = StringField();
+   var height  = IntegerField();
+   var created = DateTimeField(formatter);
+   var isMale  = CustomField("gender", "g -> StrLwr(g) == 'male'", "im -> if(im) return 'male' end; 'female'");
+   var _date   = DateField(formatter);
+   var species = ArrayField(V_STRING);
+   var starships = ArrayField(CustomField("starships", @fetchShipInfo, "tp -> tp._1"));
+   var friends = ArrayField("TestPOJOPerson");
+   var url     = StringField();
+End;
+
+Class TestPOJOShip()
+    var name  = StringField();
+    var url   = StringField();
+End;
+
+Class (TestCase) TestJsonParser()
+    var parser = JSONParser();
+
+    Macro test_parse()
+
+        var onePerson = "{\"name\":\"Luke Skywalker\",\"height\":\"172\",\"gender\":\"male\",\"species\":[\"https://swapi.co/api/species/1/\"],\"starships\":[\"https://swapi.co/api/starships/12/\",\"https://swapi.co/api/starships/22/\"],\"created\":\"2014-12-09T13:50:51.644000Z\",\"url\":\"https://swapi.co/api/people/1/\"}";
+
+        var obj = parser.parse(onePerson, "TestPOJOPerson");
+
+        assertEquals("Luke Skywalker", obj.name);
+        assertEquals(172, obj.height);
+        assertEquals(date(9, 12, 2014), obj.created.getDate);
+        assertEquals(1, obj.species.size);
+        assertTrue(obj.isMale);
+         //debugbreak;
+        var str = parser.toJSON(obj);
+        //assertEquals(onePerson, str);
+    End;
+
+    Macro test_prim()
+        var str = "[1, 2, 3, 4]";
+        var arr = parser.parse(str);
+        assertArrays(AR(1, 2, 3, 4), arr);
+        arr = parser.parse(str, IntegerField);
+        assertArrays(AR(1, 2, 3, 4), arr);
+        assertTrue(Valtype(arr[0])== V_INTEGER);
+        str = "[true, false]";
+        arr = parser.parse(str, BoolField);
+        assertArrays(Ar(true, false), arr);
+
+        str = "[\"sheet\", 1, true, 12.96]";
+        arr = parser.parse(str);
+
+        var str2 = parser.toJSON(arr);
+    End;
+
+    Macro testTime()
+        var t = time;
+         var onePerson = "{\"name\":\"Luke Skywalker\",\"height\":\"172\",\"gender\":\"male\",\"species\":[\"https://swapi.co/api/species/1/\"],\"starships\":[\"https://swapi.co/api/starships/12/\",\"https://swapi.co/api/starships/22/\"],\"created\":\"2014-12-09T13:50:51.644000Z\",\"url\":\"https://swapi.co/api/people/1/\"}";
+
+        for (var i, 1, 1000)
+            var obj = parser.parse(onePerson, "TestPOJOPerson");
+        end;
+        println(time-t:m);
+    End;
+End;
+
+//TestJsonParser();
+TestJsonParser().testTime;

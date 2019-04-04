@@ -1,167 +1,286 @@
-/***********************************************************
-FILE         :     NullObjects.mac
-COPYRIGHT    :
-DESCRIPTION  :     Реализация Optional - оберток для примитивных типов RSL
-PROGRAMMED BY:     Dzhanybaev M.P. (maratkhv@mail.ru)
-CREATION DATE:     07.03.2018
-Update       :
-************************************************************/
+/**
+   @Package WebUtils
+   Реализация холдеров полей класса для JSONParser.
+*/
+import "..\\mac\\extra\\Lambda\\Lambda.mac";
 
 Const StringField  = GenObject("StringFieldClass");
 Const IntegerField = GenObject("IntegerFieldClass");
-Const DoubleFiled  = GenObject("DoubleFieldClass");
+Const DoubleField  = GenObject("DoubleFieldClass");
 Const MoneyField   = GenObject("MoneyFieldClass");
 Const BoolField    = GenObject("BoolFieldClass");
+Const VariantField = GenObject("VariantFieldClass");
 
 Class FieldClass()
+
+   Macro parseValue(strVal, callbackFunc)
+   End;
+
+   Macro formatJSON(value, callbackFunc)
+   End;
+
+   Macro formatXML(value, callbackFunc)
+   End;
 End;
 
-Class (FieldClass) PrimFieldClass()
-   var defVal = null;
+Private Class (FieldClass) PrimFieldClass()
 
-   Macro of(val : Variant)
-      if(ValType(val) != V_UNDEF)
-         return val;
+   Macro parseValue(strVal : Variant)
+      if (ValType(strVal) != V_UNDEF)
+         return strVal;
       else
          return null;
       end;
    End;
 
-   Macro toStr(val)
-      return String(val);
+   Macro formatJSON(val)
+      return val;
    End;
+End;
 
-   Macro ofDefault(val : Variant) : Variant
-      var valOf = of(val);
-      if(valOf != V_UNDEF)
-         return valOf;
+Private Class (PrimFieldClass) VariantFieldClass()
+
+   Macro _isNumber(str) : Bool
+      for (var i, 1, StrLen(str), 1)
+         var c = CodeFor(SubStr(str, i, 1));
+         if ((c < 48) or (c > 57))
+            return false;
+         end;
       end;
-      return defVal;
+      return true;
+   End;
+
+   Macro parseValue(strVal : Variant)
+      if (ValType(strVal) != V_UNDEF)
+         var lwr = Trim(StrLwr(strVal));
+         var p1 = Index(lwr, ".");
+         var p2 = Index(lwr, ".", p1+1);
+         var f = SubStr(lwr, 1, 1);
+         if (lwr == "true")
+            return true;
+         elif (lwr == "false")
+            return false;
+         elif (_isNumber(lwr))
+            return Int(lwr);
+         elif ((p1 > 0) and (p2 <= 0))
+            return Double(lwr);
+         elif (f == "{")
+            return null;
+         else
+            return strVal;
+         end;
+      else
+         return null;
+      end;
+   End;
+
+   Macro formatJSON(val)
+      return StrLwr(String(val));
    End;
 End;
 
-Class (PrimFieldClass) StringFieldClass()
-   defVal = "";
+Private Class (PrimFieldClass) StringFieldClass()
+
+   Macro formatJSON(val)
+      return "\"" + val + "\"";
+   End;
 End;
 
-Class (PrimFieldClass) IntegerFieldClass()
-   defVal = 0;
+Private Class (PrimFieldClass) IntegerFieldClass()
 
-   Macro of(val : String)
-      var ret = Int(val);
-      return ret;
+   Macro parseValue(strVal : String)
+      return Int(strVal);
       OnError
          return null;
    End;
 End;
 
-Class (PrimFieldClass) DoubleFieldClass()
-   defVal = 0.0;
+Private Class (PrimFieldClass) DoubleFieldClass()
 
-   Macro of(val : String)
-      var ret = Double(val);
-      return ret;
+   Macro parseValue(strVal : String)
+      return Double(strVal);
+      OnError
+         return null;
+   End;
+
+End;
+
+Private Class (PrimFieldClass) MoneyFieldClass()
+
+   Macro parseValue(strVal : String)
+      return Money(strVal);
       OnError
          return null;
    End;
 End;
 
-Class (PrimFieldClass) MoneyFieldClass()
-   defVal = $0.0;
+Private Class (PrimFieldClass) BoolFieldClass()
 
-   Macro of(val : String)
-      var ret = Money(val);
-      return ret;
+   Macro parseValue(strVal : String)
+      return (StrLwr(strVal) == "true");
       OnError
          return null;
    End;
-End;
 
-Class (PrimFieldClass) BoolFieldClass()
-   defVal = false;
-
-   Macro of(val : String)
-      var ret = (StrLwr(val) == "true");
-      return ret;
-      OnError
-         return null;
+   Macro formatJSON(val)
+      return StrLwr(String(val));
    End;
 End;
 
 Class (PrimFieldClass) DateTimeField(dtformatter)
    var formatter = dtformatter;
 
-   Macro of(val : String)
-      var ret = formatter.StringToDateTime(val);
-      return ret;
+   Macro parseValue(strVal : String)
+      return formatter.parse(strVal);
       OnError
          return null;
    End;
 
-   Macro toStr(val)
-      return formatter.dateTimeToString(val);
+    Macro formatJSON(val) : String
+      return "\"" + formatter.format(val) + "\"";
    End;
 End;
 
 Class (PrimFieldClass) DateField(dtformatter)
    var formatter = dtformatter;
-   defVal = date(0,0,0);
 
-   Macro of(val : String)
-      var ret = formatter.StringToDate(val);
+   Macro parseValue(strVal : String)
+      var ret = formatter.parse(strVal).getDate();
       return ret;
       OnError
          return null;
    End;
 
-   Macro toStr(val)
-
-      return formatter.dateToString(val);
+   Macro formatJSON(val)
+      return "\"" + formatter.format(val) + "\"";
    End;
 End;
 
 Class (PrimFieldClass) TimeField(dtformatter)
    var formatter = dtformatter;
-   defVal = time(0,0,0);
 
-   Macro of(val : String)
-      var ret = formatter.StringToTime(val);
-      return ret;
+   Macro parseValue(strVal : String)
+      return formatter.parse(strVal).getTime();
       OnError
          return null;
    End;
 
-   Macro toStr(val)
-      return formatter.timeToString(val);
+   Macro formatJSON(val)
+      return "\"" + formatter.format(val) + "\"";
    End;
 End;
 
 Class (FieldClass) ObjectField(_className)
    var className = _className;
+
+   Macro parseValue(strVal : String, callbackFunc)
+      return ExecMacro2(callbackFunc, strVal, className);
+   End;
+
+   Macro formatJSON(val, callbackFunc)
+      return ExecMacro2(callbackFunc, val, className);
+   End;
 End;
 
 Class (FieldClass) ArrayField(_itemsType)
-   var type = null;
+   var itemstype = null;
+
+   Macro parseValue(strVal : String, callbackFunc)
+      return ExecMacro2(callbackFunc, strVal, itemstype);
+   End;
+
+   Macro formatJSON(val, callbackFunc)
+      return ExecMacro2(callbackFunc, val, itemstype);
+   End;
 
    Macro ini(tp)
       if (ValType(tp) == V_INTEGER)
          if (tp == V_INTEGER)
-            type = IntegerField;
+            itemstype = IntegerField;
          elif (tp == V_STRING)
-            type = StringField;
+            itemstype = StringField;
          end;
       elif (ValType(tp) == V_STRING)
-         type = ObjectField(tp);
+         itemstype = ObjectField(tp);
       elif (IsEqClass("FieldClass", tp))
-         type = tp;
+         itemstype = tp;
       else
-         RunError("\nНе верный тип поля ArrayField");
+         RunError("\nНе верный тип элементов массива ArrayField");
       end;
    End;
 
    ini(_itemsType);
 End;
 
+Private Macro fieldAsIs(val)
+   return val;
+end;
+
+Class (FieldClass) CustomField(_fieldName, _mapParser, _mapFormatter)
+   var fieldName = null;
+   var mapParser = _mapParser;
+   var mapFormatter = _mapFormatter;
+
+   Macro parseValue(strVal : String) : Variant
+      return ExecMacro2(mapParser, strVal);
+      OnError
+         return null;
+   End;
+
+   Macro formatJSON(val) : String
+      return "\"" + String(ExecMacro2(mapFormatter, val)) + "\"";
+   End;
+
+   if (ValType(_fieldName) != V_STRING)
+      RunError("fieldName should be type of String");
+   else
+      fieldName = StrLwr(_fieldName);
+   end;
+   if (ValType(mapParser) != V_UNDEF)
+      mapParser = Lambdas.getFunc(mapParser);
+   else
+      mapParser = @FieldAsIs;
+   end;
+   if (ValType(mapFormatter) != V_UNDEF)
+      mapFormatter = Lambdas.getFunc(mapFormatter);
+   else
+      mapFormatter = @FieldAsIs;
+   end;
+End;
+/*
+Class (CustomField) CustomArrayField(_itemsType, _fieldName, _mapParser, _mapFormatter)
+   InitCustomField(_fieldName, _mapParser, _mapFormatter);
+   var itemstype = _itemsType();
+
+   Macro parseValue(strVal : String, callbackFunc) : Variant
+      debugbreak;
+      return ExecMacro2(mapParser, strVal);
+      OnError
+         return null;
+   End;
+    Macro parseValue(strVal : String, callbackFunc)
+      return ExecMacro2(callbackFunc, strVal, itemstype);
+   End;
+
+   Macro iniTypes(tp)
+      if (ValType(tp) == V_INTEGER)
+         if (tp == V_INTEGER)
+            itemstype = IntegerField;
+         elif (tp == V_STRING)
+            itemstype = StringField;
+         end;
+      elif (ValType(tp) == V_STRING)
+         itemstype = ObjectField(tp);
+      elif (IsEqClass("FieldClass", tp))
+         itemstype = tp;
+      else
+         RunError("\nНе верный тип поля ArrayField");
+      end;
+   End;
+
+   iniTypes(_itemsType);
+End;
+*/
 Macro TryCastOrNull(obj : Variant, val : String) : Bool
    if(IsEqClass("FieldClass", obj))
       SetParm(0, obj.of(val));
@@ -189,13 +308,40 @@ Private Macro getPropVal(obj, pn)
    end;
 End;
 
-Macro getPropOrNull(obj, objpath)
+Private Macro getPropValByInd(obj, ind)
+   if (ValType(obj) == V_GENOBJ)
+      if (IsEqClass("TARRAY", obj))
+         if ((ind >= 0) and (ind < obj.size))
+            return obj[ind];
+         end;
+      else
+         if ((ind >= 0) and (ind < GenNumProps(obj)))
+            return obj[ind];
+         end;
+      end;
+   end;
+   return null;
+end;
+
+/**
+   Возвращает значение поля в объекте 'obj' по пути 'objpath' или `null`, если поле не существует. Не бросает ошибок.
+
+   Путь может состоять из:
+   - имён полей разделенных `.`
+   - индекса заключенного в `[]`. Можно извлекать как элемент массива, так и поле объекта, например приватное.
+
+   Например:
+   ```
+      var obj = SomeClassObject();
+      var val = getPropOrNull(obj, "field.arr[0]");
+   ```
+*/
+Macro getPropOrNull(obj : Object, objpath : String)
    if (ValType(obj) != V_GENOBJ)
       return null;
    end;
    var finded = obj;
    var propn = "";
-   var isFirst = true;
    for (var i, 1, StrLen(objpath), 1)
       if (ValType(finded) != V_GENOBJ)
          return null;
@@ -205,7 +351,6 @@ Macro getPropOrNull(obj, objpath)
          if (propn != "")
             finded = getPropVal(finded, propn);
             propn = "";
-
          end;
       elif (s == "[")
          if (propn != "")
@@ -228,6 +373,16 @@ Macro getPropOrNull(obj, objpath)
    return finded;
    OnError
       return null;
+End;
+/*
+   Возвращает значение поля в объекте 'obj' по пути 'objpath' или 'defval', если поле не существует. Не бросает ошибок.
+*/
+Macro getPropOrVal(obj : Object, objpath : String, defVal : Variant)
+   var v = getPropOrNull(obj, objpath);
+   if (ValType(v) != V_UNDEF)
+      return v;
+   end;
+   return defVal;
 End;
 
 
