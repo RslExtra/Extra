@@ -151,10 +151,6 @@ Class (ListInterface) ArrayList()
             .setEqualsFunc(equalsfunc);
    End;
 
-   /**
-      Добавляет указанный элемент `v` на позицию `ind`. Если  `ind` не указан, добавляет элемент в конец списка.
-      @sample [samples.Collections.ArrayList.add]
-   */
    Macro add(v, ind) : String
       if ((ValType(ind) == V_UNDEF) or (ind == size))
          items[size] = v;
