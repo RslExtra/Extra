@@ -1,0 +1,54 @@
+import "..\\mac\\extra\\Utils\\TimeUtils.mac";
+
+// Формат дат
+private var dformat = TU_DateFormat("yyyy-MM-dd");
+// Опишем классы
+Class CompanyClass()
+    // Строковое поле
+    var inn = StringField();
+     // Вложенный объект
+    var legalName = ObjectField("LegalnameClass");
+    var legalAddress = ObjectField("LegalAddressClass");
+    // Опишем кастомное поле, его нет в JSON, но мы преобразуем поле status
+    var isActive = CustomField("status", "Index(StrLwr(it), 'действу') > 0", "if(it) return 'Действующее';end; 'Не действующее'");
+    var heads    = ArrayField("PersonClass");         // Массив объектов
+    var statedCapital =  ObjectField("CapitalClass");
+End;
+
+Class LegalnameClass()
+    var short = StringField();
+    var full  = StringField();
+    // Date служебное слово в RSL, поэтому добавляем _, парсер это поймет.
+    var _date  = DateField(dformat);
+End;
+
+Class LegalAddressClass()
+    var parsedAddressRF = ObjectField("parsedAddressRFClass");
+    var _date    = DateField(dformat);
+End;
+
+Class parsedAddressRFClass()
+    var zipCode = StringField();
+    var regionName = ObjectField("TopoClass");
+    var city = ObjectField("TopoClass");
+    var street =  ObjectField("TopoClass");
+    var house  = ObjectField("TopoClass");
+    var houseRaw = StringField();
+End;
+
+Class TopoClass()
+    var topoShortName = StringField();
+    var topoFullName  = StringField();
+    var topoValue     = StringField();
+End;
+
+Class PersonClass()
+    var fio = StringField();
+    var position = StringField;
+    var _date    = DateField(dformat);
+End;
+
+Class CapitalClass()
+    var sum   = MoneyField();
+    var _date = DateField(dformat);
+End;

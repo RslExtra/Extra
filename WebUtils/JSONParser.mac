@@ -1,3 +1,8 @@
+/**
+   @package WebUtils
+
+   Утилиты для работы с JSON.
+*/
 import rcw;
 import "..\\mac\\extra\\WebUtils\\Fields.mac";
 import "..\\mac\\extra\\Utils\\TimeUtils.mac";
@@ -57,7 +62,6 @@ Private Macro getStrOpenClose(str, from, op, cl)
          break;
       end;
    end;
-   // res = SubStr(res, 2, StrLen(res) - 1);
    return res;
 End;
 
@@ -72,9 +76,9 @@ Private Macro getPrimItems(str) : SArray
    var result = SArray;
    var isOpen = false;
    var part = "";
-   var s;
-
-   for (var i, 1, StrLen(str), 1)
+   var s, p = "";
+   var i = 1;
+   while (i <= StrLen(str))
       s = SubStr(str, i, 1);
       if (s == "\"")
          isOpen = not(isOpen);
@@ -84,9 +88,15 @@ Private Macro getPrimItems(str) : SArray
          result.push(part);
          part = "";
       elif (s == " ")
+
+      elif (s == "\\")
+         i = i + 1;
+         part = part + SubStr(str, i, 1);
       else
          part = part + s;
       end;
+      p = s;
+      i = i + 1;
    end;
    if (part != "")
       result.push(part);
@@ -98,10 +108,10 @@ Private Macro getProps(str) : SArray
    var result = SArray();
    var isOpen = false;
    var i = 1;
-   var s, block, part = "";
+   var s, p = "", block, part = "";
    while (i <= StrLen(str))
       s = SubStr(str, i, 1);
-      if (s == "\"")
+      if ((s == "\"") and (p != "\\"))
          isOpen = not(isOpen);
       end;
       if ((isOpen == false))
@@ -117,6 +127,8 @@ Private Macro getProps(str) : SArray
             block = getStrOpenClose(str, i, "[", "]");
             part = part + block;
             i = i + StrLen(block);
+         elif (s == "\\")
+            i = i + 1;
          else
             part = part + s;
             i = i + 1;
@@ -125,6 +137,7 @@ Private Macro getProps(str) : SArray
          part = part + s;
          i = i + 1
       end;
+      p = s;
    end;
    if (part != "")
       result.push(part);
@@ -238,45 +251,6 @@ Private Macro parseProp (field, strVal)
    end;
    return strVal;
 End;
-/*
-Private Macro parseObject(str, className) : Object
-   var resultObject = GenObject(className);
-
-   if (SubStr(str, 1, 1) == "{")
-      str = SubStr(str, 2, StrLen(str) - 2);
-   end;
-   var customMap = getObjectCustomMap(className);
-   var hascustom = (customMap.size > 0);
-   var pr, ind = 1;
-   while (GetNextProp(str, ind, pr))
-      var pos = Index(pr, ":");
-      if (pos > 0)
-         var propName = SubStr(pr, 2, pos-3);
-         var value = SubStr(pr, pos + 1);
-         if (ModuleName(propname) == "SYSTEM")
-            propname = "_" + propname;
-         end;
-         var id = genPropID(resultObject, propname);
-         if (id >= 0)
-            var field = resultObject[id];
-            resultObject[id] = parseProp(field, value);
-         else
-            if (hascustom)
-               id = customMap.get(StrLwr(propname));
-               if (ValType(id) == V_INTEGER)
-                  resultObject[id] = parseProp(resultObject[id], value);
-               end;
-            end;
-         end;
-      end;
-   end;
-   UnusedFieldsToNull(resultObject);
-   return resultObject;
-
-   OnError
-      return null;
-End;
-*/
 
 Private Macro parseObject(str, className) : Object
    var resultObject = GenObject(className);
@@ -317,10 +291,8 @@ Private Macro parseObject(str, className) : Object
 End;
 
 // TO JSON
-
-
 Private Macro formatJsonKey(propName)
-   propName = StrLwr(propname);
+   // propName = StrLwr(propname);
    if (SubStr(propname, 1, 1) == "_")
       propname = SubStr(propname, 2);
    end;
@@ -360,7 +332,7 @@ End;
 Private Macro objectToJSONString(obj, type) : String
    var result = "{";
    var model  = GenObject(GenClassName(obj));
-   var propnames = getObjProps(model);
+   var propnames = GetObjProps(model, TRUE);
    var isFirst = true;
    for (var i, 0, genNumProps(model) - 1, 1)
       var modelPr = model[i];
@@ -475,10 +447,17 @@ End;
 Class JSONParser()
 
    /**
-      Преобразует валидную строку JSON 'jsonString' в объект класса 'pojoClassName', или массив объектов.
+      Преобразует валидную строку JSON 'jsonString' в объект класса 'classNameOrType', или массив объектов/примитивов типа 'classNameOrType'.
+
+      @param jsonString - валидная JSON строка. Строка должна быть в той же кодировке что и ваши классы.
+      @param classNameOrType - имя класса или объект типа [FieldClass]. Если строка представляет объект (т.е начинается с '{'), classNameOrType -
+      должен быть именем класса, который соответствует JSON объекту. Если строка представляет массив (т.е начинается с '['), classNameOrType - может быть именем класса элементов массива, или объектом типа [FieldClass], определяющий тип элементов массива. Если параметр равен `null`, сгенерируется ошибка.
    */
-   Macro parse(jsonString : String, pojoClassName : Variant)
-      return ParseFromJSON(jsonString, pojoClassName);
+   Macro parse(jsonString : String, classNameOrType : Variant)
+      if (ValType(classNameOrType) == V_UNDEF)
+         return Throw(IllegalArgumentException("ClassName can't be null"))
+      end;
+      return ParseFromJSON(jsonString, classNameOrType);
    End;
 
    /**
@@ -491,59 +470,3 @@ Class JSONParser()
       return SomeToJSONString(sourceObj, typeObject);
    End;
 End;
-
-var dtformatt = TU_DateFormat("yyyy-MM-ddTHH:mm:ss.S");
-var dtformat2 = TU_DateFormat("yyyy-MM-dd");
-
-Class Planet()
-   var name = StringField;
-   var rotation_period = IntegerField;
-   var residents = ArrayField(V_STRING);
-   var someShit  = IntegerField;
-   var som     = ObjectField("Som");
-   var friends = ArrayField("Som");
-   var numb = IntegerField;
-   var flag = BoolField;
-End;
-
-Class Som()
-   var name = StringField;
-   var age  = IntegerField;
-   var _date = DateField(dtformatt);
-End;
-
-Class Person()
-   var name = StringField;
-   var created = DateField();
-
-End;
-/*
-var fl  = TStreamDoc("../mac/old/extra_/jsont.txt", "R", "utf8");
-var fl2 = TStreamDoc("../mac/old/extra_/jsonarr.json", "R", "utf8");
-var fl3 = TStreamDoc("../mac/old/extra_/people.json", "R", "utf8");
-
-var i;
-var str;
-
-
-fl.readLine(str);
-
-var par = JSONParser();
-
-var obj = par.parse(str, "Planet");
-debugbreak;
-var res = par.toJSON(obj);
-var pret = prettifyJSON(res);
-
-var minj = minifyJSON(pret);
-var obj2 = par.parse(minj, "Planet");
-
-fl2.readLine(str);
-debugbreak;
-var arr = par.parse(str, "som");
-exit();
-var p = GetPropOrNull(arr, "[0].date");
-var inverse = par.toJSON(SArray(1, 2, true, "http:/google.com"));
-
-println(prettifyJSON(inverse));
-*/

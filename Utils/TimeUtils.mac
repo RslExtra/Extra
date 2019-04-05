@@ -15,8 +15,9 @@ const Locales = GenObject("LocalesClass");
 private const SU = StringUtils;
 private const DefaultLocale = GenObject("RuLocale");
 private const DefaultTimeZone = 300;
+
 /**
-   Класс предопределнных локалей. На данный момент поддерживаются 2: RU и US.
+   Класс предопределённых локалей; на данный момент поддерживаются 2: RU и US.
 */
 Private Class LocalesClass()
    /** Русская локаль. */
@@ -24,6 +25,7 @@ Private Class LocalesClass()
    /** Локаль США. */
    const US = GenObject("UsLocale");
 End;
+
 
 private Class LocaleClass()
    var monthesI;
@@ -113,7 +115,7 @@ private Class (LocaleClass) UsLocale()
 End;
 
 /**
-   Класс утилит, представлен синглтоном [TimeUtil].
+   Класс утилит, представлен синглтоном [TimeUtils].
 */
 Private Class TimeUtilsClass()
 
@@ -1437,7 +1439,7 @@ Private Macro PartsCompare(p1, p2)
 End;
 
 /**
-   Класс временного формата. В конструктор предается один параметр: маска формата '_pattern'.
+   Класс временного формата. В конструктор предается маска формата '_pattern' и ,необязательно, локаль (по умолчанию Locales.RU).
 */
 Class TU_DateFormat(_pattern, _locale)
    var pattern          = _pattern;
@@ -1593,16 +1595,3 @@ Class TU_DateFormat(_pattern, _locale)
 
    ini();
 End;
-/*
-var formatt = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.S");
-var form2 = TU_DateFormat("yy-M-d H:m:s.S");
-var d = formatt.StringToDateTime("2014-12-09T13:50:51.644000Z");
-
-var t = formatt.dateTimeToString(d);
-
-var d2 = form2.StringToDateTime("19-3-31 22:54:2.960");
-println(form2.dateTimeToString(TU_DateTime(date, time)));
-*/
-//println(d.getDateTime);
-//println(t);
-

@@ -1,0 +1,23 @@
+import "..\\mac\\extra\\WebUtils\\JSONParser.mac";
+import "..\\mac\\extra\\_Samples\\WebUtils\\Entities.mac";
+
+var doc = TStreamDoc("..\\mac\\extra\\_Samples\\WebUtils\\kontur.json", "R", "utf8");  // открываем файл
+var jsonStr;
+doc.readLine(jsonStr);  // Читаем строку
+
+var parser  = JSONParser();                           // Создаем инстанс парсера
+var company = parser.parse(jsonStr, "CompanyClass");  // Передаем строку и имя класса
+
+// Убеждаемся, что все спарсилось
+println(company.legalName.short + " (" +  company.inn +")");
+var head = gpon(company, "heads[0]");                 // GetPropOrNull получаем из массива heads первое значение
+if (head != null)
+    println(head.position + ": " +head.fio);
+end;
+
+// Теперь сделаем JSON из объекта
+
+var json = parser.toJSON(company);
+
+var pretty = PrettifyJSON(json);        // Сделаем красивым
+println(pretty);                        // И выведем

@@ -107,7 +107,7 @@ Class (TestCase) TestTimeUtils()
 
 End;
 
-Class (TestCase) TestFormatter()
+Class (TestCase) TestTU_DateFormat()
      Macro test_timeformat()
       var format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.S");
       var strDate = "2014-12-09T13:50:51.644000Z";
@@ -168,7 +168,6 @@ Class (TestCase) TestFormatter()
       format = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
       dt = format.parse(str);
       assertTrue(dt.equals(dt2));
-      debugbreak;
       str2 = format.format(dt);
       assertEquals(str, str2);
    End;
@@ -288,15 +287,11 @@ Class (TestCase) TestFormatter()
    Macro test_weekAndDay()
       var format = TU_DateFormat("yyyy-'W'ww-u");
       var dt = date(12, 01, 2019);
-      debugbreak;
       var str = format.format(dt);
       assertEquals("2019-W02-6", str);
       var dt2 = format.parse(str).getDate();
       assertEquals(dt, dt2);
    End;
-
-
-
 
 End;
 

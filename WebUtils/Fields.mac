@@ -4,15 +4,21 @@
 */
 import "..\\mac\\extra\\Lambda\\Lambda.mac";
 
+/** Тип строки. */
 Const StringField  = GenObject("StringFieldClass");
+/** Тип целого числа. */
 Const IntegerField = GenObject("IntegerFieldClass");
+/** Тип числа c дробной частью. */
 Const DoubleField  = GenObject("DoubleFieldClass");
+/** Денежный тип. */
 Const MoneyField   = GenObject("MoneyFieldClass");
+/** Булев тип. */
 Const BoolField    = GenObject("BoolFieldClass");
+/** Тип смешанных примитивов.*/
 Const VariantField = GenObject("VariantFieldClass");
 
+/** Базовый класс, не реализует функциональность. */
 Class FieldClass()
-
    Macro parseValue(strVal, callbackFunc)
    End;
 
@@ -24,7 +30,6 @@ Class FieldClass()
 End;
 
 Private Class (FieldClass) PrimFieldClass()
-
    Macro parseValue(strVal : Variant)
       if (ValType(strVal) != V_UNDEF)
          return strVal;
@@ -39,7 +44,6 @@ Private Class (FieldClass) PrimFieldClass()
 End;
 
 Private Class (PrimFieldClass) VariantFieldClass()
-
    Macro _isNumber(str) : Bool
       for (var i, 1, StrLen(str), 1)
          var c = CodeFor(SubStr(str, i, 1));
@@ -81,8 +85,13 @@ End;
 
 Private Class (PrimFieldClass) StringFieldClass()
 
+   Macro parseValue(val)
+      val = StrSubst(val, "\\\"", "\"");
+      return val;
+   End;
+
    Macro formatJSON(val)
-      return "\"" + val + "\"";
+      return "\"" + StrSubst(val, "\"", "\\\"") + "\"";
    End;
 End;
 
@@ -127,49 +136,61 @@ Private Class (PrimFieldClass) BoolFieldClass()
    End;
 End;
 
-Class (PrimFieldClass) DateTimeField(dtformatter)
-   var formatter = dtformatter;
+/**
+   Тип даты времени. Принимает на вход обязательный параметр 'dtformat' типа  [Utils.TU_DateFormat]. После парсинга поля возращает значение типа [Utils.TU_DateTime].
+*/
+Class (PrimFieldClass) DateTimeField(dtformat)
+   var format = dtformatter;
 
    Macro parseValue(strVal : String)
-      return formatter.parse(strVal);
+      return format.parse(strVal);
       OnError
          return null;
    End;
 
     Macro formatJSON(val) : String
-      return "\"" + formatter.format(val) + "\"";
+      return "\"" + format.format(val) + "\"";
    End;
 End;
 
-Class (PrimFieldClass) DateField(dtformatter)
-   var formatter = dtformatter;
+/**
+   Тип даты. Принимает на вход обязательный параметр 'dtformat' типа  [Utils.TU_DateFormat]. После парсинга поля возращает значение RSL типа 'V_DATE'.
+*/
+Class (PrimFieldClass) DateField(dtformat)
+   var format = dtformatter;
 
    Macro parseValue(strVal : String)
-      var ret = formatter.parse(strVal).getDate();
+      var ret = format.parse(strVal).getDate();
       return ret;
       OnError
          return null;
    End;
 
    Macro formatJSON(val)
-      return "\"" + formatter.format(val) + "\"";
+      return "\"" + format.format(val) + "\"";
    End;
 End;
 
-Class (PrimFieldClass) TimeField(dtformatter)
-   var formatter = dtformatter;
+/**
+   Тип даты. Принимает на вход обязательный параметр 'dtformat' типа  [Utils.TU_DateFormat]. После парсинга поля возращает значение RSL типа 'V_TIME'.
+*/
+Class (PrimFieldClass) TimeField(dtformat)
+   var format = dtformat;
 
    Macro parseValue(strVal : String)
-      return formatter.parse(strVal).getTime();
+      return format.parse(strVal).getTime();
       OnError
          return null;
    End;
 
    Macro formatJSON(val)
-      return "\"" + formatter.format(val) + "\"";
+      return "\"" + format.format(val) + "\"";
    End;
 End;
 
+/**
+   Тип объекта. Принимает на вход обязательный параметр '_className', имя класса соответсвующего полю.
+*/
 Class (FieldClass) ObjectField(_className)
    var className = _className;
 
@@ -182,6 +203,14 @@ Class (FieldClass) ObjectField(_className)
    End;
 End;
 
+/**
+   Тип массива. Принимает на вход обязательный параметр '_itemsType',
+   это может быть
+      - имя класса объектов
+      - объект типа  [FieldClass] (предпочтительно), соответсвующий типу элементов массива.
+      - RSL тип для примитивных типов (V_STRING, V_INTEGER)
+
+*/
 Class (FieldClass) ArrayField(_itemsType)
    var itemstype = null;
 
@@ -216,7 +245,13 @@ Private Macro fieldAsIs(val)
    return val;
 end;
 
-Class (FieldClass) CustomField(_fieldName, _mapParser, _mapFormatter)
+/**
+   Пользователький тип. Необходим в случаях когда имя поля класса не соответствует имени в JSON или XML, или необходимо выполнить дополнительные преобразования при парсинге или форматировании строки.
+   @param  _fieldName         - имя поля в JSON.
+   @oparam _mapParser         - ссылка на функцию или лямбда выражение для преобразование при парсинге JSON. Если не задана, функция вернет значение поля "как есть".
+   @oparam _map_mapFormatterr - ссылка на функцию или лямбда выражение для преобразование при форматировании строки. Если не задана, функция вернет значение поля "как есть".
+*/
+Class (FieldClass) CustomField(_fieldName : String, _mapParser, _mapFormatter)
    var fieldName = null;
    var mapParser = _mapParser;
    var mapFormatter = _mapFormatter;
@@ -247,56 +282,6 @@ Class (FieldClass) CustomField(_fieldName, _mapParser, _mapFormatter)
       mapFormatter = @FieldAsIs;
    end;
 End;
-/*
-Class (CustomField) CustomArrayField(_itemsType, _fieldName, _mapParser, _mapFormatter)
-   InitCustomField(_fieldName, _mapParser, _mapFormatter);
-   var itemstype = _itemsType();
-
-   Macro parseValue(strVal : String, callbackFunc) : Variant
-      debugbreak;
-      return ExecMacro2(mapParser, strVal);
-      OnError
-         return null;
-   End;
-    Macro parseValue(strVal : String, callbackFunc)
-      return ExecMacro2(callbackFunc, strVal, itemstype);
-   End;
-
-   Macro iniTypes(tp)
-      if (ValType(tp) == V_INTEGER)
-         if (tp == V_INTEGER)
-            itemstype = IntegerField;
-         elif (tp == V_STRING)
-            itemstype = StringField;
-         end;
-      elif (ValType(tp) == V_STRING)
-         itemstype = ObjectField(tp);
-      elif (IsEqClass("FieldClass", tp))
-         itemstype = tp;
-      else
-         RunError("\nНе верный тип поля ArrayField");
-      end;
-   End;
-
-   iniTypes(_itemsType);
-End;
-*/
-Macro TryCastOrNull(obj : Variant, val : String) : Bool
-   if(IsEqClass("FieldClass", obj))
-      SetParm(0, obj.of(val));
-   else
-      return false;
-   end;
-End;
-
-Macro TryCastOrDefault(obj : @Variant, val : String) : Bool
-   if(IsEqClass("FieldClass", obj))
-      obj = obj.ofDefault(val);
-   else
-      return false;
-   end;
-End;
-
 
 Private Macro getPropVal(obj, pn)
    if (moduleName(pn) == "SYSTEM")
@@ -383,6 +368,14 @@ Macro getPropOrVal(obj : Object, objpath : String, defVal : Variant)
       return v;
    end;
    return defVal;
+End;
+
+Macro gpon(obj : Object, objpath : String)
+   return getPropOrNull(obj, objpath);
+End;
+
+Macro gpov(obj : Object, objpath : String,  defVal : Variant)
+   return getPropOrVal(obj, objpath, defVal);
 End;
 
 
