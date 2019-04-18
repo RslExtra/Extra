@@ -9,7 +9,7 @@ import "..\\mac\\extra\\_Tests\\Lambda\\UT_Lambda.mac";
 import "..\\mac\\extra\\_Tests\\OOP\\UT_OOP.mac";
 import "..\\mac\\extra\\_Tests\\OOP\\UT_Comparators.mac";
 import "..\\mac\\extra\\_Tests\\StreamApi\\UT_Stream.mac";
-import "..\\mac\\extra\\_Tests\\WebUtils\\UT_JSONParser.mac";
+//import "..\\mac\\extra\\_Tests\\WebUtils\\UT_JSONParser.mac";
 
 
 RUnitTest.SHOW_SUCCEED_FUN = false;
