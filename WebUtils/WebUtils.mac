@@ -1,7 +1,0 @@
-/**
-   @Package  WebUtils
-   @ancestor Extra
-
-   Утилиты для работы в вебе.
-*/
-import "..\\mac\\extra\\WebUtils\\JSONParser.mac";
