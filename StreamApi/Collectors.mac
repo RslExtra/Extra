@@ -16,8 +16,10 @@ Const Collectors = GenObject("CollectorsClass");
    Пользовательский класс коллектора. Принимает на вход три аргумента ссылки на функции или валидные лямбда-выражения.
 
    @param supplier - функция создающая экземпляр класса, в который необходимо будет собрать элементы вида Supply() : Variant.
-   @param accumulator - функция-аккумулятор, добавляет элементы. Функция должна быть вида accumulate(SupplyObj, el).
-   @param finisher - функция-финишер, принимает сборщик и возвращает итоговый результат. Должна быть вида finish(SupplyObj) : Variant
+   @param accumulator : SomeShit - функция-аккумулятор, добавляет элементы. Функция должна быть вида accumulate(SupplyObj, el).
+   @oparam finisher : Link = null - функция-финишер, принимает сборщик и возвращает итоговый результат. Должна быть вида finish(SupplyObj) : Variant.
+
+   @Sample [Samples.Stream.CustomCollector]
 */
 Class CustomCollector(supplier, accumulator, finisher)
    var supplierFunc = Lambdas.getFunc(supplier);

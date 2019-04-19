@@ -11,9 +11,9 @@ import "..\\Mac\\Extra\\OOP\\Comparators.mac";
 const TimeUtils = GenObject("TimeUtilsClass");
 /** Singleton объект класса [LocalesClass]. */
 const Locales = GenObject("LocalesClass");
-//private var currentTimezone = GenGetProp(TimeZoneInfo, "utc");
+
 private const SU = StringUtils;
-private const DefaultLocale = GenObject("RuLocale");
+private const DefaultLocale = Locales.RU;
 private const DefaultTimeZone = 300;
 
 /**
@@ -166,7 +166,7 @@ Private Class TimeUtilsClass()
       return (calcDt - 1);
    End;
    /**
-      Возвращает полное название для недели для даты 'dt'.
+      Возвращает полное название для недели для даты 'dt' для локали 'locale'.
    */
    Macro getWeekDay(dt: Date, locale)
       if (Valtype(locale) == V_UNDEF)
@@ -176,7 +176,7 @@ Private Class TimeUtilsClass()
    End;
 
    /**
-      Возвращает сокращенное название для недели для даты 'dt'.
+      Возвращает сокращенное название для недели для даты 'dt' для локали 'locale'.
    */
    Macro getShortWeekDay(dt: Date, locale)
       if (Valtype(locale) == V_UNDEF)
@@ -185,6 +185,9 @@ Private Class TimeUtilsClass()
       return locale.getWeekDayShort(dt);
    End;
 
+   /**
+      Возвращает порядковый номер дня недели для даты 'dt' для локали 'locale'. (для пнд - 1).
+   */
    Macro getWeekDayNum(dt : Date, locale)
       if (ValType(locale) == V_UNDEF)
          locale = DefaultLocale;
@@ -192,18 +195,27 @@ Private Class TimeUtilsClass()
       return (locale.getNumWeekDay(dt));
    End;
 
+   /**
+      Возвращает порядковый номер дня в году для даты 'dt' (начиная с 1).
+   */
    Macro getDayOfYear(dt : Date)
       var y,m,d;
       DateSplit(dt, d, m, y);
       return (dt - Date(1,1, y) + 1);
    End;
 
+   /**
+      Возвращает порядковый номер текущего дня недели в месяце для даты 'dt'.
+   */
    Macro getWeekDayNumInMonth(dt : Date)
       var d;
       DateSplit(dt, d, null, null);
       return (Int((d-1)/7) + 1);
    End;
 
+   /**
+      Возвращает порядковый номер недели в месяце для даты 'dt' для локали 'locale'.
+   */
    Macro getNumWeekInMonth(dt : Date, locale)
       if (ValType(locale) == V_UNDEF)
          locale = DefaultLocale;
@@ -211,6 +223,9 @@ Private Class TimeUtilsClass()
       return (locale.getNumWeekInMonth(dt));
    End;
 
+   /**
+      Возвращает порядковый номер недели в году для даты 'dt' для локали 'locale'.
+   */
    Macro getNumWeekInYear(dt : Date, locale)
       if (ValType(locale) == V_UNDEF)
          locale = DefaultLocale;
@@ -221,7 +236,7 @@ End;
 
 
 /**
-   Класс обертка для даты/времени. В конструктор передаются аргументы: дата '_dt' и время '_tm' временная зона '_timezone'.
+   Класс обертка для даты/времени. В конструктор передаются необязательные аргументы: дата '_dt', время '_tm' и временная зона '_tz'.
    После инициализации в полях класса становятся доступными числовые временные значения.
 */
 Class TU_DateTime(_dt, _tm, _tz)
@@ -257,7 +272,14 @@ Class TU_DateTime(_dt, _tm, _tz)
    End;
 
    /**
-      Устанавливате дату 'dt'.
+      Возвращает RSL DtTm.
+   */
+   Macro getDtTm()
+      return DtTm(date(day,month, year), time(hour, minute, sec, msec/10));
+   End;
+
+   /**
+      Устанавливает дату 'dt'.
    */
    Macro setDate(dt : Date)
       if (ValType(dt) != V_DATE)
@@ -431,13 +453,6 @@ Class TU_DateTime(_dt, _tm, _tz)
       res.plusHours(h);
       res.plusMinutes(m);
       return res;
-   End;
-
-   /**
-      Возвращает RSL DtTm.
-   */
-   Macro getDtTm()
-      return DtTm(date(day,month, year), time(hour, minute, sec, msec/10));
    End;
 
    /**
@@ -1439,7 +1454,10 @@ Private Macro PartsCompare(p1, p2)
 End;
 
 /**
-   Класс временного формата. В конструктор предается маска формата '_pattern' и ,необязательно, локаль (по умолчанию Locales.RU).
+   Класс временного формата. В конструктор предается маска формата '_pattern' и, опционально, локаль (по умолчанию Locales.RU).
+
+   Пример использования:
+   @Sample [Samples.utils.TimeUtils.DateFormat]
 */
 Class TU_DateFormat(_pattern, _locale)
    var pattern          = _pattern;
@@ -1448,6 +1466,7 @@ Class TU_DateFormat(_pattern, _locale)
    var parts            = SArray();
    var applyQueue       = null;
    var passError        = false;
+
    /**
       Устанавливает временную зону 'tz' (например 1000 для Владивостока).
    */
@@ -1456,6 +1475,9 @@ Class TU_DateFormat(_pattern, _locale)
       return this;
    End;
 
+   /**
+      При передаче 'pass' = true, вместо ошибки исполнения при парсинге даты, вернутся нулевые даты и время.
+   */
    Macro setPassError(pass : Bool)
       passError = pass;
       return this;
@@ -1534,7 +1556,7 @@ Class TU_DateFormat(_pattern, _locale)
    End;
 
    /**
-      Возвращает строковое представления согласно шаблону для 'dt'.
+      Возвращает строковое представление согласно шаблону для 'dt'.
 
       Входной параметр 'dt' может являться:
          - Датой типа V_DATE
@@ -1557,13 +1579,11 @@ Class TU_DateFormat(_pattern, _locale)
    End;
 
    /**
-      Парсит строку 'str' и возвращает объект типа [TU_DATETIME]. Получить дату и\или можно методами [TU_DATETIME.getDate], [TU_DATETIME.getTime]
-      [TU_DATETIME.getDtTm].
+      Парсит строку 'str' и возвращает объект типа [TU_DATETIME]. Получить дату и время можно методами [TU_DATETIME.getDate], [TU_DATETIME.getTime], [TU_DATETIME.getDtTm].
    */
    Macro parse(str : String)
       return stringToDateTime(str);
    End;
-
 
    Private Macro ini()
       var i = 1;
@@ -1591,7 +1611,6 @@ Class TU_DateFormat(_pattern, _locale)
 
       applyQueue = parts.slice().sort(@PartsCompare);
    End;
-
 
    ini();
 End;

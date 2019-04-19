@@ -13,6 +13,7 @@
    @author Dzhanybaev M.P.
 */
 import "..\\Mac\\Extra\\Lambda\\Lambda.mac";
+import bankinter;
 
 Private Macro isBankInterLoaded()
    return (ValType(ExecMacro2("isAlpha", "a")) != V_UNDEF);

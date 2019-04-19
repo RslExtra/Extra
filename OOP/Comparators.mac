@@ -6,7 +6,7 @@ import rcw;
 
 /**
    Сравнение двух примитивных типов средствами языка (==, >, <).
-   Для скорости сортировки, аргументы не проверяются на 'null` или соответствие типов значения
+   Для лучшей скорости сортировки, аргументы не проверяются на 'null` или соответствие типов значения
 */
 Macro CF_ComparePrimitive(el1 : Variant, el2 : Variant) : Integer
    if(el1 > el2)
@@ -33,6 +33,9 @@ Macro CF_CompareNullable(el1 : Variant, el2 : Variant) : Integer
    end;
 End;
 
+/**
+   Сравнение двух строк без учета регистра.
+*/
 Macro CF_CompareStrIgnoreCase(s1 : String, s2 : String) : Integer
    s1 = StrUpr(s1);
    s2 = StrUpr(s2);
@@ -57,6 +60,31 @@ Macro CF_CompareToImpl(o1, o2)
    else
       return 0;
    end;
+End;
+
+/**
+   Универсальная функция-компаратор для двух переменных RSL 'o1' и 'o2'. Для двух примитивов одного типа проведет сравнение через `> < ==`, если примитивы будут разного типа бросит ошибку. Для аргументов разных типов вернет результат сравнения числовых констант типов, т.е по возрастанию будут идти (Undefined, Integer, String и т.д ). Для объектных типов попробует выполнить метод `compareTo(obj) : Integer`, если такой метод не будет определен в классе, бросит ошибку. Если оба элемента равны `null` вернет 0. Работает медленней чем собственные функции-компараторы, но за константное время, т.е. не усложняет алгоритм использующий эту функцию.
+*/
+Macro VariantCompare(o1: Variant, o2: Variant) : Integer
+   var t1 = ValType(o1);
+   var t2 = ValType(o2);
+   var sign = 1;
+   if (t1 != t2)
+      return (t1-t2);
+   end;
+
+   if (t1 == V_UNDEF)
+      return 0;
+   elif (t1 <= V_TIME)                    // Примитивы
+      return CF_ComparePrimitive(o1, o2);
+   elif (t1 == V_GENOBJ)            // Объекты
+      var rCmp = ExecMacro2(R2M(o1,"compareTo"), o2);
+      if (ValType(rCmp) == V_INTEGER)
+         return sign*rCmp;
+      end;
+      RunError("\nДля класса " + GenClassName(o1) + " не определена функция CompareTo(otherObj) : Integer");
+   end;
+   return CF_ComparePrimitive(o1, o2);
 End;
 
 /**
@@ -111,6 +139,9 @@ Macro CF_EqualsPrimitive(p1, p2) : Bool
    return (p1 == p2);
 End;
 
+/**
+   Функция проверки на равенство двух строк без учета регистра.
+*/
 Macro CF_StrEqualsIgnoreCase(s1 : String, s2 : String) : Bool
    return (StrUpr(s1) == StrUpr(s2));
 End;
@@ -127,6 +158,50 @@ Macro CF_ObjectEquals(o1, o2) : Bool
    var pc = GenNumProps(o1);
    for (var i, 0, pc-1, 1)
       if (isEqualProp(o1[i], o2[i])==false)
+         return false;
+      end;
+   end;
+   return true;
+End;
+/**
+   Универсальная функция проверки на равенство двух переменных RSL 'o1' и 'o2'.
+
+   Функция работает по следующему принципу:
+   - Если аргументы разных типов вернет `false`,
+   - Если одного примитивного типа, пернет результат сравнения через `==`.
+   - Для объектных аргументов, попробует вызвать метод `equals(obj) : Bool`, а затем если не будет найден 'compareTo'. Если ни один из методов не определен бросит ошибку.
+   - Если аргументы равны `null`, вернет `true`.
+   - Если аргументы типа [TArray] или наследного класса, вернет результат функции [TArrayEquals], которая попарно сравнивает элементы обоих массивов.
+*/
+Macro VariantEquals(o1: Variant, o2: Variant) : Bool
+   var t1 = ValType(o1);
+   var t2 = ValType(o2);
+   if (t1 != t2) return false; end;
+   if (t1 <= 10)                    // Примитивы
+      return (o1 == o2);
+   elif (t1 == V_GENOBJ)            // Объекты
+      if (isEqClass("TArray", o1))
+         return ExecMacro2("TArrayEquals", o1, o2);
+      end;
+      var rEq = ExecMacro2(R2M(o1,"equals"), o2);
+      if (ValType(req) == V_BOOL) return req; end;
+      var rCmp = ExecMacro2(R2M(o1,"compareTo"), o2);
+      if (ValType(rCmp) == V_INTEGER)
+         return (rCmp == 0);
+      end;
+      RunError("\nДля класса " + GenClassName(o1) + " не определена функция Equals(otherObj) : Bool");
+   end;
+   return (o1 == o2);
+End;
+
+/**
+   Функция эквивалентности двух массивов [TArray]. Последовательно вызывает для каждой пары элементов массивов [VariantEquals].
+   Если в результате сравнеия хоть одна пара не эквивалентна, вернет `false`.
+*/
+Macro TArrayEquals(arr1, arr2) : Bool
+   if (arr1.size != arr2.size) return false; end;
+   for(var i, 0, arr1.size - 1, 1)
+      if (VariantEquals(arr1[i], arr2[i]) == false)
          return false;
       end;
    end;
@@ -193,7 +268,7 @@ End;
 
 /**
    Объект-компаратор генерирует метод-компаратор и предоставляет ссылку на него методом [getFunc].
-   Схож с [CF_ObjectComparator], однако сравнивает объекты одного класса, в конструктор он передается первым параметром 'obj'. Далее следуют имена полей, в т.ч и приватных! Если поля с таким именем не найдено у объекта будет брошена ошибка.
+   Схож с [CF_ObjectComparator], однако сравнивает объекты одного класса, в конструктор он передается первым параметром 'obj'. Далее следуют имена полей, в т.ч и приватных. Если поле с таким именем не найдено у любого из объектов, будет брошена ошибка.
 */
 Class CF_ObjectComparator2(obj)
    private var propsId   = TArray();
@@ -221,7 +296,7 @@ Class CF_ObjectComparator2(obj)
          j = j + 1;
       end;
       if (ValType(propsId[i-2]) == V_UNDEF)
-         RunError("У объекта отсутсвует поле с именем " + nm);
+         RunError("У объекта отсутствует поле с именем " + nm);
       end;
    end;
    tmpArr[tmpArr.size] = this;

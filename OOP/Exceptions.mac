@@ -5,7 +5,6 @@
    Реализация исключений и блоков try/catch/finally.
 */
 
-
 /**
    Базовый класс исключения.
 */
@@ -73,15 +72,13 @@ Class (Exception) UnsupportedOperationException(detailMessage : String)
    initException(detailMessage);
 End;
 
-
-
 private var ThrowMode = 0;
 
 /**
    Задает поведение метода throw. Возможные варианты:
    - '0' - будет вызвана стандартная RSL ошибка через RunError,
    - '1' - на синий экран будет выведен StackTrace, а программа завершится.
-   - '2' - режим для Unit тестов, метод Throw вернет объект брошенного Exception, который можно будет перехватить
+   - '2' - метод Throw вернет объект брошенного Exception, который можно будет перехватить и обработать без предложения отладить и завершения программы.
 */
 Macro setThrowMode(modeInt : Integer)
    if (ValType(modeInt) == V_UNDEF)
@@ -93,12 +90,14 @@ Macro setThrowMode(modeInt : Integer)
 End;
 
 private var LastException = null;
+private var isCatchable   = false;
 /**
    Служебный метод для работы в режиме Unit тестирования. Устанавливает последнее брошенное исключение.
 */
 Macro setLastException(exc)
    LastException = exc;
 End;
+
 /**
    Служебный метод для работы в режиме Unit тестирования. Возвращает и удаляет из хранилища последнее исключение.
 */
@@ -107,6 +106,7 @@ Macro getLastException()
    LastException = null;
    return ret;
 End;
+
 /**
    Бросает исключение '_exception'. Вызывает функцию [RunError] передавая в качестве параметров текст исключения и объект исключения.
 */
@@ -114,7 +114,12 @@ Macro Throw(_exception : Exception)
    if ( Valtype(_exception) == V_UNDEF)
       _exception = Exception();
    end;
+   if (isCatchable)
+      setLastException(_exception);
+      return;
+   end;
    if (ThrowMode == 0)
+      setLastException(_exception);
       RunError(_exception.getText, _exception);
    elif (ThrowMode == 1)
       printStack();
@@ -135,96 +140,64 @@ End;
    В вызов [try] передается ссылка на функцию которую необходимо выполнить, далее передается до 10 аргументов функции через запятую.
 
    Затем в методе [catch] первым аргументом указывается класс исключение - наследник [Exception], или код ошибки, если будет перехватываться стандартная 'TrslError',
-   вторым аргументов указывается ссылка на функцию, которую необходимо выполнить в случае перехвата ошибки. Блоков [catch] может быть указано сколько угодно много, однако выполнится функция лишь из первого подходящего блока.
+   вторым аргументов указывается ссылка на функцию, которую необходимо выполнить в случае перехвата ошибки. Блоков [catch] может быть указано сколько угодно много, однако выполнится функция лишь из первого подходящего блока. Если ни один блок не перехватит исключение, будет сгенерирована ошибка 'TrslError' и программа завершится.
 
    Далее есть возможность указать блок [finally]. Единственным аргументом этого метода является ссылка на функцию которую необходимо выполнить, независимо, было ли брошено исключение/ошибка или нет.
 
-   Пример использования:
-
-```
-   Macro inc(p)
-      if (ValType(p) != V_INTEGER)
-         Throw(IllegalArgumentException("Не верный тип " + p));
-      end;
-      setParm(0, p + 1);
-      println("Increment result is " + p);
-      Throw(Exception("Все равно бросим исключение"));
-   End;
-
-   Macro doOnIllegal(ex)
-      println("I'm on IllegalArgumentException");
-   End;
-
-   Macro doOnException(ex)
-      println("I'm on Exception");
-   End;
-
-   Macro finallyBlock()
-      println("In the end");
-   End;
-
-   Macro tryIncrement(parm)
-      try(@inc, parm)                                    // Передаем фукнцию по ссылке и параметры
-         .catch(IllegalArgumentException, @doOnIllegal) // Если иключение тогоже типа или типа потомка, выполняется блок doOnIllegal
-         .catch(Exception, @doOnException)              // Обработает любую ошибку
-         .finally(@finallyBlock);                       // В конце выполняем блок
-   End;
-
-   tryIncrement("1");
-   tryIncrement(666);
-
-```
-   Также есть возможность обрабатывать ошибки стандартные 'TrslError'.
+   Также есть возможность обрабатывать стандартные ошибки 'TrslError'.
    Тогда, если функция передаваемая в Try вызывает ошибку 'TrslError', в вызове catch первым параметром указывается код ошибки (0  или null если необходимо перехватить любую), вторым параметром так же остается ссылка на функцию.
+   В debug режиме будет показана соответствующая ошибка, однако при выборе "Нет" на вопрос ("Будем отлаживать?") программа продолжит своё выполнение если ошибка была перехвачена.
 
-   Например:
-```
-   Macro doSome(parm)
-      println("Doing " + parm);
-      RunError("User Error");
-   End;
-
-   Macro doFinally()
-      println("finally");
-   End;
-
-   Macro catcha()
-      println("Gotcha");
-   End;
-
-   try(@doSome, 2)
-      .catch(0, @catcha)
-      .finally(@doFinally);
-```
+   Пример использования:
+   @Sample [Samples.OOP.tryCatch]
 */
 Class Try(tryfunc)
    private var isDone  : Bool  = false;
    private var func    = tryfunc;
    private var pa      = TArray();
-   private var p1;
    private var catches = TArray();
    private var finallyFunc = null;
+   private var needThrow = false;
+   private var lastExc   = null;
+
+   private Macro tryCatchIt()
+      var result;
+      if (IsEqClass("Exception", lastExc))
+         needThrow = true;
+         for (var c, catches)
+            if (IsEqClass(GenClassName(c.exc), lastExc))
+               result = ExecMacro2(c.dofunc);
+               needThrow = false;
+               break;
+            end;
+         end;
+      end;
+      if (finallyFunc != null)
+         ExecMacro(finallyFunc);
+      end;
+      return result;
+   End;
 
    /**
       Запускает в ручную цепочку исполнения.
    */
    Macro tryRun()
-      ExecMacro(func, pa[0], pa[1], pa[2], pa[3], pa[5], pa[6], pa[7], pa[8], pa[9]);
-      if (finallyFunc != null)
-         ExecMacro(finallyFunc);
+      debugbreak;
+      var result = ExecMacro2(func, pa[0], pa[1], pa[2], pa[3], pa[5], pa[6], pa[7], pa[8], pa[9]);
+      if (isCatchable)
+         lastExc = getLastException();
+         result = tryCatchIt();
       end;
+      return result;
       OnError(err)
-
          var exc = err.err;
-         if (IsEqClass("Exception", exc))
-            for (var c, catches)
-               if (IsEqClass(GenClassName(c.exc), err.err))
-                  ExecMacro(c.dofunc, err);
-                  break;
-               end;
+         if (IsEqClass("Exception", exc))  // Если это Exception но не было catch
+            if (finallyFunc != null)
+               ExecMacro(finallyFunc);
             end;
-         elif (IsEqClass("TrslError", err))
-            for (c, catches)
+            return;
+         else
+            for (var c, catches)
                var uc = c.exc;
                if (ValType(uc) == V_UNDEF)
                   uc = 0;
@@ -236,8 +209,6 @@ Class Try(tryfunc)
                   end;
                end;
             end;
-         else
-            RunError;
          end;
          if (finallyFunc != null)
             ExecMacro(finallyFunc);
@@ -249,6 +220,7 @@ Class Try(tryfunc)
    */
    Macro catch(_exception, _doFunc)
       catches[catches.size] = CatchClass(_exception, _doFunc);
+      isCatchable = true;
       return this;
    End;
 
@@ -260,11 +232,21 @@ Class Try(tryfunc)
       return this;
    End;
 
-   Macro Destructor()
+   Macro execute()
+      var result = null;
       if (Not(isDone))
-         tryRun();
+         result = tryRun();
       end;
       isDone = true;
+      isCatchable = false;
+      if (needThrow)
+         RunError(lastExc.getText, lastExc);
+      end;
+      return result;
+   End;
+
+   Macro Destructor()
+      execute();
    End;
 
    local var i;
@@ -272,44 +254,3 @@ Class Try(tryfunc)
       GetParm(i, pa.value(i-2))
    end;
 End;
-
-/*
-   var resultSqr = null;
-
-   // Пример функции возведения Integer в квадрат
-   Macro mysqr(p)
-      if (ValType(p) != V_INTEGER)
-         Throw(IllegalArgumentException("Не верный тип " + p));
-      end;
-      resultSqr = p * p;
-      if (resultSqr < 0)  // В случае переполнения инта
-         RunError("Переполнение Integer");
-      end;
-   End;
-
-   Macro doOnIllegal(ex)
-      println("I'm on IllegalArgumentException");
-   End;
-
-   Macro doOnError(er)
-      println("I'm on error");
-   End;
-
-   Macro finallyBlock()
-      println("i'm in finnaly block.");
-      println("Result is " + resultSqr);
-   End;
-
-   Macro trySqr(parm)
-      try(@mysqr, parm)                                     // Передаем фукнцию по ссылке и параметры
-         .catch(IllegalArgumentException, @doOnIllegal)     // Если иключение того же типа или типа потомка, выполняется блок doOnIllegal
-         .catch(0, @doOnError)                              // Обработает любую ошибку
-         .finally(@finallyBlock);                           // В конце выполняем блок
-   End;
-
-
-   trySqr("1");           // Не верный тип аргумента
-   trySqr(12000000);      // Будет ошибка переполнения
-   trySqr(25);            // Исключений и ошибок не будет, выполнится лишь блок finally
-*/
-

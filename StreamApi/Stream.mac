@@ -4,16 +4,19 @@
    @Ancestor Extra
    @Version 0.8
 
-   Реализация Stream Api. В большинстве своём схожа с 'Java Stream Api'. Реализует самые полезные методы для создания цепочек ленивых вычислений.
+   Реализация Stream Api. В большинстве своём схож с 'Java Stream Api'. Реализует самые полезные методы для создания цепочек ленивых вычислений.
 
    Создать Stream можно следующими способами
    - методом '.toStream()', если он реализован у класса объекта например ([SArray], [Iterable Collections]).
    - вызовом функции StreamOf(obj). Obj может быть массивом [TArray], [Collections.Iterable], объектом [TStreamDoc], строкой 'String', объектом таблицы бд [TbFile].
    - реализовав итератор для любого класса с методами (next() : Variant, hasNext() : Bool) и передав его инстанс в конструктор класса [BornStream].
 
-   После создания объекта, как обычно, через точку пишем конвеерные методы (тэг 'Conveyor'), агрегирующие методы (тэг 'Agregate') и заверщаем цепочку одним терминальным методом ('Terminal'), который вернет или `null` или соответствующий результат.
+   После создания Stream, как обычно, через точку пишем [ContinuedStream методы] :
+    - конвеерные методы (тэг 'Conveyor')
+    - агрегирующие методы (тэг 'Agregate')
+    - терминальный метод (тэг 'Terminal'), который запускает выполнение Stream и возвращает результат.
 
-   Во всех методах где необходимо передать ссылку на функцию, можно использовать лямбды, имя функции с '@' перед именем, ссылкой на метод [R2M] или ссылку на функцию через '@'.
+   Во всех методах где необходимо передать ссылку на функцию, можно использовать [Lambda лямбды], имя функции с '@' перед именем, ссылкой на метод [R2M] или ссылку на функцию через '@'.
 
    О чем следует помнить:
    - Стрим не запускает конвеер вычислений до добавление в цепочку терминального метода.
@@ -96,12 +99,9 @@ End;
 Private Class (StreamInterface) ContinuedStream()
 
    /**
-      Преобразует каждый элемент стрима согласно 'mapfunc'. Если используются лямбды, вернет последнюю инструкцию н.р
-      ```
-         var arr = SArray(1, 2, 3).toStream()
-                  .map("i -> println(i); i*2")  // Выведет на экран каждое число и вернёт каждое удвоенным
-                  .toArray();
-      ```
+      Преобразует каждый элемент stream согласно 'mapfunc'. Если используются лямбды, вернет последнюю инструкцию н.р
+
+      @Sample [Samples.Stream.map]
       @tag Conveyor
    */
    Macro map(mapfunc)
@@ -112,7 +112,9 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Разворачивает вложенные stream  в один.
 
+      @Sample [Samples.Stream.flatMap]
       @tag Conveyor
+
    */
    Macro flatMap(mapfunc)
       var streamObj = GenObject("FlatMapStream", mapfunc);
@@ -122,6 +124,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Фильтрует записи согласно функции 'predicate', т.е передает дальше только те элементы для которых вызов 'predicate' вернет `true`.
 
+      @Sample [Samples.Stream.filter]
       @tag Conveyor
    */
    Macro filter(predicate)
@@ -132,6 +135,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Ограничивает переданное количество элементов параметром '_count'.
 
+      @Sample [Samples.Stream.limit]
       @tag Conveyor
    */
    Macro limit(_count : Integer)
@@ -142,6 +146,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Пропускает первые 'cnt' элементов.
 
+      @Sample [Samples.Stream.skip]
       @tag Conveyor
    */
    Macro skip(_count  : Integer)
@@ -152,6 +157,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Передает элементы дальше пока 'predicate' возвращает 'true'; как только 'predicate' вернет 'false' стрим закончится.
 
+      @Sample [Samples.Stream.takewhile]
       @tag Conveyor
    */
    Macro takeWhile(predicate)
@@ -162,6 +168,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Передает только уникальные элементы. Если это объектный тип, должны быть реализованы методы hash и equals.
 
+      @Sample [Samples.Stream.distinct]
       @tag Conveyor
    */
    Macro distinct()
@@ -201,7 +208,7 @@ Private Class (StreamInterface) ContinuedStream()
 
    /**
       Вызывает для каждого элемента 'peekfunc' и возвращает неизмененный элемент.
-
+      @Sample [Samples.Stream.peek]
       @tag Conveyor
    */
    Macro peek(peekfunc)
@@ -416,6 +423,7 @@ Private Class (StreamInterface) ContinuedStream()
    /**
       Позволяет использовать кастомный объект Stream. Для этого необходимо унаследоваться от [ConveyorStream], [AgregateStream] или [TerminalStream] переопределить необходимые методы и передать экземпляр класса в функцию как 'streamObj'.
 
+      @Sample [Samples.Stream.custom]
       @tags Conveyor, agregate, terminal
    */
    Macro custom(streamObj)
@@ -458,7 +466,7 @@ Class (ContinuedStream) ConveyorStream()
 End;
 
 /**
-   Базовый класс для агрегатных стримов. Жадно собирает данные у предыдущих стримов, азатем запускается на выполнение как будто является [BornStream].
+   Базовый класс для агрегатных стримов. Жадно собирает данные у предыдущих стримов (до тех пор пока они могут давать данные), и только затем отдает данные последующему стриму.
 */
 Class (ContinuedStream) AgregateStream()
    private var isReadyToGive = false;
@@ -756,8 +764,8 @@ End;
 /**
    Класс для создания стрима из объекта [TBFile].
 */
-Private Class (BornStream) TBFileStream(tbFile)
-   var inFile = tbFile;
+Private Class (BornStream) TBFileStream(_tbFile)
+   var inFile = _tbFile;
    private var front = true;
    private var fix = false;
    private var thandl = TRecHandler(inFile.TblName, inFile.DicName);

@@ -297,7 +297,7 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    End;
 
    /**
-      Помещает в хэштаблицу элементы поиндексно в соотвествии ключей из массива '_ArrKeys'`', значений из массива  '_ArrValues'.
+      Помещает в хэштаблицу элементы поиндексно в соотвествии ключей из массива '_ArrKeys', значений из массива  '_ArrValues'.
    */
    Macro putArrays(_ArrKeys : TArray, _ArrValues : TArray)
       var i = 0;

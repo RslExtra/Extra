@@ -2,18 +2,28 @@
    @Package Forms
 
    Реализация простого и удобного меню.
+   @Version 0.2
 */
 
 /**
-   Класс меню. Реализован на базе классического RSL меню [menu].
+   Класс, реализация простого скроллинга. Реализован на базе классического RSL меню [menu].
+
+   Преимущества:
+   - Оперирует не строками, а пользовательскими объектами.
+   - Удобно настраивается для вывода меню с несколькими столбцами (по полям объекта)
+   - Может возвращать не только выбранный индекс, но и объект, ему соответствующий.
+
 
    Пример использования:
    @sample [samples.forms.SimpleMenu_]
 */
 Class SimpleMenu()
-   Const prefix   =  " ";
-   Const postfix  =  " ";
-   Const divider  =  " | ";
+   /** Префикс строки меню. По умолчанию = " ".*/
+   var prefix   =  " ";
+   /** Постфикс строки меню. По умолчанию = " ".*/
+   var postfix  =  " ";
+   /** Разделитель столбцов меню. По умолчанию = " | ".*/
+   var divider  =  " | ";
 
    private var size  = 0;
    private var title = "Меню";
@@ -21,17 +31,42 @@ Class SimpleMenu()
    private var x;
    private var y;
    private var n = 0;
-   private var LineArr= TArray();
-   private var ObjArr = TArray();
+   private var LineArr = TArray();
+   private var ObjArr  = TArray();
    private var ColumnProps = TArray();
    private var ColumnSizes = TArray();
+   /** Ссылка на объект, который был выбран последним. */
    var choice = null;
 
    /**
-      Устанавливает заголовок меню '_Title'
+      Устанавливает заголовок меню '_title'. Возращает текущий экземпляр класса.
    */
-   Macro setTitle(_Title : String)
-      title = _Title;
+   Macro setTitle(_title : String)
+      title = _title;
+      return this;
+   End;
+
+   /**
+      Устанавливает префикс строки меню. Возращает текущий экземпляр класса.
+   */
+   Macro setPrefix(_prefix : String)
+      prefix = _prefix;
+      return this;
+   End;
+
+   /**
+      Устанавливает постфикс строки меню. Возращает текущий экземпляр класса.
+   */
+   Macro setPrefix(_postfix : String)
+      postfix = _postfix;
+      return this;
+   End;
+
+   /**
+      Устанавливает разделитель столбцов меню. Возращает текущий экземпляр класса.
+   */
+   Macro setDivider(_divider : String)
+      divider = _divider;
       return this;
    End;
 
@@ -44,9 +79,9 @@ Class SimpleMenu()
    End;
 
    /**
-      Устанавливает координаты.
+      Устанавливает координаты левого верхнего угла.
    */
-   Macro setCoord(_x, _y)
+   Macro setCoord(_x : Integer, _y : Integer)
       x = _x;
       y = _y;
       return this;
@@ -55,7 +90,7 @@ Class SimpleMenu()
    /**
       Устанавливает координату x.
    */
-   Macro setX(_x)
+   Macro setX(_x : Integer)
       x = _x;
       return this;
    End;
@@ -63,7 +98,7 @@ Class SimpleMenu()
    /**
       Устанавливает координату y.
    */
-   Macro setY(_y)
+   Macro setY(_y : Integer)
       y = _y;
       return this;
    End;
@@ -113,12 +148,12 @@ Class SimpleMenu()
    Private Macro processStr(str : String, ns : Integer) : String
       var res = "";
       var ln = StrLen(str);
-      if(ln>=ns)
+      if (ln >= ns)
          res = SubStr(str,1, ns);
       else
          var i = 0;
          res = str;
-         while(i < (ns - ln))
+         while (i < (ns - ln))
             res = res + " ";
             i = i + 1;
          end;
@@ -131,7 +166,7 @@ Class SimpleMenu()
       var s = prefix;
       var propVal;
       var sz = 0;
-      while(i < ColumnProps.Size)
+      while (i < ColumnProps.Size)
          propVal = GenGetProp(obj, ColumnProps[i]);
          sz      = ColumnSizes[i];
          s = s + processStr(String(propVal), sz);

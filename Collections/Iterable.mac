@@ -313,7 +313,7 @@ Class Iterable()
    /**
       Возвращает строку из элементов коллекции, разделенных '_delim', начинается с '_prefix' заканчивается '_postfix'.
 
-      @oparam _delim = ", " разделитель
+      @oparam _delim = "," разделитель
       @oparam _prefix = "[" префикс вывода
       @oparam _postfix = "]" постфикс вывода
 

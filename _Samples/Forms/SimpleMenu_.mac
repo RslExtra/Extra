@@ -13,8 +13,8 @@ Class BranchClass(_FNCash, _desc, _city)
 End;
 
 var branches = SArray(BranchClass(1, "Головной офис", "г. Москва"),
-                      BranchClass(12, "Допольнителный офис №14", "г. Бобруйск"),
-                      BranchClass(23, "Допольнителный офис №23", "г. Владивосток")
+                      BranchClass(12, "Дополнительный офис №14", "г. Бобруйск"),
+                      BranchClass(23, "Дополнительный офис №23", "г. Владивосток")
                      );
 
 var mn = SimpleMenu()

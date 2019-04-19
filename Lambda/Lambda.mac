@@ -15,7 +15,7 @@ import rsexts;
 import "..\\Mac\\Extra\\OOP\\Exceptions.mac";
 
 /**
-   Singleton instance [LambdaClass].
+   Singleton объект класса [LambdaClass].
 */
 const Lambdas = GenObject("LambdaClass");
 
