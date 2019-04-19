@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+var arr = SArray(1, 2, 3, 4, 5);
+var resArr = arr.toStream()                // Создаем стрим
+                .filter("mod(it, 2) == 0") // Пропускаем дальше только четные
+                .forEach(@println);        // 2 4

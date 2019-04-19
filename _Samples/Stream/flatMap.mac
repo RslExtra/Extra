@@ -1,0 +1,11 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+var innerArr1 = SArray(1, 2, 3, 4);
+var innerArr2 = SArray(10, 20, 30, 40);
+var arr = SArray(innerArr1, innerArr2);  // Массив массивов
+
+var resultArr = arr.toStream()
+                   .flatMap("it.toStream")
+                   .toArray();
+
+resultArr.toScreen();     // [1, 2, 3, 4, 10, 20, 30, 40]

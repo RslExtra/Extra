@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+var str = "This is simple text";
+StreamOf(str)
+   .distinct()
+   .forEach(@print);

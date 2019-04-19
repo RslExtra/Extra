@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+var arr =   SArray(1, 2, 3, -1, 4, 5);
+var resArr = arr.toStream()                // Создаем стрим
+                .takeWhile("it > 0")       // Стрим остановится, когда условие вернет false
+                .forEach(@println);        // 1 2 3

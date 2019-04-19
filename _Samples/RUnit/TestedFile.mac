@@ -1,0 +1,24 @@
+import "..\\Mac\\Extra\\OOP\\Exceptions.mac";
+
+
+Macro calcSum(a, b)
+    return a+b;
+End;
+
+Macro calcMult(a, b)
+    return a*b;
+End;
+
+Macro calcDiv(a, b)
+    if (b == 0)
+        return Throw(IllegalArgumentException("Делить на ноль не стоит"));
+    end;
+    return a/b;
+End;
+
+if (ExecMacro("RUnitMarker")) return; end;
+// Во время тестов до этого места исполнение не дойдет
+var a = 20, b = 10;
+println(calcSum(a, b));
+println(calcMult(a, b));
+println(calcDiv(a, b));

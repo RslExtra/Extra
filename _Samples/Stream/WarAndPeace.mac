@@ -1,0 +1,10 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+var fl = TStreamDoc("../mac/Extra/_samples/stream/warandpeace.txt", "R", "rsansi");
+var res = StreamOf(fl)                    // Создаем стрим строк файла
+            .flatMap("l -> StreamOf(l)")  // преобразуем в стрим символов
+            .collect(Collectors.counting("StrUpr(it)", V_STRING)) // Собираем в LinkedHasMap
+            .sort();                      // Сортируем по ключу (символу)
+
+res.toScreen2();
+println("total: " + res.sumByProp("value"));

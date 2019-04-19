@@ -1,0 +1,9 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+
+var i = 0;
+var arr = SArray(1, 2, 3, 4, 5);
+var resArr = arr.toStream()              // Создаем стрим
+                .peek("i = i + it")      // Прибавим к глобальной i каждый элемент
+                .forEach(@println);        // Выводим каждый на экран
+println("sum = " + i);

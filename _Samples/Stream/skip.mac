@@ -1,0 +1,7 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+var arr = SArray(1, 2, 3, 4, 5);
+arr.toStream()
+   .skip(2)             // Пропустим первые 2 элемента
+   .forEach(@println);  // 3 4 5
+

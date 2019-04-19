@@ -1,0 +1,12 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+var filepath = "..\\workfile\\CustomCollector.txt";
+var arr = SArray(1, 2, 3, 4, 5);
+var resFile = arr.toStream()                // Создаем стрим
+                 .collect(CustomCollector(
+                     "TStreamDoc(filepath, 'W', 'utf8')",    // Лямбда которая создаст файл
+                     "acc, el -> acc.writeLine(String(el))", // На каждой итерации будет записана строка
+                     "supplyObj -> supplyObj")               // Вернем результатом объект TStreamDoc
+                         );
+resFile.writeLine("The end");  // Дозапишем в конец еще одну строку
+resFile = null;

@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+var arr = SArray(1, 2, 3, 4, 5);
+arr.toStream()
+   .limit(2)    // Стрим завершится после 2 элементов
+   .forEach(@println); // 1 2

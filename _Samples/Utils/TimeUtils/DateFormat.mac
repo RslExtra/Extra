@@ -1,0 +1,17 @@
+import "..\\mac\\extra\\utils\\timeutils.mac";
+//<
+
+var ruformat = TU_DateFormat("yyyy-MM-dd'T'HH:mm:ss.S");
+var strDateTime = "2014-12-09T13:50:51.644000Z";
+var dt = ruformat.parse(strDateTime);     // Парсим дату/время со строки
+println(dt.getDate);
+println(dt.getTime);
+
+var curDT = TU_DateTime(date(), time());
+var curStr = ruformat.format(curDT);
+println(curStr);        // Выведет текущую дату/время в нашем формате
+
+var enformat = TU_DateFormat("EEE, MMM d, ''yy", locales.US);
+var curStrEN = enformat.format(curDt);
+println(curStrEN);      // Выведет текущую дату вроде Thu, Apr 18, '19
+//>

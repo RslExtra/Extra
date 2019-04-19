@@ -1,0 +1,20 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+
+// Создаем наш кастомный класс стрима
+// Он будет построчно записывать в файл
+Class (TerminalStream) AllToFile(filePath)
+   var infile = TStreamDoc(filepath, "W", "utf8");
+
+   Macro apply()
+      while(true)
+         var el = upstream.next();
+         if(needStop) break; end;
+         infile.writeLine(String(el));
+      End;
+      infile = null;
+   End;
+End;
+
+var arr = SArray(1, 2, 3, 4, 5);
+var resArr = arr.toStream()                // Создаем стрим
+                .custom(AllToFile("..\\workfile\\testAllToFile.txt"));        // Запишем в файл

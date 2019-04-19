@@ -1,0 +1,24 @@
+import "../mac/extra/RUnit/RUnit.mac";
+import "../mac/extra/_samples/RUnit/TestedFile.mac";
+
+Class (TestCase) TestCalc()
+
+   Macro test_sum()
+      assertEquals(20, calcSum(5, 15));
+      assertEquals(10, calcSum(-5, 15));
+   End;
+
+   Macro test_mult()
+      assertTrue(25==calcMult(5, 5));
+   End;
+
+   Macro test_div()
+      assertEquals(3, calcDiv(15, 5));
+      assertException(IllegalArgumentException, calcDiv(20, 0))
+   End;
+
+End;
+
+setThrowMode(2);
+TestCalc();
+setThrowMode(0);
