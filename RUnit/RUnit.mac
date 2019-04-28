@@ -585,8 +585,12 @@ Private Class UnitFun(_testCase, _funcname : String)
       setExecTime(getTimeDiffMillis(t0, time));
 
       OnError(err) // При ошибке внутри функции
-         var errAss = AssertErrorClass(expErrCode, err);
-         this.addAssert(errAss);
+         if (ValType(expErrCode) != V_UNDEF)
+            var errAss = AssertErrorClass(expErrCode, err);
+            this.addAssert(errAss);
+         else
+            this.fail("Test failed because of Error " + err.Message);
+         end;
    End;
 
    Macro addAssert(ass)

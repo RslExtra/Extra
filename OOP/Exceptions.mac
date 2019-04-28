@@ -126,7 +126,7 @@ Macro Throw(_exception : Exception)
       exit(0);
    elif (ThrowMode == 2)
       setLastException(_exception);
-      return _exception;
+      return null;
    end;
 End;
 
@@ -178,15 +178,13 @@ Class Try(tryfunc)
       return result;
    End;
 
-   /**
-      Запускает в ручную цепочку исполнения.
-   */
-   Macro tryRun()
-      debugbreak;
+   Private Macro tryRun()
       var result = ExecMacro2(func, pa[0], pa[1], pa[2], pa[3], pa[5], pa[6], pa[7], pa[8], pa[9]);
       if (isCatchable)
          lastExc = getLastException();
-         result = tryCatchIt();
+         if (IsEqClass("Exception", lastExc))
+            result = tryCatchIt();
+         end;
       end;
       return result;
       OnError(err)
@@ -220,7 +218,6 @@ Class Try(tryfunc)
    */
    Macro catch(_exception, _doFunc)
       catches[catches.size] = CatchClass(_exception, _doFunc);
-      isCatchable = true;
       return this;
    End;
 
@@ -232,21 +229,25 @@ Class Try(tryfunc)
       return this;
    End;
 
+   /**
+      Запускает в ручную цепочку исполнения
+   */
    Macro execute()
-      var result = null;
-      if (Not(isDone))
-         result = tryRun();
-      end;
-      isDone = true;
+      isCatchable = (catches.size>0);
+      var result = tryRun();
       isCatchable = false;
+      isDone = true;
       if (needThrow)
-         RunError(lastExc.getText, lastExc);
+         return Throw(lastExc);
       end;
       return result;
    End;
 
    Macro Destructor()
-      execute();
+      if (not(isDone))
+         execute();
+      end;
+      isDone = true;
    End;
 
    local var i;
