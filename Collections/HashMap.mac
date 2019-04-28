@@ -31,7 +31,7 @@ Private Const DEFAULT_LOAD_FACTOR : Double    = 0.1;
 Private Const DEFAULT_INIT_CAPACITY : Integer = 256;
 
 /**
-   Возвращает целое число ближайшее к 'cap', являющееся степенью 2.
+   Возвращает целое число ближайшее меньшее к 'cap', являющееся степенью 2.
 */
 Macro toLowPwr2(cap : Integer) : Integer
    if (cap <= DEFAULT_INIT_CAPACITY) return DEFAULT_INIT_CAPACITY; end;
@@ -56,17 +56,16 @@ End;
 
    Примеры объявления:
 ```
-   var map = HashMap();   // Хэш-таблица с ключом типа String
+   var map = HashMap();   // Хэш-таблица с ключом типа Variant
 
-   var objmap = HashMap().setKeyType(V_GENOBJ); // Хэш-таблица с ключем объектного типа
+   var objmap = HashMap().setKeyType(V_GENOBJ);   // Хэш-таблица с ключем объектного типа
 
-   var intmap = HashMap.setKeyType(V_INTEGER);
-
+   var intmap = IntHashMap(10000, 0.3);    // Хэш-таблица с ключем типа Integer, вместимостью 10000
 ```
 
 
-   @OParam _InitialCapacity  начальная вместимость таблицы, при null значение будет равно DEFAULT_INIT_CAPACITY = 256
-   @OParam _LoadFactor       начальный фактор загрузки, при null значение будет равно DEFAULT_LOAD_FACTOR = 0.1
+   @OParam _InitialCapacity  начальная вместимость таблицы, при null значение будет равно [DEFAULT_INIT_CAPACITY] = 256
+   @OParam _LoadFactor       начальный фактор загрузки, при null значение будет равно [DEFAULT_LOAD_FACTOR] = 0.1
 
    Необходимо указать эти функции или (предпочтительней) реализовать в классе следующие методы:
    equals(obj) : Integer   - сравнение с объектами того же вида
@@ -138,7 +137,6 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
       - V_STRING  - В качестве типа ключа выступает String.
       - V_INTEGER - В качестве типа ключа выступает Integer. Существенно ускоряет работу таблицы при использовании целочисленных ключей.
       - V_GENOBJ  - Для объектных значений. Пользовательский класс должен реализовать методы `macro compareTo(obj) : Integer` и `macro Equals(other) : Bool`. Как вариант можно унаследовать класс от [OOP.Any]
-
    */
    Macro setValueType(type : Integer)
       if (type <= 10)
@@ -154,7 +152,7 @@ Class (MapInterface) HashMap(_InitialCapacity : Integer, _LoadFactor : Double)
    End;
 
    /**
-      Устанавливает ссылку на хэшфункцию 'kHashFun'.
+      Устанавливает ссылку на функцию расчета хэша ключа 'kHashFun'.
    */
    Macro setKeyHashFunc(kHashFunc)
       keyHashFunc = kHashFunc;
