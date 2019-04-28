@@ -1,0 +1,19 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+import bankInter;
+
+var db_depdoc = Tbfile ("sbdepdoc.dbt", "R",  5, null, "sbbank.def");
+
+var onDate = date(1, 4, 2019);
+StreamOf(db_depdoc)                    // Создаём stream из файла бд
+         .rewind()
+         .getGE(onDate)                // Переводим курсор бд в нужную дату (5 ключ)
+         .takeWhile("r -> r.Date_Document == onDate")
+         .filter("r -> r.FlagStorn == ''")      // Отбросим сторнированные
+         .filter("r -> r.inSum > 0")
+         .map("r -> Tupple2(r.CodClient, r.inSum - r.outSum)")    // Замапим нужные поля в Tupple
+         .groupByInt("t -> t._1")                      // Сгруппируем по коду клиента
+         .map("p -> Tupple2(p.key, p.value.sum)")      // Замапим в Tupple, первое поле код клиента, второе сумма операций
+         .sorted("t1, t2 -> t2._2 - t1._2")            // Сортируем по убыванию суммы
+         .limit(5)                                     // Берем первые 5
+         .peek("t -> t._1 = getClientFIO(t._1)")       // Заменим поле _1 на ФИО
+         .forEach("t -> println(t._1+' : '+t._2)");    // Выведем на экран

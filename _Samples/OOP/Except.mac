@@ -1,0 +1,14 @@
+import "..\\mac\\extra\\OOP\\Exceptions.mac";
+//<
+// Пример функции возведения Integer в квадрат
+Macro mysqr(p)
+   if (ValType(p) != V_INTEGER)
+      Throw(IllegalArgumentException("Не верный тип " + p));
+      return; // Обязательно выходим из процедуры
+   end;
+   return p * p;
+End;
+
+var a = mysqr(5);     // ok
+var b = mysqr(null);  // Error
+//>

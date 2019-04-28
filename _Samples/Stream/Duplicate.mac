@@ -1,0 +1,20 @@
+import "..\\mac\\extra\\StreamApi\\Stream.mac";
+import bankInter;
+
+var db_client = Tbfile("client.dbt", "R",  0, null, "bank.def");
+
+var arr = StreamOf(db_client)                    // Создаём stream из файла бд
+            .rewind()
+            .map("Tupple2(it.Name_Client, it.Code)")
+            .groupByString("StrUpr(it._1)")
+            .filter("p -> p.value.size > 1")
+            .map("it.value")
+            .toArray();          // Соберём в массив
+
+// Выведем на экран
+for (var i, 0, arr.size-1, 1)
+   println(i + 1 + " : ");
+   for (var t, arr[i])
+      println("   (" + t._2 + ")" + t._1);
+   end;
+end;
