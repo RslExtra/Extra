@@ -1,7 +1,8 @@
 /**
-    @package  Utils
-    @ancestor Extra
-    @title    Полезные утилиты
+   @package  Utils
+   @ancestor Extra
+
+   Полезные утилиты.
 */
 
 import "..\\mac\\Extra\\utils\\SArray.mac";

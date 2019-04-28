@@ -11,3 +11,4 @@ import "..\\Mac\\Extra\\Lambda\\Lambda.mac";
 import "..\\Mac\\Extra\\Collections\\Collections.mac";
 import "..\\Mac\\Extra\\RUnit\\RUnit.mac";
 import "..\\Mac\\Extra\\Forms\\Forms.mac";
+import "..\\Mac\\Extra\\LogR\\LogR.mac";
