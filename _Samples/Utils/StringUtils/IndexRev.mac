@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\utils\\stringUtils.mac";
+//<
+   var str1 = "A.S.A.P";
+   var result = StringUtils.indexRev(str1, ".");
+   println(result); // 6
+//>

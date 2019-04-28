@@ -6,8 +6,10 @@ import "..\\mac\\extra\\_Tests\\Collections\\UT_Lists.mac";
 import "..\\mac\\extra\\_Tests\\Collections\\UT_Maps.mac";
 import "..\\mac\\extra\\_Tests\\Collections\\UT_Sets.mac";
 import "..\\mac\\extra\\_Tests\\Lambda\\UT_Lambda.mac";
+import "..\\mac\\extra\\_Tests\\MemDb\\UT_MemDB.mac";
 import "..\\mac\\extra\\_Tests\\OOP\\UT_OOP.mac";
 import "..\\mac\\extra\\_Tests\\OOP\\UT_Comparators.mac";
+import "..\\mac\\extra\\_Tests\\OOP\\UT_Exceptions.mac";
 import "..\\mac\\extra\\_Tests\\StreamApi\\UT_Stream.mac";
 //import "..\\mac\\extra\\_Tests\\WebUtils\\UT_JSONParser.mac";
 

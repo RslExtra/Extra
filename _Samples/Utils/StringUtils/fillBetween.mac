@@ -1,0 +1,7 @@
+import "..\\mac\\extra\\utils\\stringUtils.mac";
+//<
+   var str1 = "left";
+   var str2 = "right";
+   var result = StringUtils.fillBetween(str1, str2, 12, ".");
+   println(result); // left...right
+//>

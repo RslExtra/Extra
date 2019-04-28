@@ -1,0 +1,7 @@
+import "..\\mac\\extra\\utils\\stringUtils.mac";
+//<
+   var str1 = "String";
+   var str2 = "Being";
+   var result = StringUtils.commonSuffix(str1, str2);
+   println(result); // ing
+//>

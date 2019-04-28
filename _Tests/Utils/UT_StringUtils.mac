@@ -19,11 +19,16 @@ Class (TestCase) TestStringUtils()
       var str = "this is string";
       var arr = su.split(str, " ");
       assertEquals("this", arr[0]);
-      assertEquals("is",arr[1]);
-      assertEquals("string",arr[2]);
+      assertEquals("is", arr[1]);
+      assertEquals("string", arr[2]);
+      str = "abc";
+      arr = su.split(str, "");
+      assertArrays(Ar("a", "b", "c"), arr);
+      arr = su.split(str);
+      assertArrays(Ar("a", "b", "c"), arr);
       str = "some::new::string:comes::";
       arr = su.split(str, "::");
-      assertArrays(Ar("some", "new", "string:comes", ""), arr);
+      assertArrays(Ar("some", "new", "string:comes"), arr);
    End;
 
    Macro test_commonPrefix()

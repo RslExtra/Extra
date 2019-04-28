@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\utils\\stringUtils.mac";
+//<
+   var str1 = "word";
+   var result = StringUtils.padStart(str1, 10, ".");
+   println(result); // ......word
+//>

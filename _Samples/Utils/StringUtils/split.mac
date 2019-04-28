@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\utils\\stringUtils.mac";
+//<
+   var str1 = "This is test string";
+   var arr = StringUtils.split(str1, " ");
+   arr.toScreen();  // [This, is, test, string]
+//>

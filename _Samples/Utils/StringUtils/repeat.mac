@@ -1,0 +1,6 @@
+import "..\\mac\\extra\\utils\\stringUtils.mac";
+//<
+   var str1 = "word";
+   var result = StringUtils.repeat(str1, 3);
+   println(result); // wordwordword
+//>

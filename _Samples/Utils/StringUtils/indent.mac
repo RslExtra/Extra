@@ -1,0 +1,18 @@
+import "..\\mac\\extra\\utils\\stringUtils.mac";
+//<
+   var str1 = "word";
+   var result = StringUtils.indent(str1, 3);
+   println(result);  // '   word'
+
+   var strn = "multi\nline";
+   result = StringUtils.indent(strn, 2);
+   println(result);  // '  multi'
+                     // '  line'
+
+   var str = "   word";
+   result = StringUtils.indent(str, -2);
+   println(result);     // ' word'
+
+   result = StringUtils.indent(str, -5);
+   println(result);    // 'word'
+//>

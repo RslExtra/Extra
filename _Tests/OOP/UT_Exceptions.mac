@@ -1,0 +1,72 @@
+import "..\\mac\\extra\\RUnit\\RUnit.Mac";
+import "..\\mac\\extra\\OOP\\Exceptions.Mac";
+
+
+Private Macro calcDiv(a, b)
+   if ((ValType(a) != V_INTEGER) or (ValType(b)!=V_INTEGER))
+      return Throw(IllegalArgumentException());
+   end;
+   if (b == 0)
+      return Throw(IllegalStateException)
+   end;
+   return a/b;
+End;
+
+Private macro catchIllegalArg()
+   return -1;
+End;
+
+Private macro catchIllegalState()
+   return -2;
+End;
+
+Private macro catchAnyException()
+   return -3;
+End;
+
+
+Class (TestCase) TestExceptions()
+
+   Macro test3_TryCatch()
+      var result;
+      result = try(@calcDiv, "2", 0).execute();
+      assertException(IllegalArgumentException);
+      assertNull(result);
+
+      result = try(@calcDiv, 2, 0)
+                     .catch(IllegalArgumentException(), @catchIllegalArg)
+                     .catch(IllegalStateException(), @catchIllegalState).execute();
+      assertEquals(-2, result);
+
+      result = try(@calcDiv, "2", 0)
+                     .catch(IllegalArgumentException(), @catchIllegalArg)
+                     .catch(IllegalStateException(), @catchIllegalState).execute();
+      assertEquals(-1, result);
+
+      result = try(@calcDiv, 2, 0)
+                     .catch(IllegalArgumentException(), @catchIllegalArg).execute();
+      assertException(IllegalStateException);
+
+      result = try(@calcDiv, "2", 0)
+                     .catch(Exception, @catchAnyException)
+                     .catch(IllegalArgumentException(), @catchIllegalArg).execute();
+      assertEquals(-3, result);
+   End;
+
+   Macro testex()
+      assertTrue(true);
+      var result;
+      result = try(@calcDiv, 2, 0)
+                     .catch(IllegalArgumentException(), @catchIllegalArg).execute();
+      assertException(IllegalStateException);
+   End;
+
+   Macro testonErr()
+      catchError(0);
+      assertEquals(2/0);
+   End;
+End;
+
+SetThrowMode(0);
+TestExceptions();
+SetThrowMode(0);
